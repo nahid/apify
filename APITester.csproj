@@ -2,15 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>apitester</AssemblyName>
     <RootNamespace>APITester</RootNamespace>
-    <!-- Settings to ensure forward compatibility with .NET 8 -->
     <LangVersion>latest</LangVersion>
     <AnalysisLevel>latest</AnalysisLevel>
-    <EnablePreviewFeatures>true</EnablePreviewFeatures>
   </PropertyGroup>
 
   <ItemGroup>
