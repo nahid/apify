@@ -1,7 +1,10 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace APITester.Models
 {
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
+                               DynamicallyAccessedMemberTypes.PublicFields)]
     public class ConfigurationProfile
     {
         public string Name { get; set; } = string.Empty;

@@ -1,0 +1,7 @@
+<Project>
+  <!-- For Native AOT compilation, we need to add types that will be reflected upon -->
+  <ItemGroup>
+    <!-- Keep public classes in Models namespace -->
+    <TrimmerRootDescriptor Include="$(MSBuildThisFileDirectory)TrimmerRoots.xml" />
+  </ItemGroup>
+</Project>

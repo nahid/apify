@@ -9,12 +9,32 @@
     <RootNamespace>APITester</RootNamespace>
     <LangVersion>latest</LangVersion>
     <AnalysisLevel>latest</AnalysisLevel>
+    <!-- Native AOT settings -->
+    <PublishAot>true</PublishAot>
+    <StripSymbols>true</StripSymbols>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Trimming settings -->
+    <TrimMode>partial</TrimMode>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <!-- Required for Newtonsoft.Json reflection -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="ConsoleTableExt" Version="3.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+  <!-- Required for System.CommandLine with Native AOT -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="System.CommandLine" />
+  </ItemGroup>
+
+  <!-- Required for Newtonsoft.Json with Native AOT -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="Newtonsoft.Json" />
   </ItemGroup>
 
   <ItemGroup>

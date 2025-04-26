@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<linker>
+  <!-- Preserve our model types for reflection -->
+  <assembly fullname="apitester">
+    <!-- Keep all public types in our Models namespace -->
+    <type fullname="APITester.Models.ApiDefinition" preserve="all" />
+    <type fullname="APITester.Models.TestAssertion" preserve="all" />
+    <type fullname="APITester.Models.FileUpload" preserve="all" />
+    <type fullname="APITester.Models.PayloadType" preserve="all" />
+    <type fullname="APITester.Models.TestEnvironment" preserve="all" />
+    <type fullname="APITester.Models.ConfigurationProfile" preserve="all" />
+    <type fullname="APITester.Services.ApiResponse" preserve="all" />
+    
+    <!-- Also preserve all methods in the JsonHelper -->
+    <type fullname="APITester.Utils.JsonHelper" preserve="all" />
+  </assembly>
+</linker>

@@ -1,7 +1,11 @@
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace APITester.Models
 {
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
+                               DynamicallyAccessedMemberTypes.PublicFields | 
+                               DynamicallyAccessedMemberTypes.PublicMethods)]
     public class TestAssertion
     {
         [JsonPropertyName("name")]

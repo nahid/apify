@@ -1,9 +1,14 @@
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace APITester.Models
 {
+    // Add DynamicallyAccessedMembers attribute to preserve public members for reflection
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
+                               DynamicallyAccessedMemberTypes.PublicFields | 
+                               DynamicallyAccessedMemberTypes.PublicMethods)]
     public class ApiDefinition
     {
         [JsonPropertyName("name")]
@@ -22,11 +27,11 @@ namespace APITester.Models
         public Dictionary<string, string>? Headers { get; set; }
 
         [JsonPropertyName("payload")]
-        [JsonIgnore] // This is ignored in system.text.json serialization
+        [System.Text.Json.Serialization.JsonIgnore] // This is ignored in system.text.json serialization
         private string? _payloadString;
 
         [JsonPropertyName("payloadObject")]
-        [JsonIgnore] // This is ignored in system.text.json serialization
+        [System.Text.Json.Serialization.JsonIgnore] // This is ignored in system.text.json serialization
         private object? _payloadObject;
 
         // This property is used by Newtonsoft.Json for serialization/deserialization
@@ -142,6 +147,8 @@ namespace APITester.Models
         FormData
     }
 
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
+                               DynamicallyAccessedMemberTypes.PublicFields)]
     public class FileUpload
     {
         [JsonPropertyName("name")]

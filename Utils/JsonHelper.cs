@@ -1,10 +1,14 @@
 using Newtonsoft.Json;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace APITester.Utils
 {
     public static class JsonHelper
     {
+        // Add UnconditionalSuppressMessage attribute to suppress trimming warnings
+        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
+            Justification = "JSON types are preserved in TrimmerRoots.xml")]
         public static T? DeserializeFromFile<T>(string filePath)
         {
             if (!File.Exists(filePath))
@@ -16,16 +20,22 @@ namespace APITester.Utils
             return JsonConvert.DeserializeObject<T>(json);
         }
 
+        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
+            Justification = "JSON types are preserved in TrimmerRoots.xml")]
         public static string? SerializeToJson<T>(T obj, bool indented = true)
         {
             return JsonConvert.SerializeObject(obj, indented ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None);
         }
 
+        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
+            Justification = "JSON types are preserved in TrimmerRoots.xml")]
         public static string SerializeObject<T>(T obj, bool indented = true)
         {
             return JsonConvert.SerializeObject(obj, indented ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None);
         }
 
+        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
+            Justification = "We don't care about specific types here, just validating JSON")]
         public static bool IsValidJson(string json)
         {
             try
@@ -39,6 +49,8 @@ namespace APITester.Utils
             }
         }
 
+        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
+            Justification = "We don't care about specific types here, just formatting JSON")]
         public static string FormatJson(string json)
         {
             try
