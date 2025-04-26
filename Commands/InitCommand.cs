@@ -235,8 +235,25 @@ namespace APITester.Commands
 
                 // Display help information
                 ConsoleHelper.WriteInfo("\nProject initialized successfully!");
-                ConsoleHelper.WriteInfo("To run tests, use: dotnet run run apis/sample-api.json");
-                ConsoleHelper.WriteInfo("To list environments, use: dotnet run list-env");
+                
+                // Check if we're running as a compiled executable or via dotnet run
+                string exeName = Path.GetFileName(Environment.ProcessPath ?? "apitester");
+                bool isCompiledExecutable = !exeName.Equals("dotnet", StringComparison.OrdinalIgnoreCase);
+                
+                if (isCompiledExecutable)
+                {
+                    // Running as a standalone executable like ./apitester
+                    ConsoleHelper.WriteInfo($"To run tests, use: ./{exeName} run apis/sample-api.json");
+                    ConsoleHelper.WriteInfo($"To list environments, use: ./{exeName} list-env");
+                    ConsoleHelper.WriteInfo($"Tests will use the configuration from the current directory: {configFilePath}");
+                }
+                else
+                {
+                    // Running via dotnet run
+                    ConsoleHelper.WriteInfo("To run tests, use: dotnet run run apis/sample-api.json");
+                    ConsoleHelper.WriteInfo("To list environments, use: dotnet run list-env");
+                    ConsoleHelper.WriteInfo($"Tests will use the configuration from the current directory: {configFilePath}");
+                }
             }
             catch (Exception ex)
             {
