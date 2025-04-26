@@ -176,7 +176,7 @@ namespace APITester.Commands
                 }
             }
 
-            if (!string.IsNullOrEmpty(apiDefinition.Payload))
+            if (apiDefinition.Payload != null)
             {
                 ConsoleHelper.WriteKeyValue("Payload Type", apiDefinition.PayloadType.ToString());
                 ConsoleHelper.WriteInfo("Payload:");
@@ -187,7 +187,15 @@ namespace APITester.Commands
                     try
                     {
                         // Try to format and colorize JSON payload
-                        ConsoleHelper.WriteColoredJson(apiDefinition.Payload);
+                        var jsonString = apiDefinition.GetPayloadAsString();
+                        if (jsonString != null)
+                        {
+                            ConsoleHelper.WriteColoredJson(jsonString);
+                        }
+                        else
+                        {
+                            Console.WriteLine("[null payload]");
+                        }
                     }
                     catch
                     {
@@ -198,7 +206,8 @@ namespace APITester.Commands
                 else
                 {
                     // For non-JSON payloads, display as-is
-                    Console.WriteLine(apiDefinition.Payload);
+                    var payloadString = apiDefinition.GetPayloadAsString();
+                    Console.WriteLine(payloadString ?? "[null payload]");
                 }
             }
             

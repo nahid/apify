@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using APITester.Models;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Linq;
 
 namespace APITester.Services
@@ -105,7 +106,8 @@ namespace APITester.Services
                 Name = ApplyEnvironmentVariables(apiDefinition.Name),
                 Uri = ApplyEnvironmentVariables(apiDefinition.Uri),
                 Method = apiDefinition.Method,
-                Payload = apiDefinition.Payload != null ? ApplyEnvironmentVariables(apiDefinition.Payload) : null,
+                Payload = ProcessPayload(apiDefinition.Payload),
+                PayloadType = apiDefinition.PayloadType,
                 Tests = new List<TestAssertion>()
             };
             
@@ -139,6 +141,78 @@ namespace APITester.Services
             }
             
             return modifiedApi;
+        }
+        
+        // Process payload data based on type
+        private object? ProcessPayload(object? payload)
+        {
+            if (payload == null)
+                return null;
+                
+            if (payload is string strPayload)
+            {
+                return ApplyEnvironmentVariables(strPayload);
+            }
+            else if (payload is JObject jObject)
+            {
+                // Process JObject to apply environment variables
+                var processed = ProcessJToken(jObject);
+                return processed;
+            }
+            else if (payload is JArray jArray)
+            {
+                // Process JArray to apply environment variables
+                var processed = ProcessJToken(jArray);
+                return processed;
+            }
+            
+            // For other payload types (like Dictionary), try serializing and deserializing
+            try
+            {
+                var json = JsonConvert.SerializeObject(payload);
+                var processedJson = ApplyEnvironmentVariables(json);
+                return JsonConvert.DeserializeObject(processedJson);
+            }
+            catch
+            {
+                // If conversion fails, return the original payload
+                return payload;
+            }
+        }
+        
+        // Process JToken (JObject or JArray) recursively to apply environment variables
+        private JToken ProcessJToken(JToken token)
+        {
+            switch (token.Type)
+            {
+                case JTokenType.Object:
+                    foreach (var prop in token.Children<JProperty>().ToList())
+                    {
+                        var value = ProcessJToken(prop.Value);
+                        prop.Value = value;
+                    }
+                    break;
+                case JTokenType.Array:
+                    for (int i = 0; i < token.Count(); i++)
+                    {
+                        var item = token[i];
+                        if (item != null)
+                        {
+                            token[i] = ProcessJToken(item);
+                        }
+                    }
+                    break;
+                case JTokenType.String:
+                    // Apply environment variables to string values
+                    var strValue = token.Value<string>();
+                    if (strValue != null)
+                    {
+                        return new JValue(ApplyEnvironmentVariables(strValue));
+                    }
+                    break;
+            }
+            
+            return token;
         }
         
         public void CreateDefaultEnvironmentFile()
