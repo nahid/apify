@@ -117,6 +117,8 @@ namespace APITester.Services
         
         private ConfigurationProfile CreateDefaultProfile()
         {
+            string baseUrl = "https://jsonplaceholder.typicode.com"; // Set a better default URL for testing
+            
             return new ConfigurationProfile
             {
                 Name = "Default",
@@ -130,8 +132,10 @@ namespace APITester.Services
                         Description = "Development environment",
                         Variables = new Dictionary<string, string>
                         {
-                            { "baseUrl", "https://api.example.com" },
-                            { "timeout", "30000" }
+                            { "baseUrl", baseUrl },
+                            { "timeout", "30000" },
+                            { "userId", "1" },
+                            { "apiKey", "dev-api-key" }
                         }
                     }
                 }
@@ -179,8 +183,10 @@ namespace APITester.Services
                         Description = "Development environment",
                         Variables = new Dictionary<string, string>
                         {
-                            { "baseUrl", "https://api.example.com" },
-                            { "timeout", "30000" }
+                            { "baseUrl", "https://jsonplaceholder.typicode.com" },
+                            { "timeout", "30000" },
+                            { "userId", "1" },
+                            { "apiKey", "dev-api-key" }
                         }
                     }
                 };
@@ -208,8 +214,10 @@ namespace APITester.Services
                         Description = "Development environment",
                         Variables = new Dictionary<string, string>
                         {
-                            { "baseUrl", "https://api.example.com" },
-                            { "timeout", "30000" }
+                            { "baseUrl", "https://jsonplaceholder.typicode.com" },
+                            { "timeout", "30000" },
+                            { "userId", "1" },
+                            { "apiKey", "dev-api-key" }
                         }
                     };
                     profile.Environments.Add(environment);
@@ -394,10 +402,14 @@ namespace APITester.Services
                     break;
                 case JTokenType.String:
                     // Apply environment variables to string values
-                    var strValue = token.Value<string>();
-                    if (strValue != null)
+                    var stringValue = token.Value<string>();
+                    if (stringValue != null)
                     {
-                        return new JValue(ApplyEnvironmentVariables(strValue));
+                        var transformed = ApplyEnvironmentVariables(stringValue);
+                        if (transformed != stringValue)
+                        {
+                            return new JValue(transformed);
+                        }
                     }
                     break;
             }
@@ -409,100 +421,50 @@ namespace APITester.Services
         {
             try
             {
-                // Always get the current directory and create config there
-                string currentDir = Directory.GetCurrentDirectory();
-                string configFilePath = Path.Combine(currentDir, ConfigFileName);
-                string absolutePath = Path.GetFullPath(configFilePath);
+                // Get the file path in the current directory
+                var filePath = GetConfigFilePath();
                 
-                // Check if config file already exists
-                if (File.Exists(configFilePath))
+                // Check if the file already exists
+                if (File.Exists(filePath))
                 {
-                    Console.WriteLine($"Configuration file '{absolutePath}' already exists.");
+                    Console.WriteLine($"Configuration file already exists at {filePath}");
                     return;
                 }
                 
-                Console.WriteLine($"Creating configuration file at: {absolutePath}");
+                // Create a default profile
+                var defaultProfile = CreateDefaultProfile();
                 
-                // Update the current path
-                _configFilePath = configFilePath;
+                // Serialize to JSON
+                var json = JsonConvert.SerializeObject(defaultProfile, Formatting.Indented);
                 
-                var defaultProfile = new ConfigurationProfile
-                {
-                    Name = "Default",
-                    Description = "Default configuration profile",
-                    DefaultEnvironment = "Development",
-                    Environments = new List<TestEnvironment>
-                    {
-                        new TestEnvironment
-                        {
-                            Name = "Development",
-                            Description = "Development environment",
-                            Variables = new Dictionary<string, string>
-                            {
-                                { "baseUrl", "https://api.example.com/dev" },
-                                { "apiKey", "dev-api-key" },
-                                { "userId", "1" },
-                                { "timeout", "30000" }
-                            }
-                        },
-                        new TestEnvironment
-                        {
-                            Name = "Production",
-                            Description = "Production environment",
-                            Variables = new Dictionary<string, string>
-                            {
-                                { "baseUrl", "https://api.example.com" },
-                                { "apiKey", "prod-api-key" },
-                                { "userId", "1" },
-                                { "timeout", "10000" }
-                            }
-                        }
-                    }
-                };
+                // Write to file
+                File.WriteAllText(filePath, json);
                 
-                // Make sure we have a proper non-null object
-                if (defaultProfile != null && defaultProfile.Environments != null)
-                {
-                    var json = JsonConvert.SerializeObject(defaultProfile, Formatting.Indented);
-                    
-                    // Verify the JSON is valid before writing to file
-                    var testDeserialized = JsonConvert.DeserializeObject<ConfigurationProfile>(json);
-                    if (testDeserialized == null || testDeserialized.Environments == null || testDeserialized.Environments.Count == 0)
-                    {
-                        Console.WriteLine("Error: Generated invalid configuration. Using fallback.");
-                        // Create a minimal valid JSON as fallback
-                        json = @"{
-  ""Name"": ""Default"",
-  ""Description"": ""Default configuration profile"",
-  ""DefaultEnvironment"": ""Development"",
-  ""Environments"": [
-    {
-      ""Name"": ""Development"",
-      ""Description"": ""Development environment"",
-      ""Variables"": {
-        ""baseUrl"": ""https://api.example.com/dev"",
-        ""timeout"": ""30000"",
-        ""userId"": ""1"",
-        ""apiKey"": ""dev-api-key""
-      }
-    }
-  ]
-}";
-                    }
-                    
-                    File.WriteAllText(configFilePath, json);
-                    _configFilePath = configFilePath; // Update the path to the newly created file
-                }
-                else
-                {
-                    Console.WriteLine("Error: Could not create configuration profile.");
-                }
-                
-                Console.WriteLine($"Created configuration file at {configFilePath}");
+                Console.WriteLine($"Created default configuration file at {filePath}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error creating default environment file: {ex.Message}");
+            }
+        }
+        
+        public void ListEnvironmentVariables()
+        {
+            if (_currentEnvironment == null)
+            {
+                Console.WriteLine("No active environment set.");
+                return;
+            }
+            
+            Console.WriteLine("Environment Variables:");
+            foreach (var variable in _currentEnvironment.Variables)
+            {
+                string displayValue = variable.Key.ToLower().Contains("key") || 
+                                      variable.Key.ToLower().Contains("secret") || 
+                                      variable.Key.ToLower().Contains("password") ? 
+                                      "********" : variable.Value;
+                
+                Console.WriteLine($"  {variable.Key}: {displayValue}");
             }
         }
     }

@@ -243,6 +243,16 @@ namespace APITester.Commands
         ""userId"": ""1"",
         ""apiKey"": ""dev-api-key""
       }
+    },
+    {
+      ""Name"": ""Production"",
+      ""Description"": ""Production environment"",
+      ""Variables"": {
+        ""baseUrl"": """ + baseUrl + @""",
+        ""timeout"": ""10000"",
+        ""userId"": ""1"",
+        ""apiKey"": ""prod-api-key""
+      }
     }
   ]
 }";
