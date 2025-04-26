@@ -59,12 +59,24 @@ namespace APITester.Services
             if (!File.Exists(configPath))
             {
                 Console.WriteLine($"Configuration file not found at {configPath}");
+                var defaultProfile = CreateDefaultProfile();
+                profiles.Add(defaultProfile);
+                Console.WriteLine($"Created default profile: {defaultProfile.Name}");
                 return profiles;
             }
             
             try
             {
                 var content = File.ReadAllText(configPath);
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    Console.WriteLine($"Configuration file at {configPath} is empty");
+                    var defaultProfile = CreateDefaultProfile();
+                    profiles.Add(defaultProfile);
+                    Console.WriteLine($"Created default profile: {defaultProfile.Name}");
+                    return profiles;
+                }
+                
                 var settings = new JsonSerializerSettings
                 {
                     Error = (sender, args) => 
@@ -79,34 +91,57 @@ namespace APITester.Services
                     MetadataPropertyHandling = MetadataPropertyHandling.Ignore
                 };
                 
-                // For troubleshooting, try to use the direct, safe constructor approach
-                try {
-                    var profile = new ConfigurationProfile();
-                    JsonConvert.PopulateObject(content, profile, settings);
-                    
-                    if (profile != null)
-                    {
-                        profiles.Add(profile);
-                        Console.WriteLine($"Successfully loaded profile: {profile.Name}");
-                    }
-                }
-                catch (Exception ex)
+                // Try to deserialize directly first
+                var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content, settings);
+                
+                if (profile != null)
                 {
-                    Console.WriteLine($"PopulateObject failed: {ex.Message}");
-                    
-                    // Fall back to deserialize
-                    var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content, settings);
-                    
-                    if (profile != null)
+                    // If the profile has a null or empty Name, set it to "Default"
+                    if (string.IsNullOrEmpty(profile.Name))
                     {
-                        profiles.Add(profile);
+                        profile.Name = "Default";
+                        Console.WriteLine("Profile name was empty, set to 'Default'");
                     }
-                    else
+                    
+                    profiles.Add(profile);
+                    Console.WriteLine($"Successfully loaded profile: {profile.Name}");
+                    
+                    // Ensure Environments collection is initialized
+                    if (profile.Environments == null)
                     {
-                        // Create a default profile if deserialization returns null
+                        profile.Environments = new List<TestEnvironment>();
+                        Console.WriteLine("Initialized empty Environments collection for profile");
+                    }
+                    
+                    return profiles;
+                }
+                else
+                {
+                    // If standard deserialization failed, try PopulateObject as fallback
+                    try {
+                        var fallbackProfile = new ConfigurationProfile();
+                        JsonConvert.PopulateObject(content, fallbackProfile, settings);
+                        
+                        // If the profile has a null or empty Name, set it to "Default"
+                        if (string.IsNullOrEmpty(fallbackProfile.Name))
+                        {
+                            fallbackProfile.Name = "Default";
+                            Console.WriteLine("Profile name was empty, set to 'Default'");
+                        }
+                        
+                        profiles.Add(fallbackProfile);
+                        Console.WriteLine($"Successfully loaded profile using PopulateObject: {fallbackProfile.Name}");
+                        return profiles;
+                    }
+                    catch (Exception popEx)
+                    {
+                        Console.WriteLine($"Both deserialization methods failed. Error: {popEx.Message}");
+                        
+                        // Create a default profile if all deserialization attempts fail
                         Console.WriteLine("Creating default profile...");
                         var defaultProfile = CreateDefaultProfile();
                         profiles.Add(defaultProfile);
+                        Console.WriteLine($"Created default profile: {defaultProfile.Name}");
                     }
                 }
             }
@@ -118,6 +153,7 @@ namespace APITester.Services
                 Console.WriteLine("No environment profiles found. Creating default profile...");
                 var defaultProfile = CreateDefaultProfile();
                 profiles.Add(defaultProfile);
+                Console.WriteLine($"Created default profile: {defaultProfile.Name}");
             }
             
             return profiles;
@@ -155,7 +191,31 @@ namespace APITester.Services
         public bool SetCurrentEnvironment(string profileName, string? environmentName = null)
         {
             var profiles = LoadConfigurationProfiles();
-            var profile = profiles.FirstOrDefault(p => p.Name?.Equals(profileName, StringComparison.OrdinalIgnoreCase) == true);
+            
+            // If profile name is null or empty, use "Default"
+            if (string.IsNullOrEmpty(profileName))
+            {
+                profileName = "Default";
+                Console.WriteLine("Profile name was empty, using 'Default'");
+            }
+            
+            // Try to find the profile by name (case-insensitive)
+            var profile = profiles.FirstOrDefault(p => 
+                !string.IsNullOrEmpty(p.Name) && 
+                p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
+            
+            // If not found by exact match, try partial match
+            if (profile == null && profiles.Count > 0)
+            {
+                profile = profiles.FirstOrDefault(p => 
+                    !string.IsNullOrEmpty(p.Name) && 
+                    p.Name.Contains(profileName, StringComparison.OrdinalIgnoreCase));
+                
+                if (profile != null)
+                {
+                    Console.WriteLine($"Using profile '{profile.Name}' (partial match for '{profileName}')");
+                }
+            }
             
             // Create a default profile if none exists or the requested one is not found
             if (profile == null)
