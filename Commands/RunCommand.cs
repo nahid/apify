@@ -72,7 +72,33 @@ namespace APITester.Commands
             }
 
             ConsoleHelper.WriteKeyValue("Using Profile", profileToUse);
-            ConsoleHelper.WriteKeyValue("Active Environment", environmentService.CurrentEnvironment?.Name ?? "None");
+            
+            var currentEnv = environmentService.CurrentEnvironment;
+            ConsoleHelper.WriteKeyValue("Active Environment", currentEnv?.Name ?? "None");
+            
+            // Display environment variables for better transparency
+            if (currentEnv?.Variables?.Count > 0)
+            {
+                ConsoleHelper.WriteInfo("Environment Variables:");
+                foreach (var variable in currentEnv.Variables)
+                {
+                    if (variable.Key.Contains("key", StringComparison.OrdinalIgnoreCase) || 
+                        variable.Key.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+                        variable.Key.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
+                        variable.Key.Contains("token", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Mask sensitive values
+                        Console.Write("  ");
+                        ConsoleHelper.WriteKeyValue(variable.Key, "********");
+                    }
+                    else
+                    {
+                        // Display non-sensitive values
+                        Console.Write("  ");
+                        ConsoleHelper.WriteKeyValue(variable.Key, variable.Value);
+                    }
+                }
+            }
 
             int totalTests = 0;
             int passedTests = 0;

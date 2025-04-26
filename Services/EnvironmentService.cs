@@ -194,8 +194,13 @@ namespace APITester.Services
         public ApiDefinition ApplyEnvironmentVariables(ApiDefinition apiDefinition)
         {
             if (_currentEnvironment == null)
+            {
+                Console.WriteLine("Warning: No active environment set. Environment variables will not be applied.");
                 return apiDefinition;
+            }
                 
+            Console.WriteLine($"Applying environment variables from '{_currentEnvironment.Name}' environment...");
+            
             var modifiedApi = new ApiDefinition
             {
                 Name = ApplyEnvironmentVariables(apiDefinition.Name),
@@ -203,15 +208,29 @@ namespace APITester.Services
                 Method = apiDefinition.Method,
                 Payload = ProcessPayload(apiDefinition.Payload),
                 PayloadType = apiDefinition.PayloadType,
+                Files = apiDefinition.Files, // Preserve file upload configurations
                 Tests = new List<TestAssertion>()
             };
+            
+            // Log URI transformation for debugging
+            if (apiDefinition.Uri != modifiedApi.Uri)
+            {
+                Console.WriteLine($"  Transformed URI: {apiDefinition.Uri} -> {modifiedApi.Uri}");
+            }
             
             if (apiDefinition.Headers != null)
             {
                 modifiedApi.Headers = new Dictionary<string, string>();
                 foreach (var header in apiDefinition.Headers)
                 {
-                    modifiedApi.Headers[header.Key] = ApplyEnvironmentVariables(header.Value);
+                    var transformedValue = ApplyEnvironmentVariables(header.Value);
+                    modifiedApi.Headers[header.Key] = transformedValue;
+                    
+                    // Log header transformation for debugging
+                    if (header.Value != transformedValue)
+                    {
+                        Console.WriteLine($"  Transformed Header {header.Key}: {header.Value} -> {transformedValue}");
+                    }
                 }
             }
             
@@ -220,6 +239,9 @@ namespace APITester.Services
             {
                 foreach (var test in apiDefinition.Tests)
                 {
+                    var originalValue = test.ExpectedValue;
+                    var transformedValue = originalValue != null ? ApplyEnvironmentVariables(originalValue) : null;
+                    
                     var modifiedTest = new TestAssertion
                     {
                         Name = test.Name,
@@ -227,15 +249,41 @@ namespace APITester.Services
                         Assertion = ApplyEnvironmentVariables(test.Assertion),
                         AssertType = test.AssertType,
                         Property = test.Property,
-                        ExpectedValue = test.ExpectedValue != null ? ApplyEnvironmentVariables(test.ExpectedValue) : null,
+                        ExpectedValue = transformedValue,
                         Expected = test.Expected
                     };
+                    
+                    // Log test value transformation for debugging
+                    if (originalValue != transformedValue)
+                    {
+                        Console.WriteLine($"  Transformed Test Value: {originalValue} -> {transformedValue}");
+                    }
                     
                     modifiedApi.Tests.Add(modifiedTest);
                 }
             }
             
+            // Check if the environment has all variables that might be needed
+            CheckForMissingVariables(apiDefinition.Uri);
+            
             return modifiedApi;
+        }
+        
+        private void CheckForMissingVariables(string input)
+        {
+            if (_currentEnvironment == null || string.IsNullOrEmpty(input))
+                return;
+                
+            var matches = VariablePattern.Matches(input);
+            foreach (Match match in matches)
+            {
+                var variableName = match.Groups[1].Value.Trim();
+                if (!_currentEnvironment.Variables.ContainsKey(variableName))
+                {
+                    // Show a warning for missing variables
+                    Console.WriteLine($"  Warning: Environment variable '{variableName}' is referenced but not defined in the environment.");
+                }
+            }
         }
         
         // Process payload data based on type
