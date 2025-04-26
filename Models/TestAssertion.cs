@@ -10,7 +10,7 @@ namespace APITester.Models
                                DynamicallyAccessedMemberTypes.PublicConstructors)]
     public class TestAssertion
     {
-        [JsonConstructor]
+        [Newtonsoft.Json.JsonConstructor]
         public TestAssertion()
         {
             Name = string.Empty;

@@ -10,7 +10,7 @@ namespace APITester.Models
     public class TestEnvironment
     {
         // This constructor is needed for Native AOT compatibility with JSON deserialization
-        [JsonConstructor]
+        [Newtonsoft.Json.JsonConstructor]
         public TestEnvironment()
         {
             Name = string.Empty;

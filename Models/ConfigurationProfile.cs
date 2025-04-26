@@ -10,7 +10,7 @@ namespace APITester.Models
     public class ConfigurationProfile
     {
         // This constructor is needed for Native AOT compatibility with JSON deserialization
-        [JsonConstructor]
+        [Newtonsoft.Json.JsonConstructor]
         public ConfigurationProfile()
         {
             Name = string.Empty;

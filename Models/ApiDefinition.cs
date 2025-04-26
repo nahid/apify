@@ -13,7 +13,7 @@ namespace APITester.Models
     public class ApiDefinition
     {
         // This constructor is needed for Native AOT compatibility with JSON deserialization
-        [JsonConstructor]
+        [Newtonsoft.Json.JsonConstructor]
         public ApiDefinition()
         {
             Name = string.Empty;
@@ -164,7 +164,7 @@ namespace APITester.Models
     public class FileUpload
     {
         // This constructor is needed for Native AOT compatibility with JSON deserialization
-        [JsonConstructor]
+        [Newtonsoft.Json.JsonConstructor]
         public FileUpload()
         {
             Name = string.Empty;
