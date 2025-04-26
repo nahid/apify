@@ -7,6 +7,10 @@
     <Nullable>enable</Nullable>
     <AssemblyName>apitester</AssemblyName>
     <RootNamespace>APITester</RootNamespace>
+    <!-- Settings to ensure forward compatibility with .NET 8 -->
+    <LangVersion>latest</LangVersion>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnablePreviewFeatures>true</EnablePreviewFeatures>
   </PropertyGroup>
 
   <ItemGroup>

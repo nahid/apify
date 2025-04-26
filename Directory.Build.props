@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- Enable .NET 8 compatible features -->
+    <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+    <Features>strict</Features>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Use latest C# language features -->
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+</Project>
