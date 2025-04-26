@@ -1,0 +1,34 @@
+{
+  "Name": "Sample POST API Test",
+  "Description": null,
+  "Uri": "{{baseUrl}}/posts",
+  "Method": "POST",
+  "Headers": {
+    "Accept": "application/json",
+    "Content-Type": "application/json"
+  },
+  "Payload": "{\n  \"title\": \"Sample Post\",\n  \"body\": \"This is a sample post body\",\n  \"userId\": 1\n}",
+  "PayloadType": 2,
+  "Files": null,
+  "Tests": [
+    {
+      "Name": "Status code is created",
+      "Description": "Status code is 201",
+      "Assertion": "",
+      "AssertType": "StatusCode",
+      "Property": null,
+      "ExpectedValue": "201",
+      "Expected": null
+    },
+    {
+      "Name": "Response contains post ID",
+      "Description": "Response contains id property",
+      "Assertion": "",
+      "AssertType": "ContainsProperty",
+      "Property": null,
+      "ExpectedValue": "id",
+      "Expected": null
+    }
+  ],
+  "Timeout": 30000
+}

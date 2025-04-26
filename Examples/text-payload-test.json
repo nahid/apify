@@ -1,0 +1,27 @@
+{
+  "Name": "Text Payload API Test",
+  "Description": "Tests sending a plain text payload",
+  "Uri": "{{baseUrl}}/text-endpoint",
+  "Method": "POST",
+  "Headers": {
+    "Accept": "text/plain",
+    "Content-Type": "text/plain"
+  },
+  "Payload": "This is a plain text message being sent to the API.",
+  "PayloadType": "text",
+  "Tests": [
+    {
+      "Name": "Status code is successful",
+      "Description": "Status code is 200",
+      "AssertType": "StatusCode",
+      "ExpectedValue": "200"
+    },
+    {
+      "Name": "Response contains echo of message",
+      "Description": "Response contains the original message",
+      "AssertType": "ContainsProperty",
+      "ExpectedValue": "message"
+    }
+  ],
+  "Timeout": 30000
+}

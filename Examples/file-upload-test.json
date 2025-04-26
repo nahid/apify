@@ -1,0 +1,34 @@
+{
+  "Name": "File Upload API Test",
+  "Description": "Tests uploading a file with form data",
+  "Uri": "{{baseUrl}}/upload",
+  "Method": "POST",
+  "Headers": {
+    "Accept": "application/json"
+  },
+  "Payload": "{ \"description\": \"Test file upload\", \"userId\": 1 }",
+  "PayloadType": "formData",
+  "Files": [
+    {
+      "Name": "Sample File",
+      "FieldName": "file",
+      "FilePath": "Examples/sample-image.txt",
+      "ContentType": "text/plain"
+    }
+  ],
+  "Tests": [
+    {
+      "Name": "Status code is successful",
+      "Description": "Status code is 201",
+      "AssertType": "StatusCode",
+      "ExpectedValue": "201"
+    },
+    {
+      "Name": "Response contains file information",
+      "Description": "Response contains filename",
+      "AssertType": "ContainsProperty",
+      "ExpectedValue": "filename"
+    }
+  ],
+  "Timeout": 60000
+}

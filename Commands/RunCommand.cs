@@ -178,17 +178,44 @@ namespace APITester.Commands
 
             if (!string.IsNullOrEmpty(apiDefinition.Payload))
             {
+                ConsoleHelper.WriteKeyValue("Payload Type", apiDefinition.PayloadType.ToString());
                 ConsoleHelper.WriteInfo("Payload:");
                 Console.Write("  ");
-                try
+                
+                if (apiDefinition.PayloadType == PayloadType.Json)
                 {
-                    // Try to format and colorize JSON payload
-                    ConsoleHelper.WriteColoredJson(apiDefinition.Payload);
+                    try
+                    {
+                        // Try to format and colorize JSON payload
+                        ConsoleHelper.WriteColoredJson(apiDefinition.Payload);
+                    }
+                    catch
+                    {
+                        // If it's not valid JSON or formatting fails, display as-is
+                        Console.WriteLine(apiDefinition.Payload);
+                    }
                 }
-                catch
+                else
                 {
-                    // If it's not valid JSON or formatting fails, display as-is
+                    // For non-JSON payloads, display as-is
                     Console.WriteLine(apiDefinition.Payload);
+                }
+            }
+            
+            // Display file upload information if present
+            if (apiDefinition.Files?.Count > 0)
+            {
+                ConsoleHelper.WriteInfo($"Files to Upload ({apiDefinition.Files.Count}):");
+                foreach (var file in apiDefinition.Files)
+                {
+                    Console.Write("  ");
+                    ConsoleHelper.WriteLineColored($"- {file.Name}", ConsoleColor.Cyan);
+                    Console.Write("    ");
+                    ConsoleHelper.WriteKeyValue("Field Name", file.FieldName);
+                    Console.Write("    ");
+                    ConsoleHelper.WriteKeyValue("Path", file.FilePath);
+                    Console.Write("    ");
+                    ConsoleHelper.WriteKeyValue("Content Type", file.ContentType);
                 }
             }
 

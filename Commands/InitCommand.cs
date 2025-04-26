@@ -119,6 +119,7 @@ namespace APITester.Commands
                     {
                         { "Accept", "application/json" }
                     },
+                    PayloadType = PayloadType.None,
                     Tests = new List<TestAssertion>
                     {
                         new TestAssertion { 
@@ -147,6 +148,40 @@ namespace APITester.Commands
                 string sampleApiFilePath = Path.Combine(DefaultApiDirectoryName, "sample-api.json");
                 await File.WriteAllTextAsync(sampleApiFilePath, JsonHelper.SerializeObject(sampleApiTest));
                 ConsoleHelper.WriteSuccess($"Created sample API test: {sampleApiFilePath}");
+                
+                // Create a POST sample with JSON payload
+                var samplePostTest = new ApiDefinition
+                {
+                    Name = "Sample POST API Test",
+                    Uri = "{{baseUrl}}/posts",
+                    Method = "POST",
+                    Headers = new Dictionary<string, string>
+                    {
+                        { "Accept", "application/json" },
+                        { "Content-Type", "application/json" }
+                    },
+                    Payload = "{\n  \"title\": \"Sample Post\",\n  \"body\": \"This is a sample post body\",\n  \"userId\": 1\n}",
+                    PayloadType = PayloadType.Json,
+                    Tests = new List<TestAssertion>
+                    {
+                        new TestAssertion { 
+                            Name = "Status code is created", 
+                            Description = "Status code is 201",
+                            AssertType = "StatusCode",
+                            ExpectedValue = "201"
+                        },
+                        new TestAssertion { 
+                            Name = "Response contains post ID", 
+                            Description = "Response contains id property",
+                            AssertType = "ContainsProperty",
+                            ExpectedValue = "id"
+                        }
+                    }
+                };
+                
+                string samplePostFilePath = Path.Combine(DefaultApiDirectoryName, "sample-post.json");
+                await File.WriteAllTextAsync(samplePostFilePath, JsonHelper.SerializeObject(samplePostTest));
+                ConsoleHelper.WriteSuccess($"Created sample POST API test: {samplePostFilePath}");
 
                 // Save the configuration file
                 await File.WriteAllTextAsync(DefaultConfigFileName, JsonHelper.SerializeObject(configProfile));

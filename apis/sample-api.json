@@ -7,6 +7,8 @@
     "Accept": "application/json"
   },
   "Payload": null,
+  "PayloadType": 0,
+  "Files": null,
   "Tests": [
     {
       "Name": "Status code is successful",

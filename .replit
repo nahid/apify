@@ -28,6 +28,18 @@ args = "APITester-Init"
 task = "workflow.run"
 args = "APITester-RunSample"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestTextPayload"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestFileUpload"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestPostRequest"
+
 [[workflows.workflow]]
 name = "APITester-ListEnv"
 author = "agent"
@@ -59,6 +71,30 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run apis/sample-api.json --verbose"
+
+[[workflows.workflow]]
+name = "TestTextPayload"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run Examples/text-payload-test.json --verbose"
+
+[[workflows.workflow]]
+name = "TestFileUpload"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run Examples/file-upload-test.json --verbose"
+
+[[workflows.workflow]]
+name = "TestPostRequest"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run apis/sample-post.json --verbose"
 
 [deployment]
 run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]

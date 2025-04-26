@@ -1,7 +1,9 @@
 using APITester.Models;
+using APITester.Utils;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace APITester.Services
 {
@@ -29,7 +31,9 @@ namespace APITester.Services
                 {
                     foreach (var header in apiDefinition.Headers)
                     {
-                        if (header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(apiDefinition.Payload))
+                        if (header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) && 
+                            (apiDefinition.PayloadType != PayloadType.None || 
+                             apiDefinition.Files?.Count > 0))
                         {
                             // Content-Type will be set with the content
                             continue;
@@ -38,22 +42,23 @@ namespace APITester.Services
                     }
                 }
 
-                // Add payload for appropriate methods
-                if (!string.IsNullOrEmpty(apiDefinition.Payload) && 
-                    (apiDefinition.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) || 
-                     apiDefinition.Method.Equals("PUT", StringComparison.OrdinalIgnoreCase) || 
-                     apiDefinition.Method.Equals("PATCH", StringComparison.OrdinalIgnoreCase)))
+                // Add content for appropriate methods
+                bool isMethodWithBody = apiDefinition.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) || 
+                                       apiDefinition.Method.Equals("PUT", StringComparison.OrdinalIgnoreCase) || 
+                                       apiDefinition.Method.Equals("PATCH", StringComparison.OrdinalIgnoreCase);
+                
+                if (isMethodWithBody)
                 {
-                    string contentType = "application/json";
-                    if (apiDefinition.Headers != null && 
-                        apiDefinition.Headers.TryGetValue("Content-Type", out string? headerContentType))
+                    // Check for file uploads first (takes precedence if files are present)
+                    if (apiDefinition.Files?.Count > 0)
                     {
-                        contentType = headerContentType;
+                        await AddMultipartFormDataContentAsync(request, apiDefinition);
                     }
-
-                    var content = new StringContent(apiDefinition.Payload, Encoding.UTF8);
-                    content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-                    request.Content = content;
+                    // Then check for payload
+                    else if (!string.IsNullOrEmpty(apiDefinition.Payload))
+                    {
+                        AddPayloadContent(request, apiDefinition);
+                    }
                 }
 
                 // Set timeout
@@ -81,6 +86,129 @@ namespace APITester.Services
             }
 
             return response;
+        }
+
+        private void AddPayloadContent(HttpRequestMessage request, ApiDefinition apiDefinition)
+        {
+            string contentType = "application/json";
+            if (apiDefinition.Headers != null && 
+                apiDefinition.Headers.TryGetValue("Content-Type", out string? headerContentType))
+            {
+                contentType = headerContentType;
+            }
+            else
+            {
+                // Set appropriate content type based on payload type
+                contentType = apiDefinition.PayloadType switch
+                {
+                    PayloadType.Json => "application/json",
+                    PayloadType.Text => "text/plain",
+                    PayloadType.FormData => "application/x-www-form-urlencoded",
+                    _ => "application/json" // Default to JSON
+                };
+            }
+
+            // Process payload based on type
+            StringContent content;
+            switch (apiDefinition.PayloadType)
+            {
+                case PayloadType.Json:
+                    // Try to format JSON if it's not already formatted
+                    try
+                    {
+                        // Verify it's valid JSON and format it
+                        var jsonObj = JsonConvert.DeserializeObject(apiDefinition.Payload!);
+                        string formattedJson = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+                        content = new StringContent(formattedJson, Encoding.UTF8);
+                    }
+                    catch
+                    {
+                        // If not valid JSON or error occurs, use as-is
+                        content = new StringContent(apiDefinition.Payload!, Encoding.UTF8);
+                    }
+                    break;
+
+                case PayloadType.FormData:
+                    // For form data, we need to format as key=value&key2=value2...
+                    try
+                    {
+                        // Try to parse as a dictionary or use as is
+                        var formData = new FormUrlEncodedContent(
+                            JsonConvert.DeserializeObject<Dictionary<string, string>>(apiDefinition.Payload!)!
+                        );
+                        request.Content = formData;
+                        return; // Skip the content-type setting below as FormUrlEncodedContent sets it
+                    }
+                    catch
+                    {
+                        // If not valid JSON dictionary, use as-is
+                        content = new StringContent(apiDefinition.Payload!, Encoding.UTF8);
+                    }
+                    break;
+
+                case PayloadType.Text:
+                default:
+                    content = new StringContent(apiDefinition.Payload!, Encoding.UTF8);
+                    break;
+            }
+
+            content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            request.Content = content;
+        }
+
+        private async Task AddMultipartFormDataContentAsync(HttpRequestMessage request, ApiDefinition apiDefinition)
+        {
+            var multipartContent = new MultipartFormDataContent();
+
+            // Add text fields from payload if specified and if it's a form data payload
+            if (!string.IsNullOrEmpty(apiDefinition.Payload) && apiDefinition.PayloadType == PayloadType.FormData)
+            {
+                try
+                {
+                    var formFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(apiDefinition.Payload);
+                    if (formFields != null)
+                    {
+                        foreach (var field in formFields)
+                        {
+                            multipartContent.Add(new StringContent(field.Value), field.Key);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.WriteWarning($"Error parsing form data payload: {ex.Message}");
+                }
+            }
+
+            // Add files
+            foreach (var file in apiDefinition.Files!)
+            {
+                try
+                {
+                    if (!File.Exists(file.FilePath))
+                    {
+                        ConsoleHelper.WriteWarning($"File not found: {file.FilePath}");
+                        continue;
+                    }
+
+                    // Read file as byte array
+                    var fileBytes = await File.ReadAllBytesAsync(file.FilePath);
+                    var fileContent = new ByteArrayContent(fileBytes);
+                    
+                    // Set the content type for the file
+                    fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+                    
+                    // Set the filename in the Content-Disposition header
+                    string fileName = Path.GetFileName(file.FilePath);
+                    multipartContent.Add(fileContent, file.FieldName, fileName);
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.WriteWarning($"Error adding file {file.FilePath}: {ex.Message}");
+                }
+            }
+
+            request.Content = multipartContent;
         }
     }
 
