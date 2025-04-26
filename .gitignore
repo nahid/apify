@@ -63,3 +63,6 @@ UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/
 *.rptproj.bak
+
+# API Tester specific files
+apify-config.json

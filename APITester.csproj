@@ -37,10 +37,12 @@
     <TrimmerRootAssembly Include="Newtonsoft.Json" />
   </ItemGroup>
 
+  <!-- Copy example files to output directory but exclude from build -->
   <ItemGroup>
-    <None Update="Examples\*.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <None Update="Examples\*.*" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Remove="Examples\**" />
+    <EmbeddedResource Remove="Examples\**" />
+    <None Remove="Examples\**" />
   </ItemGroup>
 
 </Project>
