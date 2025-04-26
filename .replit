@@ -64,6 +64,14 @@ args = "TestFreshJsonPlaceholder"
 task = "workflow.run"
 args = "TestFreshJsonPlaceholderPost"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestBuiltListEnv"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestDebugList"
+
 [[workflows.workflow]]
 name = "APITester-ListEnv"
 author = "agent"
@@ -167,6 +175,22 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run apis/sample-post.json --verbose"
+
+[[workflows.workflow]]
+name = "TestBuiltListEnv"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet build && dotnet run list-env"
+
+[[workflows.workflow]]
+name = "TestDebugList"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run list-env"
 
 [deployment]
 run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]

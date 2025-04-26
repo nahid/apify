@@ -9,8 +9,7 @@ namespace APITester.Models
                                DynamicallyAccessedMemberTypes.PublicConstructors)]
     public class TestEnvironment
     {
-        // This constructor is needed for Native AOT compatibility with JSON deserialization
-        [JsonConstructor]
+        // Default constructor for general use
         public TestEnvironment()
         {
             Name = string.Empty;
@@ -24,6 +23,14 @@ namespace APITester.Models
             Name = name;
             Variables = variables ?? new Dictionary<string, string>();
             Description = description;
+        }
+        
+        // JsonConstructor must be on the default constructor for AOT compatibility
+        [JsonConstructor]
+        private TestEnvironment(bool _) : this()
+        {
+            // This constructor is used by Newtonsoft.Json during deserialization
+            // The properties will be populated through property setters
         }
 
         [JsonProperty("Name")]

@@ -9,13 +9,26 @@ namespace APITester.Models
                                DynamicallyAccessedMemberTypes.PublicConstructors)]
     public class TestEnvironmentConfig
     {
-        // This constructor is needed for Native AOT compatibility with JSON deserialization
-        [JsonConstructor]
+        // Default constructor
         public TestEnvironmentConfig()
         {
             Name = "Default";
             Environments = new List<TestEnvironment>();
             DefaultEnvironment = "Development";
+        }
+
+        // Parameterized constructor for AOT compatibility
+        [JsonConstructor]
+        public TestEnvironmentConfig(
+            [JsonProperty("Name")] string name,
+            [JsonProperty("Description")] string? description,
+            [JsonProperty("Environments")] List<TestEnvironment> environments,
+            [JsonProperty("DefaultEnvironment")] string? defaultEnvironment)
+        {
+            Name = name ?? "Default";
+            Description = description;
+            Environments = environments ?? new List<TestEnvironment>();
+            DefaultEnvironment = defaultEnvironment ?? "Development";
         }
 
         [JsonProperty("Name")]
