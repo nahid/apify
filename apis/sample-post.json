@@ -1,6 +1,5 @@
 {
   "Name": "Sample POST API Test",
-  "Description": null,
   "Uri": "{{baseUrl}}/posts",
   "Method": "POST",
   "Headers": {
@@ -13,25 +12,20 @@
     "userId": 1
   },
   "PayloadType": 2,
-  "Files": null,
   "Tests": [
     {
       "Name": "Status code is created",
       "Description": "Status code is 201",
       "Assertion": "",
       "AssertType": "StatusCode",
-      "Property": null,
-      "ExpectedValue": "201",
-      "Expected": null
+      "ExpectedValue": "201"
     },
     {
       "Name": "Response contains post ID",
       "Description": "Response contains id property",
       "Assertion": "",
       "AssertType": "ContainsProperty",
-      "Property": null,
-      "ExpectedValue": "id",
-      "Expected": null
+      "ExpectedValue": "id"
     }
   ],
   "Timeout": 30000

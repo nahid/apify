@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq; // Add this for JObject
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
@@ -9,7 +10,11 @@ namespace APITester.Utils
         // Add UnconditionalSuppressMessage attribute to suppress trimming warnings
         [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
             Justification = "JSON types are preserved in TrimmerRoots.xml")]
-        public static T? DeserializeFromFile<T>(string filePath)
+        // Add DynamicallyAccessedMembers to ensure properties are preserved
+        public static T? DeserializeFromFile<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | 
+                                       DynamicallyAccessedMemberTypes.PublicProperties)]
+            T>(string filePath)
         {
             if (!File.Exists(filePath))
             {
@@ -54,13 +59,13 @@ namespace APITester.Utils
                         var methodProperty = typeof(T).GetProperty("Method");
                         
                         if (nameProperty != null && jObject["name"] != null)
-                            nameProperty.SetValue(instance, jObject["name"].ToString());
+                            nameProperty.SetValue(instance, jObject["name"]?.ToString() ?? string.Empty);
                         
                         if (uriProperty != null && jObject["uri"] != null)
-                            uriProperty.SetValue(instance, jObject["uri"].ToString());
+                            uriProperty.SetValue(instance, jObject["uri"]?.ToString() ?? string.Empty);
                         
                         if (methodProperty != null && jObject["method"] != null)
-                            methodProperty.SetValue(instance, jObject["method"].ToString());
+                            methodProperty.SetValue(instance, jObject["method"]?.ToString() ?? string.Empty);
                         
                         return instance;
                     }
@@ -76,7 +81,9 @@ namespace APITester.Utils
 
         [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
             Justification = "JSON types are preserved in TrimmerRoots.xml")]
-        public static string? SerializeToJson<T>(T obj, bool indented = true)
+        public static string? SerializeToJson<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
+            T>(T obj, bool indented = true)
         {
             try
             {
