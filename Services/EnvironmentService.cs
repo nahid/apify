@@ -30,49 +30,148 @@ namespace APITester.Services
             try
             {
                 var content = File.ReadAllText(ConfigFileName);
-                var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content);
+                var settings = new JsonSerializerSettings
+                {
+                    Error = (sender, args) => 
+                    {
+                        Console.WriteLine($"JSON Error: {args.ErrorContext.Error.Message}");
+                        args.ErrorContext.Handled = true;
+                    },
+                    MissingMemberHandling = MissingMemberHandling.Ignore,
+                    NullValueHandling = NullValueHandling.Ignore
+                };
+                
+                var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content, settings);
+                
                 if (profile != null)
                 {
                     profiles.Add(profile);
+                }
+                else
+                {
+                    // Create a default profile if deserialization returns null
+                    Console.WriteLine("Creating default profile...");
+                    var defaultProfile = CreateDefaultProfile();
+                    profiles.Add(defaultProfile);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error loading configuration profile from {ConfigFileName}: {ex.Message}");
+                
+                // Create and add a default profile on error
+                Console.WriteLine("No environment profiles found. Creating default profile...");
+                var defaultProfile = CreateDefaultProfile();
+                profiles.Add(defaultProfile);
             }
             
             return profiles;
         }
         
+        private ConfigurationProfile CreateDefaultProfile()
+        {
+            return new ConfigurationProfile
+            {
+                Name = "Default",
+                Description = "Default configuration profile",
+                DefaultEnvironment = "Development",
+                Environments = new List<TestEnvironment>
+                {
+                    new TestEnvironment
+                    {
+                        Name = "Development",
+                        Description = "Development environment",
+                        Variables = new Dictionary<string, string>
+                        {
+                            { "baseUrl", "https://api.example.com" },
+                            { "timeout", "30000" }
+                        }
+                    }
+                }
+            };
+        }
+        
         public bool SetCurrentEnvironment(string profileName, string? environmentName = null)
         {
             var profiles = LoadConfigurationProfiles();
-            var profile = profiles.FirstOrDefault(p => p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
+            var profile = profiles.FirstOrDefault(p => p.Name?.Equals(profileName, StringComparison.OrdinalIgnoreCase) == true);
             
+            // Create a default profile if none exists or the requested one is not found
             if (profile == null)
             {
                 Console.WriteLine($"Configuration profile '{profileName}' not found.");
-                return false;
+                
+                // If we have any profiles, use the first one
+                if (profiles.Count > 0)
+                {
+                    profile = profiles[0];
+                    Console.WriteLine($"Using Profile: {profile.Name}");
+                }
+                else
+                {
+                    // Create a default profile
+                    profile = CreateDefaultProfile();
+                    profiles.Add(profile);
+                    Console.WriteLine($"Created and using default profile: {profile.Name}");
+                }
             }
-            
-            string envName = environmentName ?? profile.DefaultEnvironment ?? profile.Environments.FirstOrDefault()?.Name ?? string.Empty;
-            
-            if (string.IsNullOrEmpty(envName))
+            else
             {
-                Console.WriteLine($"No environment specified or found in profile '{profileName}'.");
-                return false;
+                Console.WriteLine($"Using Profile: {profile.Name}");
             }
             
-            var environment = profile.Environments.FirstOrDefault(e => e.Name.Equals(envName, StringComparison.OrdinalIgnoreCase));
+            // Ensure the profile has environments
+            if (profile.Environments == null || profile.Environments.Count == 0)
+            {
+                // Add a default environment
+                profile.Environments = new List<TestEnvironment>
+                {
+                    new TestEnvironment
+                    {
+                        Name = "Development",
+                        Description = "Development environment",
+                        Variables = new Dictionary<string, string>
+                        {
+                            { "baseUrl", "https://api.example.com" },
+                            { "timeout", "30000" }
+                        }
+                    }
+                };
+                Console.WriteLine("Added default environment to profile.");
+            }
             
+            string envName = environmentName ?? profile.DefaultEnvironment ?? profile.Environments.FirstOrDefault()?.Name ?? "Development";
+            
+            var environment = profile.Environments.FirstOrDefault(e => e.Name?.Equals(envName, StringComparison.OrdinalIgnoreCase) == true);
+            
+            // If environment is not found, use the first one or create a default
             if (environment == null)
             {
-                Console.WriteLine($"Environment '{envName}' not found in profile '{profileName}'.");
-                return false;
+                if (profile.Environments.Count > 0)
+                {
+                    environment = profile.Environments[0];
+                    Console.WriteLine($"Environment '{envName}' not found. Using '{environment.Name}' instead.");
+                }
+                else
+                {
+                    // Create a default environment
+                    environment = new TestEnvironment
+                    {
+                        Name = "Development",
+                        Description = "Development environment",
+                        Variables = new Dictionary<string, string>
+                        {
+                            { "baseUrl", "https://api.example.com" },
+                            { "timeout", "30000" }
+                        }
+                    };
+                    profile.Environments.Add(environment);
+                    Console.WriteLine($"Created and using default environment: {environment.Name}");
+                }
             }
             
             _currentEnvironment = environment;
-            Console.WriteLine($"Using environment: {environment.Name}");
+            Console.WriteLine($"Active Environment: {environment.Name}");
             return true;
         }
         
