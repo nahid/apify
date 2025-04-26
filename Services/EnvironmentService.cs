@@ -11,7 +11,7 @@ namespace APITester.Services
 {
     public class EnvironmentService
     {
-        private const string EnvironmentFolderName = "Environments";
+        private const string ConfigFileName = "apify-config.json";
         private static readonly Regex VariablePattern = new Regex(@"{{(.+?)}}", RegexOptions.Compiled);
         
         private TestEnvironment? _currentEnvironment;
@@ -22,27 +22,23 @@ namespace APITester.Services
         {
             var profiles = new List<ConfigurationProfile>();
             
-            if (!Directory.Exists(EnvironmentFolderName))
+            if (!File.Exists(ConfigFileName))
             {
-                Directory.CreateDirectory(EnvironmentFolderName);
                 return profiles;
             }
             
-            foreach (var file in Directory.GetFiles(EnvironmentFolderName, "*.json"))
+            try
             {
-                try
+                var content = File.ReadAllText(ConfigFileName);
+                var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content);
+                if (profile != null)
                 {
-                    var content = File.ReadAllText(file);
-                    var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content);
-                    if (profile != null)
-                    {
-                        profiles.Add(profile);
-                    }
+                    profiles.Add(profile);
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error loading configuration profile from {file}: {ex.Message}");
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading configuration profile from {ConfigFileName}: {ex.Message}");
             }
             
             return profiles;
@@ -217,9 +213,11 @@ namespace APITester.Services
         
         public void CreateDefaultEnvironmentFile()
         {
-            if (!Directory.Exists(EnvironmentFolderName))
+            // Check if config file already exists
+            if (File.Exists(ConfigFileName))
             {
-                Directory.CreateDirectory(EnvironmentFolderName);
+                Console.WriteLine($"Configuration file '{ConfigFileName}' already exists.");
+                return;
             }
             
             var defaultProfile = new ConfigurationProfile
@@ -254,11 +252,10 @@ namespace APITester.Services
                 }
             };
             
-            var filePath = Path.Combine(EnvironmentFolderName, "default.json");
             var json = JsonConvert.SerializeObject(defaultProfile, Formatting.Indented);
-            File.WriteAllText(filePath, json);
+            File.WriteAllText(ConfigFileName, json);
             
-            Console.WriteLine($"Created default environment file at {filePath}");
+            Console.WriteLine($"Created configuration file at {ConfigFileName}");
         }
     }
 }

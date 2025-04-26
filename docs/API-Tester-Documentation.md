@@ -2,7 +2,7 @@
 
 ## Overview
 
-API Tester is a robust command-line tool designed for API testing and validation. It allows developers to define API tests in JSON format and execute them against endpoints, providing detailed output of the request, response, and test results. The tool offers environment management, variable substitution, and support for various payload types and file uploads.
+API Tester is a robust command-line tool designed for API testing and validation. It allows developers to define API tests in JSON format and execute them against endpoints, providing detailed output of the request, response, and test results. The tool offers centralized environment management, variable substitution, and support for various payload types and file uploads.
 
 ## Table of Contents
 
@@ -81,7 +81,7 @@ dotnet run init --name "My API Project" --base-url "https://api.example.com"
 
 This will:
 - Create a `apis` directory to store your API test definitions
-- Generate a default configuration file `apify-config.json` with development and production environments
+- Generate a configuration file `apify-config.json` with development and production environments
 - Create sample API test files in the `apis` directory
 
 ### Running Your First Test
