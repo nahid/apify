@@ -1,0 +1,40 @@
+{
+  "Name": "Sample API Test",
+  "Description": null,
+  "Uri": "{{baseUrl}}/users/1",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "application/json"
+  },
+  "Payload": null,
+  "Tests": [
+    {
+      "Name": "Status code is successful",
+      "Description": "Status code is 200",
+      "Assertion": "",
+      "AssertType": "StatusCode",
+      "Property": null,
+      "ExpectedValue": "200",
+      "Expected": null
+    },
+    {
+      "Name": "Response format is JSON",
+      "Description": "Content-Type header is application/json",
+      "Assertion": "",
+      "AssertType": "HeaderContains",
+      "Property": "Content-Type",
+      "ExpectedValue": "application/json",
+      "Expected": null
+    },
+    {
+      "Name": "Response contains user data",
+      "Description": "Response contains user id",
+      "Assertion": "",
+      "AssertType": "ContainsProperty",
+      "Property": null,
+      "ExpectedValue": "id",
+      "Expected": null
+    }
+  ],
+  "Timeout": 30000
+}

@@ -21,6 +21,11 @@ namespace APITester.Utils
             return JsonConvert.SerializeObject(obj, indented ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None);
         }
 
+        public static string SerializeObject<T>(T obj, bool indented = true)
+        {
+            return JsonConvert.SerializeObject(obj, indented ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None);
+        }
+
         public static bool IsValidJson(string json)
         {
             try

@@ -23,7 +23,12 @@ namespace APITester.Commands
                 ListEnvironments();
             });
             
+            // Add the init command
+            var initCommand = new InitCommand();
+            
+            // Add commands to root command
             Command.AddCommand(listEnvCommand);
+            Command.AddCommand(initCommand);
         }
         
         private void ListEnvironments()

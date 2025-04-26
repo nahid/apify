@@ -21,6 +21,7 @@ namespace APITester
 
             // Add subcommands
             rootCommand.AddCommand(new RunCommand().Command);
+            rootCommand.AddCommand(new InitCommand());
 
             // Parse and execute
             return await rootCommand.InvokeAsync(args);

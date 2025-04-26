@@ -1,0 +1,23 @@
+{
+  "Name": "Default",
+  "Description": "Configuration for Test API Project",
+  "Environments": [
+    {
+      "Name": "Development",
+      "Variables": {
+        "baseUrl": "https://api.example.com",
+        "timeout": "30000"
+      },
+      "Description": "Development environment"
+    },
+    {
+      "Name": "Production",
+      "Variables": {
+        "baseUrl": "https://api.example.com",
+        "timeout": "30000"
+      },
+      "Description": "Production environment"
+    }
+  ],
+  "DefaultEnvironment": "Development"
+}
