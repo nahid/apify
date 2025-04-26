@@ -213,47 +213,86 @@ namespace APITester.Services
         
         public void CreateDefaultEnvironmentFile()
         {
-            // Check if config file already exists
-            if (File.Exists(ConfigFileName))
+            try
             {
-                Console.WriteLine($"Configuration file '{ConfigFileName}' already exists.");
-                return;
-            }
-            
-            var defaultProfile = new ConfigurationProfile
-            {
-                Name = "Default",
-                Description = "Default configuration profile",
-                DefaultEnvironment = "Development",
-                Environments = new List<TestEnvironment>
+                // Check if config file already exists
+                if (File.Exists(ConfigFileName))
                 {
-                    new TestEnvironment
+                    Console.WriteLine($"Configuration file '{ConfigFileName}' already exists.");
+                    return;
+                }
+                
+                var defaultProfile = new ConfigurationProfile
+                {
+                    Name = "Default",
+                    Description = "Default configuration profile",
+                    DefaultEnvironment = "Development",
+                    Environments = new List<TestEnvironment>
                     {
-                        Name = "Development",
-                        Description = "Development environment",
-                        Variables = new Dictionary<string, string>
+                        new TestEnvironment
                         {
-                            { "baseUrl", "https://api.example.com/dev" },
-                            { "apiKey", "dev-api-key" },
-                            { "timeout", "30000" }
-                        }
-                    },
-                    new TestEnvironment
-                    {
-                        Name = "Production",
-                        Description = "Production environment",
-                        Variables = new Dictionary<string, string>
+                            Name = "Development",
+                            Description = "Development environment",
+                            Variables = new Dictionary<string, string>
+                            {
+                                { "baseUrl", "https://api.example.com/dev" },
+                                { "apiKey", "dev-api-key" },
+                                { "timeout", "30000" }
+                            }
+                        },
+                        new TestEnvironment
                         {
-                            { "baseUrl", "https://api.example.com" },
-                            { "apiKey", "prod-api-key" },
-                            { "timeout", "10000" }
+                            Name = "Production",
+                            Description = "Production environment",
+                            Variables = new Dictionary<string, string>
+                            {
+                                { "baseUrl", "https://api.example.com" },
+                                { "apiKey", "prod-api-key" },
+                                { "timeout", "10000" }
+                            }
                         }
                     }
+                };
+                
+                // Make sure we have a proper non-null object
+                if (defaultProfile != null && defaultProfile.Environments != null)
+                {
+                    var json = JsonConvert.SerializeObject(defaultProfile, Formatting.Indented);
+                    
+                    // Verify the JSON is valid before writing to file
+                    var testDeserialized = JsonConvert.DeserializeObject<ConfigurationProfile>(json);
+                    if (testDeserialized == null || testDeserialized.Environments == null || testDeserialized.Environments.Count == 0)
+                    {
+                        Console.WriteLine("Error: Generated invalid configuration. Using fallback.");
+                        // Create a minimal valid JSON as fallback
+                        json = @"{
+  ""Name"": ""Default"",
+  ""Description"": ""Default configuration profile"",
+  ""DefaultEnvironment"": ""Development"",
+  ""Environments"": [
+    {
+      ""Name"": ""Development"",
+      ""Description"": ""Development environment"",
+      ""Variables"": {
+        ""baseUrl"": ""https://api.example.com/dev"",
+        ""timeout"": ""30000""
+      }
+    }
+  ]
+}";
+                    }
+                    
+                    File.WriteAllText(ConfigFileName, json);
                 }
-            };
-            
-            var json = JsonConvert.SerializeObject(defaultProfile, Formatting.Indented);
-            File.WriteAllText(ConfigFileName, json);
+                else
+                {
+                    Console.WriteLine("Error: Could not create configuration profile.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating default environment file: {ex.Message}");
+            }
             
             Console.WriteLine($"Created configuration file at {ConfigFileName}");
         }

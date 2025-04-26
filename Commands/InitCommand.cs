@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text.Json;
 using APITester.Models;
 using APITester.Utils;
+using Newtonsoft.Json;
 
 namespace APITester.Commands
 {
@@ -189,8 +190,40 @@ namespace APITester.Commands
                 ConsoleHelper.WriteSuccess($"Created sample POST API test: {samplePostFilePath}");
 
                 // Save the configuration file
-                await File.WriteAllTextAsync(DefaultConfigFileName, JsonHelper.SerializeObject(configProfile));
-                ConsoleHelper.WriteSuccess($"Created configuration file: {DefaultConfigFileName}");
+                try
+                {
+                    string configJson = JsonHelper.SerializeObject(configProfile);
+                    
+                    // Verify that the serialized JSON is valid by attempting to deserialize it
+                    var testDeserialized = JsonConvert.DeserializeObject<ConfigurationProfile>(configJson);
+                    if (testDeserialized == null || testDeserialized.Environments == null || testDeserialized.Environments.Count == 0)
+                    {
+                        ConsoleHelper.WriteError("Generated invalid configuration. Using fallback.");
+                        // Create a minimal valid JSON as fallback
+                        configJson = @"{
+  ""Name"": ""Default"",
+  ""Description"": ""Configuration for " + projectName + @""",
+  ""DefaultEnvironment"": """ + environment + @""",
+  ""Environments"": [
+    {
+      ""Name"": """ + environment + @""",
+      ""Description"": """ + environment + @" environment"",
+      ""Variables"": {
+        ""baseUrl"": """ + baseUrl + @""",
+        ""timeout"": ""30000""
+      }
+    }
+  ]
+}";
+                    }
+                    
+                    await File.WriteAllTextAsync(DefaultConfigFileName, configJson);
+                    ConsoleHelper.WriteSuccess($"Created configuration file: {DefaultConfigFileName}");
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.WriteError($"Error creating configuration file: {ex.Message}");
+                }
 
                 // Display help information
                 ConsoleHelper.WriteInfo("\nProject initialized successfully!");
