@@ -21,56 +21,54 @@ namespace APITester.Services
         
         public EnvironmentService()
         {
-            // Find the configuration file in the current directory or parent directories
-            _configFilePath = FindConfigFile();
+            // Always use the current directory for finding the config file
+            _configFilePath = Path.Combine(Directory.GetCurrentDirectory(), ConfigFileName);
         }
         
-        private string FindConfigFile()
+        // Function to get the configuration file path - always uses current working directory
+        private string GetConfigFilePath()
         {
-            // First check the current directory
-            if (File.Exists(ConfigFileName))
+            // Always update to the current directory in case it has changed
+            string currentPath = Path.Combine(Directory.GetCurrentDirectory(), ConfigFileName);
+            
+            if (File.Exists(currentPath))
             {
-                Console.WriteLine($"Using configuration file: {Path.GetFullPath(ConfigFileName)}");
-                return ConfigFileName;
+                Console.WriteLine($"Using configuration file from current directory: {currentPath}");
+                _configFilePath = currentPath;
+                return currentPath;
             }
             
-            // Try to find in parent directories (up to 3 levels)
-            var currentDir = Directory.GetCurrentDirectory();
-            for (int i = 0; i < 3; i++)
+            Console.WriteLine($"Configuration file not found in current directory: {currentPath}");
+            
+            // If not found, check if we have a previously found path to use
+            if (_configFilePath != null && File.Exists(_configFilePath))
             {
-                var parentDir = Directory.GetParent(currentDir);
-                if (parentDir == null)
-                    break;
-                    
-                currentDir = parentDir.FullName;
-                var configPath = Path.Combine(currentDir, ConfigFileName);
-                
-                if (File.Exists(configPath))
-                {
-                    Console.WriteLine($"Using configuration file from parent directory: {configPath}");
-                    return configPath;
-                }
+                Console.WriteLine($"Using previously found configuration file: {_configFilePath}");
+                return _configFilePath;
             }
             
-            // If not found, default to the working directory
-            Console.WriteLine($"Configuration file not found in current or parent directories. Using default path: {ConfigFileName}");
-            return ConfigFileName;
+            // Return the path in the current directory even if it doesn't exist yet
+            // (it might be created later)
+            _configFilePath = currentPath;
+            return currentPath;
         }
 
         public List<ConfigurationProfile> LoadConfigurationProfiles()
         {
             var profiles = new List<ConfigurationProfile>();
             
-            // Use the discovered config file path
-            if (!File.Exists(_configFilePath))
+            // Always get the latest config file path from the current directory
+            string configPath = GetConfigFilePath();
+            
+            if (!File.Exists(configPath))
             {
-                Console.WriteLine($"Configuration file not found at {_configFilePath}");
+                Console.WriteLine($"Configuration file not found at {configPath}");
                 return profiles;
             }
             
             try
             {
-                var content = File.ReadAllText(_configFilePath);
+                var content = File.ReadAllText(configPath);
                 var settings = new JsonSerializerSettings
                 {
                     Error = (sender, args) => 
@@ -98,7 +96,7 @@ namespace APITester.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading configuration profile from {_configFilePath}: {ex.Message}");
+                Console.WriteLine($"Error loading configuration profile from {configPath}: {ex.Message}");
                 
                 // Create and add a default profile on error
                 Console.WriteLine("No environment profiles found. Creating default profile...");
@@ -403,7 +401,7 @@ namespace APITester.Services
         {
             try
             {
-                // Use the current directory for the config file
+                // Always use the current directory for the config file
                 string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), ConfigFileName);
                 
                 // Check if config file already exists
@@ -412,6 +410,9 @@ namespace APITester.Services
                     Console.WriteLine($"Configuration file '{configFilePath}' already exists.");
                     return;
                 }
+                
+                // Update the current path
+                _configFilePath = configFilePath;
                 
                 var defaultProfile = new ConfigurationProfile
                 {
