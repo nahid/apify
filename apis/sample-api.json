@@ -6,7 +6,7 @@
   "Headers": {
     "Accept": "application/json"
   },
-  "Payload": null,
+  "payload": null,
   "PayloadType": 0,
   "Files": null,
   "Tests": [

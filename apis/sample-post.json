@@ -7,7 +7,11 @@
     "Accept": "application/json",
     "Content-Type": "application/json"
   },
-  "Payload": "{\n  \"title\": \"Sample Post\",\n  \"body\": \"This is a sample post body\",\n  \"userId\": 1\n}",
+  "payload": {
+    "title": "Sample Post",
+    "body": "This is a sample post body",
+    "userId": 1
+  },
   "PayloadType": 2,
   "Files": null,
   "Tests": [
