@@ -1,6 +1,6 @@
 {
   "Name": "Sample API Test",
-  "Uri": "{{baseUrl}}/get",
+  "Uri": "{{baseUrl}}/posts/1",
   "Method": "GET",
   "Headers": {
     "Accept": "application/json"
@@ -23,11 +23,11 @@
       "ExpectedValue": "application/json"
     },
     {
-      "Name": "Response contains url data",
-      "Description": "Response contains url property",
+      "Name": "Response contains id property",
+      "Description": "Response contains id property",
       "Assertion": "",
       "AssertType": "ContainsProperty",
-      "ExpectedValue": "url"
+      "ExpectedValue": "id"
     }
   ],
   "Timeout": 30000

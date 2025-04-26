@@ -51,9 +51,9 @@ namespace APITester.Commands
                 }
             }
             
-            ConsoleHelper.WriteSection("Available Configuration Profile:");
+            ConsoleHelper.WriteSection("Available Configuration:");
             
-            ConsoleHelper.WriteLineColored($"Profile: {profile.Name}", ConsoleColor.Cyan);
+            ConsoleHelper.WriteLineColored($"Name: {profile.Name}", ConsoleColor.Cyan);
             
             if (!string.IsNullOrEmpty(profile.Description))
             {

@@ -49,19 +49,18 @@ namespace APITester.Services
             return currentPath;
         }
 
-        public ConfigurationProfile LoadConfigurationProfile()
+        public TestEnvironmentConfig LoadConfigurationProfile()
         {
             // Always get the latest config file path from the current directory
             string configPath = GetConfigFilePath();
             
-            // Create a default profile that will be used if we can't load from file
-            var defaultProfile = CreateDefaultProfile();
+            // Create a default config that will be used if we can't load from file
+            var defaultConfig = CreateDefaultConfig();
             
             if (!File.Exists(configPath))
             {
                 Console.WriteLine($"Configuration file not found at {configPath}");
-                Console.WriteLine($"Using default profile: {defaultProfile.Name}");
-                return defaultProfile;
+                return defaultConfig;
             }
             
             try
@@ -70,8 +69,7 @@ namespace APITester.Services
                 if (string.IsNullOrWhiteSpace(content))
                 {
                     Console.WriteLine($"Configuration file at {configPath} is empty");
-                    Console.WriteLine($"Using default profile: {defaultProfile.Name}");
-                    return defaultProfile;
+                    return defaultConfig;
                 }
                 
                 var settings = new JsonSerializerSettings
@@ -88,52 +86,42 @@ namespace APITester.Services
                     MetadataPropertyHandling = MetadataPropertyHandling.Ignore
                 };
                 
-                // Try to deserialize the profile
-                var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content, settings);
+                // Try to deserialize the config
+                var config = JsonConvert.DeserializeObject<TestEnvironmentConfig>(content, settings);
                 
-                if (profile != null)
+                if (config != null)
                 {
-                    // If the profile has a null or empty Name, set it to "Default"
-                    if (string.IsNullOrEmpty(profile.Name))
-                    {
-                        profile.Name = "Default";
-                        Console.WriteLine("Profile name was empty, set to 'Default'");
-                    }
-                    
-                    Console.WriteLine($"Successfully loaded profile: {profile.Name}");
+                    Console.WriteLine("Successfully loaded environment configuration");
                     
                     // Ensure Environments collection is initialized
-                    if (profile.Environments == null)
+                    if (config.Environments == null)
                     {
-                        profile.Environments = new List<TestEnvironment>();
-                        Console.WriteLine("Initialized empty Environments collection for profile");
+                        config.Environments = new List<TestEnvironment>();
+                        Console.WriteLine("Initialized empty Environments collection");
                     }
                     
-                    return profile;
+                    return config;
                 }
                 
                 // If deserialize failed, fall back to default
-                Console.WriteLine("Deserialization failed, using default profile");
-                return defaultProfile;
+                Console.WriteLine("Deserialization failed, using default configuration");
+                return defaultConfig;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading configuration profile from {configPath}: {ex.Message}");
-                Console.WriteLine($"Using default profile: {defaultProfile.Name}");
-                return defaultProfile;
+                Console.WriteLine($"Error loading configuration from {configPath}: {ex.Message}");
+                return defaultConfig;
             }
         }
         
-        private ConfigurationProfile CreateDefaultProfile()
+        private TestEnvironmentConfig CreateDefaultConfig()
         {
             // Use a default URL for testing, which can be overridden by config file
             // Using httpbin.org as it's a reliable testing endpoint with both GET and POST support
             string baseUrl = "https://httpbin.org"; 
             
-            return new ConfigurationProfile
+            return new TestEnvironmentConfig
             {
-                Name = "Default",
-                Description = "Default configuration profile",
                 DefaultEnvironment = "Development",
                 Environments = new List<TestEnvironment>
                 {
@@ -153,28 +141,16 @@ namespace APITester.Services
             };
         }
         
-        public bool SetCurrentEnvironment(string profileName, string? environmentName = null)
+        public bool SetCurrentEnvironment(string? environmentName = null)
         {
-            // Load the single profile from the current directory
-            var profile = LoadConfigurationProfile();
+            // Load the configuration from the current directory
+            var config = LoadConfigurationProfile();
             
-            // Simply display the profile information
-            Console.WriteLine($"Using Profile: {profile.Name}");
-            
-            // If profile doesn't match what was requested, show an informational message
-            if (!string.IsNullOrEmpty(profileName) && 
-                !profileName.Equals(profile.Name, StringComparison.OrdinalIgnoreCase) && 
-                !profileName.Equals("Default", StringComparison.OrdinalIgnoreCase))
-            {
-                Console.WriteLine($"Note: Requested profile '{profileName}' does not match loaded profile '{profile.Name}'");
-                Console.WriteLine("Configuration is loaded only from the current directory's apify-config.json file");
-            }
-            
-            // Ensure the profile has environments
-            if (profile.Environments == null || profile.Environments.Count == 0)
+            // Ensure the config has environments
+            if (config.Environments == null || config.Environments.Count == 0)
             {
                 // Add a default environment
-                profile.Environments = new List<TestEnvironment>
+                config.Environments = new List<TestEnvironment>
                 {
                     new TestEnvironment
                     {
@@ -189,19 +165,19 @@ namespace APITester.Services
                         }
                     }
                 };
-                Console.WriteLine("Added default environment to profile.");
+                Console.WriteLine("Added default environment to configuration.");
             }
             
-            string envName = environmentName ?? profile.DefaultEnvironment ?? profile.Environments.FirstOrDefault()?.Name ?? "Development";
+            string envName = environmentName ?? config.DefaultEnvironment ?? config.Environments.FirstOrDefault()?.Name ?? "Development";
             
-            var environment = profile.Environments.FirstOrDefault(e => e.Name?.Equals(envName, StringComparison.OrdinalIgnoreCase) == true);
+            var environment = config.Environments.FirstOrDefault(e => e.Name?.Equals(envName, StringComparison.OrdinalIgnoreCase) == true);
             
             // If environment is not found, use the first one or create a default
             if (environment == null)
             {
-                if (profile.Environments.Count > 0)
+                if (config.Environments.Count > 0)
                 {
-                    environment = profile.Environments[0];
+                    environment = config.Environments[0];
                     Console.WriteLine($"Environment '{envName}' not found. Using '{environment.Name}' instead.");
                 }
                 else
@@ -219,7 +195,7 @@ namespace APITester.Services
                             { "apiKey", "dev-api-key" }
                         }
                     };
-                    profile.Environments.Add(environment);
+                    config.Environments.Add(environment);
                     Console.WriteLine($"Created and using default environment: {environment.Name}");
                 }
             }
@@ -430,11 +406,11 @@ namespace APITester.Services
                     return;
                 }
                 
-                // Create a default profile
-                var defaultProfile = CreateDefaultProfile();
+                // Create a default configuration
+                var defaultConfig = CreateDefaultConfig();
                 
                 // Serialize to JSON
-                var json = JsonConvert.SerializeObject(defaultProfile, Formatting.Indented);
+                var json = JsonConvert.SerializeObject(defaultConfig, Formatting.Indented);
                 
                 // Write to file
                 File.WriteAllText(filePath, json);

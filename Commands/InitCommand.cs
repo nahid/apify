@@ -107,8 +107,8 @@ namespace APITester.Commands
                     }
                 };
 
-                // Create configuration profile
-                var configProfile = new ConfigurationProfile
+                // Create environment configuration
+                var config = new TestEnvironmentConfig
                 {
                     Name = "Default",
                     Description = $"Configuration for {projectName}",
@@ -120,7 +120,7 @@ namespace APITester.Commands
                 var sampleApiTest = new ApiDefinition
                 {
                     Name = "Sample API Test",
-                    Uri = "{{baseUrl}}/get",
+                    Uri = "{{baseUrl}}/posts/1",
                     Method = "GET",
                     Headers = new Dictionary<string, string>
                     {
@@ -143,10 +143,10 @@ namespace APITester.Commands
                             ExpectedValue = "application/json"
                         },
                         new TestAssertion { 
-                            Name = "Response contains url data", 
-                            Description = "Response contains url property",
+                            Name = "Response contains id property", 
+                            Description = "Response contains id property",
                             AssertType = "ContainsProperty",
-                            ExpectedValue = "url"
+                            ExpectedValue = "id"
                         }
                     }
                 };
@@ -160,7 +160,7 @@ namespace APITester.Commands
                 var samplePostTest = new ApiDefinition
                 {
                     Name = "Sample POST API Test",
-                    Uri = "{{baseUrl}}/post",
+                    Uri = "{{baseUrl}}/posts",
                     Method = "POST",
                     Headers = new Dictionary<string, string>
                     {
@@ -177,16 +177,22 @@ namespace APITester.Commands
                     Tests = new List<TestAssertion>
                     {
                         new TestAssertion { 
-                            Name = "Status code is OK", 
-                            Description = "Status code is 200",
+                            Name = "Status code is Created", 
+                            Description = "Status code is 201",
                             AssertType = "StatusCode",
-                            ExpectedValue = "200"
+                            ExpectedValue = "201"
                         },
                         new TestAssertion { 
-                            Name = "Response contains JSON data", 
-                            Description = "Response contains json property",
+                            Name = "Response contains id property", 
+                            Description = "Response contains id property",
                             AssertType = "ContainsProperty",
-                            ExpectedValue = "json"
+                            ExpectedValue = "id"
+                        },
+                        new TestAssertion { 
+                            Name = "Response contains title property", 
+                            Description = "Response contains title property",
+                            AssertType = "ContainsProperty",
+                            ExpectedValue = "title"
                         }
                     }
                 };
@@ -198,7 +204,7 @@ namespace APITester.Commands
                 // Save the configuration file
                 try
                 {
-                    string configJson = JsonHelper.SerializeObject(configProfile);
+                    string configJson = JsonHelper.SerializeObject(config);
                     
                     // Skip the validation step that's causing issues
                     bool useRawJson = false;
@@ -211,7 +217,7 @@ namespace APITester.Commands
                             MissingMemberHandling = MissingMemberHandling.Ignore,
                             NullValueHandling = NullValueHandling.Ignore
                         };
-                        var testObject = JsonConvert.DeserializeObject<ConfigurationProfile>(configJson, jsonSettings);
+                        var testObject = JsonConvert.DeserializeObject<TestEnvironmentConfig>(configJson, jsonSettings);
                         
                         // Check if the deserialized object is valid
                         if (testObject == null || testObject.Environments == null || testObject.Environments.Count == 0)

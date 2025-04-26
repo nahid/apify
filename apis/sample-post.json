@@ -1,6 +1,6 @@
 {
   "Name": "Sample POST API Test",
-  "Uri": "{{baseUrl}}/post",
+  "Uri": "{{baseUrl}}/posts",
   "Method": "POST",
   "Headers": {
     "Accept": "application/json",
@@ -14,18 +14,25 @@
   "PayloadType": 2,
   "Tests": [
     {
-      "Name": "Status code is OK",
-      "Description": "Status code is 200",
+      "Name": "Status code is Created",
+      "Description": "Status code is 201",
       "Assertion": "",
       "AssertType": "StatusCode",
-      "ExpectedValue": "200"
+      "ExpectedValue": "201"
     },
     {
-      "Name": "Response contains JSON data",
-      "Description": "Response contains json property",
+      "Name": "Response contains id property",
+      "Description": "Response contains id property",
       "Assertion": "",
       "AssertType": "ContainsProperty",
-      "ExpectedValue": "json"
+      "ExpectedValue": "id"
+    },
+    {
+      "Name": "Response contains title property",
+      "Description": "Response contains title property",
+      "Assertion": "",
+      "AssertType": "ContainsProperty",
+      "ExpectedValue": "title"
     }
   ],
   "Timeout": 30000

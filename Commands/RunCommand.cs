@@ -65,14 +65,13 @@ namespace APITester.Commands
                 profile = environmentService.LoadConfigurationProfile();
             }
 
-            // Set active environment - this will now use the single profile approach
-            string profileToUse = profileName ?? "Default";
-            if (!environmentService.SetCurrentEnvironment(profileToUse, environmentName))
+            // Set active environment - we don't need profile name anymore
+            if (!environmentService.SetCurrentEnvironment(environmentName))
             {
                 return; // Error message already displayed by the service
             }
 
-            ConsoleHelper.WriteKeyValue("Using Profile", profileToUse);
+            ConsoleHelper.WriteKeyValue("Using Configuration", "From current directory");
             
             var currentEnv = environmentService.CurrentEnvironment;
             ConsoleHelper.WriteKeyValue("Active Environment", currentEnv?.Name ?? "None");
@@ -322,31 +321,31 @@ namespace APITester.Commands
             }
         }
         
-        private void ListEnvironments(ConfigurationProfile profile)
+        private void ListEnvironments(TestEnvironmentConfig config)
         {
-            if (profile == null)
+            if (config == null)
             {
-                ConsoleHelper.WriteInfo("No environment profile found.");
+                ConsoleHelper.WriteInfo("No environment configuration found.");
                 return;
             }
             
-            ConsoleHelper.WriteSection("Available Configuration Profile:");
+            ConsoleHelper.WriteSection("Available Configuration:");
             
-            ConsoleHelper.WriteLineColored($"Profile: {profile.Name}", ConsoleColor.Cyan);
+            ConsoleHelper.WriteLineColored($"Name: {config.Name}", ConsoleColor.Cyan);
             
-            if (!string.IsNullOrEmpty(profile.Description))
+            if (!string.IsNullOrEmpty(config.Description))
             {
-                ConsoleHelper.WriteLineColored($"  Description: {profile.Description}", ConsoleColor.DarkGray);
+                ConsoleHelper.WriteLineColored($"  Description: {config.Description}", ConsoleColor.DarkGray);
             }
             
-            if (!string.IsNullOrEmpty(profile.DefaultEnvironment))
+            if (!string.IsNullOrEmpty(config.DefaultEnvironment))
             {
-                ConsoleHelper.WriteLineColored($"  Default Environment: {profile.DefaultEnvironment}", ConsoleColor.DarkCyan);
+                ConsoleHelper.WriteLineColored($"  Default Environment: {config.DefaultEnvironment}", ConsoleColor.DarkCyan);
             }
             
             ConsoleHelper.WriteLineColored("  Environments:", ConsoleColor.White);
             
-            foreach (var env in profile.Environments)
+            foreach (var env in config.Environments)
             {
                 ConsoleHelper.WriteLineColored($"    - {env.Name}", ConsoleColor.Green);
                 
