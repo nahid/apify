@@ -1,0 +1,33 @@
+{
+  "name": "Create User API Test",
+  "description": "Tests the user creation endpoint",
+  "uri": "https://jsonplaceholder.typicode.com/users",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+  },
+  "payload": "{\"name\":\"John Doe\",\"username\":\"johndoe\",\"email\":\"john.doe@example.com\"}",
+  "tests": [
+    {
+      "name": "Status code is 201 (Created)",
+      "assertion": "status == 201"
+    },
+    {
+      "name": "Response contains created user ID",
+      "assertion": "response.body contains \"id\""
+    },
+    {
+      "name": "Created user has correct name",
+      "assertion": "response.body.$.name == \"John Doe\""
+    },
+    {
+      "name": "Created user has correct email",
+      "assertion": "response.body.$.email == \"john.doe@example.com\""
+    },
+    {
+      "name": "Response time is acceptable",
+      "assertion": "response.time < 2000"
+    }
+  ]
+}

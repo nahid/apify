@@ -1,0 +1,40 @@
+modules = ["dotnet"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["dotnet-sdk"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "APITester"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "apitester"
+
+[[workflows.workflow]]
+name = "APITester"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "dotnet run run Examples/get-user.json"
+
+[[workflows.workflow]]
+name = "apitester"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "dotnet build && dotnet run run Examples/get-user.json"
+
+[deployment]
+run = ["sh", "-c", "dotnet run run Examples/get-user.json"]

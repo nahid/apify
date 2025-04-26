@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "b85aNlQeu3kSJIRsQWYTNeZDty/fqTl6ZBaHw1eUgDyWPAl7whsDBfbfzfT5IWQJ1cUPIawaQ5pMqdpx8JtIOQ==",
+  "success": true,
+  "projectFilePath": "/home/runner/workspace/APITester.csproj",
+  "expectedPackageFiles": [
+    "/home/runner/.nuget/packages/consoletableext/3.2.0/consoletableext.3.2.0.nupkg.sha512",
+    "/home/runner/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512",
+    "/home/runner/.nuget/packages/system.commandline/2.0.0-beta4.22272.1/system.commandline.2.0.0-beta4.22272.1.nupkg.sha512"
+  ],
+  "logs": []
+}
