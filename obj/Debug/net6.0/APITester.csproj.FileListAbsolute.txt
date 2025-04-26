@@ -1,8 +1,3 @@
-/home/runner/workspace/obj/Debug/net6.0/APITester.csproj.AssemblyReference.cache
-/home/runner/workspace/obj/Debug/net6.0/APITester.GeneratedMSBuildEditorConfig.editorconfig
-/home/runner/workspace/obj/Debug/net6.0/APITester.AssemblyInfoInputs.cache
-/home/runner/workspace/obj/Debug/net6.0/APITester.AssemblyInfo.cs
-/home/runner/workspace/obj/Debug/net6.0/APITester.csproj.CoreCompileInputs.cache
 /home/runner/workspace/bin/Debug/net6.0/Examples/create-user.json
 /home/runner/workspace/bin/Debug/net6.0/Examples/get-user.json
 /home/runner/workspace/bin/Debug/net6.0/apitester
@@ -26,6 +21,11 @@
 /home/runner/workspace/bin/Debug/net6.0/tr/System.CommandLine.resources.dll
 /home/runner/workspace/bin/Debug/net6.0/zh-Hans/System.CommandLine.resources.dll
 /home/runner/workspace/bin/Debug/net6.0/zh-Hant/System.CommandLine.resources.dll
+/home/runner/workspace/obj/Debug/net6.0/APITester.csproj.AssemblyReference.cache
+/home/runner/workspace/obj/Debug/net6.0/APITester.GeneratedMSBuildEditorConfig.editorconfig
+/home/runner/workspace/obj/Debug/net6.0/APITester.AssemblyInfoInputs.cache
+/home/runner/workspace/obj/Debug/net6.0/APITester.AssemblyInfo.cs
+/home/runner/workspace/obj/Debug/net6.0/APITester.csproj.CoreCompileInputs.cache
 /home/runner/workspace/obj/Debug/net6.0/APITester.csproj.CopyComplete
 /home/runner/workspace/obj/Debug/net6.0/apitester.dll
 /home/runner/workspace/obj/Debug/net6.0/refint/apitester.dll

@@ -45,12 +45,11 @@ namespace APITester.Commands
 
         private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? envFile)
         {
-            Console.WriteLine("API Tester - Running Tests");
-            Console.WriteLine("==========================");
+            ConsoleHelper.DisplayTitle("API Tester - Running Tests");
 
             if (envFile != null)
             {
-                Console.WriteLine($"Using environment file: {envFile}");
+                ConsoleHelper.WriteKeyValue("Environment File", envFile);
                 // Environment file handling would go here
             }
 
@@ -70,7 +69,7 @@ namespace APITester.Commands
             {
                 try
                 {
-                    Console.WriteLine($"\nProcessing {path}...");
+                    ConsoleHelper.WriteSection($"Processing {path}...");
                     
                     var apiDefinition = JsonHelper.DeserializeFromFile<ApiDefinition>(path);
                     if (apiDefinition == null)
@@ -104,9 +103,9 @@ namespace APITester.Commands
                 }
             }
 
-            Console.WriteLine("\n==========================");
-            Console.WriteLine($"Test Summary: {passedTests}/{totalTests} tests passed");
-            Console.WriteLine("==========================");
+            ConsoleHelper.WriteSection("==========================");
+            ConsoleHelper.WriteKeyValue("Test Summary", $"{passedTests}/{totalTests} tests passed");
+            ConsoleHelper.WriteLineColored("==========================", ConsoleColor.Cyan);
         }
 
         private List<string> ExpandWildcards(string[] filePaths)
@@ -134,35 +133,50 @@ namespace APITester.Commands
 
         private void DisplayApiDefinition(ApiDefinition apiDefinition)
         {
-            Console.WriteLine("\nAPI Definition:");
-            Console.WriteLine($"Name: {apiDefinition.Name}");
-            Console.WriteLine($"URI: {apiDefinition.Uri}");
-            Console.WriteLine($"Method: {apiDefinition.Method}");
+            ConsoleHelper.WriteSection("API Definition:");
+            ConsoleHelper.WriteKeyValue("Name", apiDefinition.Name);
+            
+            Console.Write("URI: ");
+            ConsoleHelper.WriteUrl(apiDefinition.Uri);
+            
+            Console.Write("Method: ");
+            ConsoleHelper.WriteMethod(apiDefinition.Method);
             
             if (apiDefinition.Headers?.Count > 0)
             {
-                Console.WriteLine("Headers:");
+                ConsoleHelper.WriteInfo("Headers:");
                 foreach (var header in apiDefinition.Headers)
                 {
-                    Console.WriteLine($"  {header.Key}: {header.Value}");
+                    Console.Write("  ");
+                    ConsoleHelper.WriteKeyValue(header.Key, header.Value);
                 }
             }
 
             if (!string.IsNullOrEmpty(apiDefinition.Payload))
             {
-                Console.WriteLine("Payload:");
-                Console.WriteLine($"  {apiDefinition.Payload}");
+                ConsoleHelper.WriteInfo("Payload:");
+                Console.Write("  ");
+                try
+                {
+                    // Try to format and colorize JSON payload
+                    ConsoleHelper.WriteColoredJson(apiDefinition.Payload);
+                }
+                catch
+                {
+                    // If it's not valid JSON or formatting fails, display as-is
+                    Console.WriteLine(apiDefinition.Payload);
+                }
             }
 
             if (apiDefinition.Tests?.Count > 0)
             {
-                Console.WriteLine($"Tests: {apiDefinition.Tests.Count} defined");
+                ConsoleHelper.WriteKeyValue("Tests", $"{apiDefinition.Tests.Count} defined");
             }
         }
 
         private void DisplayTestResults(List<TestResult> results, bool verbose)
         {
-            Console.WriteLine("\nTest Results:");
+            ConsoleHelper.WriteSection("Test Results:");
             
             foreach (var result in results)
             {
@@ -175,7 +189,8 @@ namespace APITester.Commands
                     ConsoleHelper.WriteError($"✗ {result.TestName}");
                     if (verbose)
                     {
-                        Console.WriteLine($"  Error: {result.ErrorMessage}");
+                        Console.Write("  ");
+                        ConsoleHelper.WriteKeyValue("Error", result.ErrorMessage ?? "Unknown error");
                     }
                 }
             }
@@ -183,34 +198,35 @@ namespace APITester.Commands
         
         private void DisplayApiResponse(ApiResponse response)
         {
-            Console.WriteLine("\nAPI Response:");
-            Console.WriteLine($"Status Code: {response.StatusCode}");
-            Console.WriteLine($"Response Time: {response.ResponseTimeMs}ms");
+            ConsoleHelper.WriteSection("API Response:");
+            ConsoleHelper.WriteStatusCode(response.StatusCode);
+            ConsoleHelper.WriteTiming(response.ResponseTimeMs);
             
             if (response.Headers.Count > 0)
             {
-                Console.WriteLine("\nResponse Headers:");
+                ConsoleHelper.WriteSection("Response Headers:");
                 foreach (var header in response.Headers)
                 {
-                    Console.WriteLine($"  {header.Key}: {header.Value}");
+                    Console.Write("  ");
+                    ConsoleHelper.WriteKeyValue(header.Key, header.Value);
                 }
             }
             
             if (response.ContentHeaders.Count > 0)
             {
-                Console.WriteLine("\nContent Headers:");
+                ConsoleHelper.WriteSection("Content Headers:");
                 foreach (var header in response.ContentHeaders)
                 {
-                    Console.WriteLine($"  {header.Key}: {header.Value}");
+                    Console.Write("  ");
+                    ConsoleHelper.WriteKeyValue(header.Key, header.Value);
                 }
             }
             
-            Console.WriteLine("\nResponse Body:");
+            ConsoleHelper.WriteSection("Response Body:");
             try
             {
-                // Try to format JSON for better readability
-                var formattedBody = APITester.Utils.JsonHelper.FormatJson(response.Body);
-                Console.WriteLine(formattedBody);
+                // Try to format and colorize JSON for better readability
+                ConsoleHelper.WriteColoredJson(response.Body);
             }
             catch
             {
