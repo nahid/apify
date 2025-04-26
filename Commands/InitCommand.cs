@@ -120,7 +120,7 @@ namespace APITester.Commands
                 var sampleApiTest = new ApiDefinition
                 {
                     Name = "Sample API Test",
-                    Uri = "{{baseUrl}}/users/1",
+                    Uri = "{{baseUrl}}/get",
                     Method = "GET",
                     Headers = new Dictionary<string, string>
                     {
@@ -143,10 +143,10 @@ namespace APITester.Commands
                             ExpectedValue = "application/json"
                         },
                         new TestAssertion { 
-                            Name = "Response contains user data", 
-                            Description = "Response contains user id",
+                            Name = "Response contains url data", 
+                            Description = "Response contains url property",
                             AssertType = "ContainsProperty",
-                            ExpectedValue = "id"
+                            ExpectedValue = "url"
                         }
                     }
                 };

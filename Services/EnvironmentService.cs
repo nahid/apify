@@ -28,15 +28,53 @@ namespace APITester.Services
         // Function to get the configuration file path - always uses current working directory
         private string GetConfigFilePath()
         {
-            // ALWAYS get the current directory path when this method is called
+            // Try multiple locations for the config file, in order of priority:
+            // 1. Current working directory (where the user is executing from)
+            // 2. Application base directory (where the executable is located)
+            // 3. Parent directory of the executable
+            
+            // Get current directory path
             string currentDir = Directory.GetCurrentDirectory();
             string currentPath = Path.Combine(currentDir, ConfigFileName);
             
-            // Print absolute path for debugging
-            string absolutePath = Path.GetFullPath(currentPath);
-            Console.WriteLine($"Using configuration file: {absolutePath}");
+            // Check if the file exists in the current directory
+            if (File.Exists(currentPath))
+            {
+                string absolutePath = Path.GetFullPath(currentPath);
+                Console.WriteLine($"Using configuration file: {absolutePath}");
+                _configFilePath = currentPath;
+                return currentPath;
+            }
             
-            // Always set the path to the current directory one
+            // If not found, try the application base directory
+            string appDir = AppDomain.CurrentDomain.BaseDirectory;
+            string appPath = Path.Combine(appDir, ConfigFileName);
+            
+            if (File.Exists(appPath))
+            {
+                string absolutePath = Path.GetFullPath(appPath);
+                Console.WriteLine($"Using configuration file: {absolutePath}");
+                _configFilePath = appPath;
+                return appPath;
+            }
+            
+            // If still not found, try parent directory of the executable
+            string? parentDir = Path.GetDirectoryName(appDir);
+            if (!string.IsNullOrEmpty(parentDir))
+            {
+                string parentPath = Path.Combine(parentDir, ConfigFileName);
+                if (File.Exists(parentPath))
+                {
+                    string absolutePath = Path.GetFullPath(parentPath);
+                    Console.WriteLine($"Using configuration file: {absolutePath}");
+                    _configFilePath = parentPath;
+                    return parentPath;
+                }
+            }
+            
+            // If we get here, the file doesn't exist yet, so return the current directory path
+            // as the preferred location for creating it
+            Console.WriteLine($"Configuration file not found. Will use: {Path.GetFullPath(currentPath)}");
             _configFilePath = currentPath;
             return currentPath;
         }
@@ -118,7 +156,8 @@ namespace APITester.Services
         private ConfigurationProfile CreateDefaultProfile()
         {
             // Use a default URL for testing, which can be overridden by config file
-            string baseUrl = "https://api.example.com"; 
+            // Using httpbin.org as it's a reliable testing endpoint with both GET and POST support
+            string baseUrl = "https://httpbin.org"; 
             
             return new ConfigurationProfile
             {
@@ -184,7 +223,7 @@ namespace APITester.Services
                         Description = "Development environment",
                         Variables = new Dictionary<string, string>
                         {
-                            { "baseUrl", "https://api.example.com" },
+                            { "baseUrl", "https://httpbin.org" },
                             { "timeout", "30000" },
                             { "userId", "1" },
                             { "apiKey", "dev-api-key" }
@@ -215,7 +254,7 @@ namespace APITester.Services
                         Description = "Development environment",
                         Variables = new Dictionary<string, string>
                         {
-                            { "baseUrl", "https://api.example.com" },
+                            { "baseUrl", "https://httpbin.org" },
                             { "timeout", "30000" },
                             { "userId", "1" },
                             { "apiKey", "dev-api-key" }
