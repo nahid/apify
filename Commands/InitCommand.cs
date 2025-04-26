@@ -225,8 +225,33 @@ namespace APITester.Commands
 }";
                     }
                     
-                    await File.WriteAllTextAsync(configFilePath, configJson);
-                    ConsoleHelper.WriteSuccess($"Created configuration file: {DefaultConfigFileName}");
+                    try 
+                    {
+                        string currentDir = Directory.GetCurrentDirectory();
+                        ConsoleHelper.WriteInfo($"Current working directory: {currentDir}");
+                        ConsoleHelper.WriteInfo($"Creating config file at: {configFilePath}");
+
+                        await File.WriteAllTextAsync(configFilePath, configJson);
+                        
+                        // Verify file was created
+                        if (File.Exists(configFilePath))
+                        {
+                            ConsoleHelper.WriteSuccess($"Created configuration file: {DefaultConfigFileName}");
+                            ConsoleHelper.WriteInfo($"Configuration file exists at: {configFilePath}");
+                        }
+                        else
+                        {
+                            ConsoleHelper.WriteError($"Failed to create configuration file at: {configFilePath}");
+                        }
+                    }
+                    catch (Exception fileEx)
+                    {
+                        ConsoleHelper.WriteError($"Error writing config file: {fileEx.Message}");
+                        if (fileEx.InnerException != null)
+                        {
+                            ConsoleHelper.WriteError($"Inner exception: {fileEx.InnerException.Message}");
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
