@@ -11,6 +11,12 @@ on:
         required: true
         default: '1.0.0'
 
+# Add explicit permissions needed for creating releases
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 jobs:
   build-native:
     strategy:
@@ -125,11 +131,14 @@ jobs:
     
     - name: Create Release
       id: create_release
-      uses: softprops/action-gh-release@v2
+      uses: ncipollo/release-action@v1
       with:
-        tag_name: v${{ steps.set_version.outputs.VERSION }}
+        tag: v${{ steps.set_version.outputs.VERSION }}
         name: Release v${{ steps.set_version.outputs.VERSION }}
         draft: false
         prerelease: false
-        files: |
-          ./artifacts/**/*
+        artifacts: "./artifacts/**/*"
+        artifactContentType: application/octet-stream
+        allowUpdates: true
+        removeArtifacts: false
+        token: ${{ github.token }}
