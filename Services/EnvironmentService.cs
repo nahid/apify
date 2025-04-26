@@ -21,34 +21,22 @@ namespace APITester.Services
         
         public EnvironmentService()
         {
-            // Always use the current directory for finding the config file
-            _configFilePath = Path.Combine(Directory.GetCurrentDirectory(), ConfigFileName);
+            // Initialize config path to null - it will be determined dynamically when needed
+            _configFilePath = null;
         }
         
         // Function to get the configuration file path - always uses current working directory
         private string GetConfigFilePath()
         {
-            // Always update to the current directory in case it has changed
-            string currentPath = Path.Combine(Directory.GetCurrentDirectory(), ConfigFileName);
+            // ALWAYS get the current directory path when this method is called
+            string currentDir = Directory.GetCurrentDirectory();
+            string currentPath = Path.Combine(currentDir, ConfigFileName);
             
-            if (File.Exists(currentPath))
-            {
-                Console.WriteLine($"Using configuration file from current directory: {currentPath}");
-                _configFilePath = currentPath;
-                return currentPath;
-            }
+            // Print absolute path for debugging
+            string absolutePath = Path.GetFullPath(currentPath);
+            Console.WriteLine($"Using configuration file: {absolutePath}");
             
-            Console.WriteLine($"Configuration file not found in current directory: {currentPath}");
-            
-            // If not found, check if we have a previously found path to use
-            if (_configFilePath != null && File.Exists(_configFilePath))
-            {
-                Console.WriteLine($"Using previously found configuration file: {_configFilePath}");
-                return _configFilePath;
-            }
-            
-            // Return the path in the current directory even if it doesn't exist yet
-            // (it might be created later)
+            // Always set the path to the current directory one
             _configFilePath = currentPath;
             return currentPath;
         }
@@ -77,21 +65,41 @@ namespace APITester.Services
                         args.ErrorContext.Handled = true;
                     },
                     MissingMemberHandling = MissingMemberHandling.Ignore,
-                    NullValueHandling = NullValueHandling.Ignore
+                    NullValueHandling = NullValueHandling.Ignore,
+                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                    TypeNameHandling = TypeNameHandling.None, // For security
+                    MetadataPropertyHandling = MetadataPropertyHandling.Ignore
                 };
                 
-                var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content, settings);
-                
-                if (profile != null)
-                {
-                    profiles.Add(profile);
+                // For troubleshooting, try to use the direct, safe constructor approach
+                try {
+                    var profile = new ConfigurationProfile();
+                    JsonConvert.PopulateObject(content, profile, settings);
+                    
+                    if (profile != null)
+                    {
+                        profiles.Add(profile);
+                        Console.WriteLine($"Successfully loaded profile: {profile.Name}");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // Create a default profile if deserialization returns null
-                    Console.WriteLine("Creating default profile...");
-                    var defaultProfile = CreateDefaultProfile();
-                    profiles.Add(defaultProfile);
+                    Console.WriteLine($"PopulateObject failed: {ex.Message}");
+                    
+                    // Fall back to deserialize
+                    var profile = JsonConvert.DeserializeObject<ConfigurationProfile>(content, settings);
+                    
+                    if (profile != null)
+                    {
+                        profiles.Add(profile);
+                    }
+                    else
+                    {
+                        // Create a default profile if deserialization returns null
+                        Console.WriteLine("Creating default profile...");
+                        var defaultProfile = CreateDefaultProfile();
+                        profiles.Add(defaultProfile);
+                    }
                 }
             }
             catch (Exception ex)
@@ -401,15 +409,19 @@ namespace APITester.Services
         {
             try
             {
-                // Always use the current directory for the config file
-                string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), ConfigFileName);
+                // Always get the current directory and create config there
+                string currentDir = Directory.GetCurrentDirectory();
+                string configFilePath = Path.Combine(currentDir, ConfigFileName);
+                string absolutePath = Path.GetFullPath(configFilePath);
                 
                 // Check if config file already exists
                 if (File.Exists(configFilePath))
                 {
-                    Console.WriteLine($"Configuration file '{configFilePath}' already exists.");
+                    Console.WriteLine($"Configuration file '{absolutePath}' already exists.");
                     return;
                 }
+                
+                Console.WriteLine($"Creating configuration file at: {absolutePath}");
                 
                 // Update the current path
                 _configFilePath = configFilePath;
