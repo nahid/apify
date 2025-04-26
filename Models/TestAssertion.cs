@@ -1,15 +1,40 @@
 using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
+using Newtonsoft.Json;
 
 namespace APITester.Models
 {
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
                                DynamicallyAccessedMemberTypes.PublicFields | 
-                               DynamicallyAccessedMemberTypes.PublicMethods)]
+                               DynamicallyAccessedMemberTypes.PublicMethods |
+                               DynamicallyAccessedMemberTypes.PublicConstructors)]
     public class TestAssertion
     {
+        [JsonConstructor]
+        public TestAssertion()
+        {
+            Name = string.Empty;
+            Description = string.Empty;
+            Assertion = string.Empty;
+            AssertType = string.Empty;
+        }
+        
+        // Make sure name and description are synchronized
+        public void SynchronizeProperties()
+        {
+            // Make sure Name is populated from either Description or Name
+            if (string.IsNullOrEmpty(Name) && !string.IsNullOrEmpty(Description))
+            {
+                Name = Description;
+            }
+            else if (string.IsNullOrEmpty(Description) && !string.IsNullOrEmpty(Name))
+            {
+                Description = Name;
+            }
+        }
+        
         [JsonPropertyName("name")]
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
         
         [JsonPropertyName("Description")]
         public string Description { get; set; } = string.Empty;
@@ -110,19 +135,7 @@ namespace APITester.Models
             return "unknown";
         }
         
-        // Constructor for consistent property naming
-        public TestAssertion()
-        {
-            // Make sure Name is populated from either Description or Name
-            if (string.IsNullOrEmpty(Name) && !string.IsNullOrEmpty(Description))
-            {
-                Name = Description;
-            }
-            else if (string.IsNullOrEmpty(Description) && !string.IsNullOrEmpty(Name))
-            {
-                Description = Name;
-            }
-        }
+        // This is handled in the constructor now
     }
 
     public enum AssertionType

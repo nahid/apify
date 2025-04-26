@@ -8,11 +8,22 @@ namespace APITester.Models
     // Add DynamicallyAccessedMembers attribute to preserve public members for reflection
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
                                DynamicallyAccessedMemberTypes.PublicFields | 
-                               DynamicallyAccessedMemberTypes.PublicMethods)]
+                               DynamicallyAccessedMemberTypes.PublicMethods |
+                               DynamicallyAccessedMemberTypes.PublicConstructors)]
     public class ApiDefinition
     {
+        // This constructor is needed for Native AOT compatibility with JSON deserialization
+        [JsonConstructor]
+        public ApiDefinition()
+        {
+            Name = string.Empty;
+            Uri = string.Empty;
+            Method = "GET";
+            Timeout = 30000;
+        }
+        
         [JsonPropertyName("name")]
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
 
         [JsonPropertyName("description")]
         public string? Description { get; set; }
@@ -148,11 +159,22 @@ namespace APITester.Models
     }
 
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
-                               DynamicallyAccessedMemberTypes.PublicFields)]
+                               DynamicallyAccessedMemberTypes.PublicFields |
+                               DynamicallyAccessedMemberTypes.PublicConstructors)]
     public class FileUpload
     {
+        // This constructor is needed for Native AOT compatibility with JSON deserialization
+        [JsonConstructor]
+        public FileUpload()
+        {
+            Name = string.Empty;
+            FieldName = string.Empty;
+            FilePath = string.Empty;
+            ContentType = "application/octet-stream";
+        }
+        
         [JsonPropertyName("name")]
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
 
         [JsonPropertyName("fieldName")]
         public string FieldName { get; set; } = string.Empty;
