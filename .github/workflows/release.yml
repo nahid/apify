@@ -39,10 +39,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
@@ -81,7 +81,7 @@ jobs:
       shell: bash
     
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: apitester-${{ matrix.platform }}
         path: ./artifacts/apitester-${{ steps.set_version.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
@@ -90,10 +90,10 @@ jobs:
     needs: build-native
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: ./artifacts
     
@@ -125,9 +125,7 @@ jobs:
     
     - name: Create Release
       id: create_release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.set_version.outputs.VERSION }}
         name: Release v${{ steps.set_version.outputs.VERSION }}
