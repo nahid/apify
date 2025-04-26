@@ -83,6 +83,16 @@ namespace APITester.Services
                 response.IsSuccessful = false;
                 response.ErrorMessage = ex.Message;
                 response.ResponseTimeMs = stopwatch.ElapsedMilliseconds;
+                
+                // Log the full exception details for debugging
+                Console.WriteLine($"API Request Error: {ex.GetType().Name} - {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                }
+                
+                // Include the error message in the response body for test assertion context
+                response.Body = $"{{\"error\": \"{ex.Message.Replace("\"", "\\\"")}\", \"exception_type\": \"{ex.GetType().Name}\"}}";
             }
 
             return response;

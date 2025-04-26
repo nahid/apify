@@ -98,6 +98,17 @@ namespace APITester.Services
             
             try
             {
+                // If response body is empty, handle that case
+                if (string.IsNullOrWhiteSpace(response.Body))
+                {
+                    return TestResult.Failure(
+                        name,
+                        $"Cannot check for property '{propertyName}': Response body is empty",
+                        "(empty)",
+                        "Non-empty JSON response"
+                    );
+                }
+                
                 // Try parsing the response as JSON
                 JObject jsonObj = JObject.Parse(response.Body);
                 
@@ -127,6 +138,26 @@ namespace APITester.Services
             }
             catch (JsonException ex)
             {
+                // Check if we have an error response (which we generated in the ApiExecutor)
+                try
+                {
+                    // Try to parse it as our error format
+                    JObject errorObj = JObject.Parse(response.Body);
+                    if (errorObj["error"] != null && errorObj["exception_type"] != null)
+                    {
+                        return TestResult.Failure(
+                            name,
+                            $"Cannot check property '{propertyName}': API error occurred: {errorObj["error"]}",
+                            response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
+                            "Successful API response expected"
+                        );
+                    }
+                }
+                catch
+                {
+                    // If this also fails, return the original error
+                }
+                
                 return TestResult.Failure(
                     name,
                     $"Invalid JSON in response: {ex.Message}",
@@ -354,6 +385,17 @@ namespace APITester.Services
                 
                 try
                 {
+                    // If response body is empty, handle that case
+                    if (string.IsNullOrWhiteSpace(response.Body))
+                    {
+                        return TestResult.Failure(
+                            assertion.Name,
+                            $"Cannot check path '$.{jsonPath}': Response body is empty",
+                            "(empty)",
+                            "Non-empty JSON response"
+                        );
+                    }
+                    
                     // Parse JSON
                     JObject jsonObj = JObject.Parse(response.Body);
                     
@@ -403,6 +445,26 @@ namespace APITester.Services
                 }
                 catch (JsonException ex)
                 {
+                    // Check if we have an error response (which we generated in the ApiExecutor)
+                    try
+                    {
+                        // Try to parse it as our error format
+                        JObject errorObj = JObject.Parse(response.Body);
+                        if (errorObj["error"] != null && errorObj["exception_type"] != null)
+                        {
+                            return TestResult.Failure(
+                                assertion.Name,
+                                $"Cannot check path '$.{jsonPath}': API error occurred: {errorObj["error"]}",
+                                response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
+                                "Successful API response expected"
+                            );
+                        }
+                    }
+                    catch
+                    {
+                        // If this also fails, return the original error
+                    }
+                    
                     return TestResult.Failure(
                         assertion.Name,
                         $"Invalid JSON in response: {ex.Message}",
