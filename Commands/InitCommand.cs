@@ -51,7 +51,9 @@ namespace APITester.Commands
             ConsoleHelper.WriteHeader("Initializing API Testing Project");
 
             // Check if configuration file already exists
-            if (File.Exists(DefaultConfigFileName) && !force)
+            string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), DefaultConfigFileName);
+            
+            if (File.Exists(configFilePath) && !force)
             {
                 ConsoleHelper.WriteError($"Configuration file '{DefaultConfigFileName}' already exists. Use --force to overwrite.");
                 return;
@@ -77,7 +79,7 @@ namespace APITester.Commands
                     ConsoleHelper.WriteInfo($"Using existing API directory: {DefaultApiDirectoryName}");
                 }
 
-                // Create environment configuration
+                // Create environment configuration with additional variables
                 var defaultEnvironment = new TestEnvironment
                 {
                     Name = environment,
@@ -85,7 +87,9 @@ namespace APITester.Commands
                     Variables = new Dictionary<string, string>
                     {
                         { "baseUrl", baseUrl },
-                        { "timeout", "30000" }
+                        { "timeout", "30000" },
+                        { "userId", "1" },
+                        { "apiKey", "dev-api-key" }
                     }
                 };
 
@@ -97,7 +101,9 @@ namespace APITester.Commands
                     Variables = new Dictionary<string, string>
                     {
                         { "baseUrl", baseUrl },
-                        { "timeout", "30000" }
+                        { "timeout", "10000" },
+                        { "userId", "1" },
+                        { "apiKey", "prod-api-key" }
                     }
                 };
 
@@ -210,14 +216,16 @@ namespace APITester.Commands
       ""Description"": """ + environment + @" environment"",
       ""Variables"": {
         ""baseUrl"": """ + baseUrl + @""",
-        ""timeout"": ""30000""
+        ""timeout"": ""30000"",
+        ""userId"": ""1"",
+        ""apiKey"": ""dev-api-key""
       }
     }
   ]
 }";
                     }
                     
-                    await File.WriteAllTextAsync(DefaultConfigFileName, configJson);
+                    await File.WriteAllTextAsync(configFilePath, configJson);
                     ConsoleHelper.WriteSuccess($"Created configuration file: {DefaultConfigFileName}");
                 }
                 catch (Exception ex)

@@ -6,7 +6,9 @@
       "Name": "Development",
       "Variables": {
         "baseUrl": "https://api.example.com",
-        "timeout": "30000"
+        "timeout": "30000",
+        "userId": "1",
+        "apiKey": "dev-api-key"
       },
       "Description": "Development environment"
     },
@@ -14,7 +16,9 @@
       "Name": "Production",
       "Variables": {
         "baseUrl": "https://api.example.com",
-        "timeout": "30000"
+        "timeout": "10000",
+        "userId": "1",
+        "apiKey": "prod-api-key"
       },
       "Description": "Production environment"
     }

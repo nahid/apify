@@ -15,21 +15,62 @@ namespace APITester.Services
         private static readonly Regex VariablePattern = new Regex(@"{{(.+?)}}", RegexOptions.Compiled);
         
         private TestEnvironment? _currentEnvironment;
+        private string? _configFilePath;
         
         public TestEnvironment? CurrentEnvironment => _currentEnvironment;
+        
+        public EnvironmentService()
+        {
+            // Find the configuration file in the current directory or parent directories
+            _configFilePath = FindConfigFile();
+        }
+        
+        private string FindConfigFile()
+        {
+            // First check the current directory
+            if (File.Exists(ConfigFileName))
+            {
+                Console.WriteLine($"Using configuration file: {Path.GetFullPath(ConfigFileName)}");
+                return ConfigFileName;
+            }
+            
+            // Try to find in parent directories (up to 3 levels)
+            var currentDir = Directory.GetCurrentDirectory();
+            for (int i = 0; i < 3; i++)
+            {
+                var parentDir = Directory.GetParent(currentDir);
+                if (parentDir == null)
+                    break;
+                    
+                currentDir = parentDir.FullName;
+                var configPath = Path.Combine(currentDir, ConfigFileName);
+                
+                if (File.Exists(configPath))
+                {
+                    Console.WriteLine($"Using configuration file from parent directory: {configPath}");
+                    return configPath;
+                }
+            }
+            
+            // If not found, default to the working directory
+            Console.WriteLine($"Configuration file not found in current or parent directories. Using default path: {ConfigFileName}");
+            return ConfigFileName;
+        }
 
         public List<ConfigurationProfile> LoadConfigurationProfiles()
         {
             var profiles = new List<ConfigurationProfile>();
             
-            if (!File.Exists(ConfigFileName))
+            // Use the discovered config file path
+            if (!File.Exists(_configFilePath))
             {
+                Console.WriteLine($"Configuration file not found at {_configFilePath}");
                 return profiles;
             }
             
             try
             {
-                var content = File.ReadAllText(ConfigFileName);
+                var content = File.ReadAllText(_configFilePath);
                 var settings = new JsonSerializerSettings
                 {
                     Error = (sender, args) => 
@@ -57,7 +98,7 @@ namespace APITester.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading configuration profile from {ConfigFileName}: {ex.Message}");
+                Console.WriteLine($"Error loading configuration profile from {_configFilePath}: {ex.Message}");
                 
                 // Create and add a default profile on error
                 Console.WriteLine("No environment profiles found. Creating default profile...");
@@ -362,10 +403,13 @@ namespace APITester.Services
         {
             try
             {
+                // Use the current directory for the config file
+                string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), ConfigFileName);
+                
                 // Check if config file already exists
-                if (File.Exists(ConfigFileName))
+                if (File.Exists(configFilePath))
                 {
-                    Console.WriteLine($"Configuration file '{ConfigFileName}' already exists.");
+                    Console.WriteLine($"Configuration file '{configFilePath}' already exists.");
                     return;
                 }
                 
@@ -384,6 +428,7 @@ namespace APITester.Services
                             {
                                 { "baseUrl", "https://api.example.com/dev" },
                                 { "apiKey", "dev-api-key" },
+                                { "userId", "1" },
                                 { "timeout", "30000" }
                             }
                         },
@@ -395,6 +440,7 @@ namespace APITester.Services
                             {
                                 { "baseUrl", "https://api.example.com" },
                                 { "apiKey", "prod-api-key" },
+                                { "userId", "1" },
                                 { "timeout", "10000" }
                             }
                         }
@@ -422,26 +468,29 @@ namespace APITester.Services
       ""Description"": ""Development environment"",
       ""Variables"": {
         ""baseUrl"": ""https://api.example.com/dev"",
-        ""timeout"": ""30000""
+        ""timeout"": ""30000"",
+        ""userId"": ""1"",
+        ""apiKey"": ""dev-api-key""
       }
     }
   ]
 }";
                     }
                     
-                    File.WriteAllText(ConfigFileName, json);
+                    File.WriteAllText(configFilePath, json);
+                    _configFilePath = configFilePath; // Update the path to the newly created file
                 }
                 else
                 {
                     Console.WriteLine("Error: Could not create configuration profile.");
                 }
+                
+                Console.WriteLine($"Created configuration file at {configFilePath}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error creating default environment file: {ex.Message}");
             }
-            
-            Console.WriteLine($"Created configuration file at {ConfigFileName}");
         }
     }
 }
