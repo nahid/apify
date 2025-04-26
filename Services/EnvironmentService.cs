@@ -106,7 +106,7 @@ namespace APITester.Services
                 Uri = ApplyEnvironmentVariables(apiDefinition.Uri),
                 Method = apiDefinition.Method,
                 Payload = apiDefinition.Payload != null ? ApplyEnvironmentVariables(apiDefinition.Payload) : null,
-                Tests = apiDefinition.Tests?.ToList() ?? new List<TestAssertion>()
+                Tests = new List<TestAssertion>()
             };
             
             if (apiDefinition.Headers != null)
@@ -115,6 +115,26 @@ namespace APITester.Services
                 foreach (var header in apiDefinition.Headers)
                 {
                     modifiedApi.Headers[header.Key] = ApplyEnvironmentVariables(header.Value);
+                }
+            }
+            
+            // Process test assertions and apply environment variables
+            if (apiDefinition.Tests != null)
+            {
+                foreach (var test in apiDefinition.Tests)
+                {
+                    var modifiedTest = new TestAssertion
+                    {
+                        Name = test.Name,
+                        Description = test.Description,
+                        Assertion = ApplyEnvironmentVariables(test.Assertion),
+                        AssertType = test.AssertType,
+                        Property = test.Property,
+                        ExpectedValue = test.ExpectedValue != null ? ApplyEnvironmentVariables(test.ExpectedValue) : null,
+                        Expected = test.Expected
+                    };
+                    
+                    modifiedApi.Tests.Add(modifiedTest);
                 }
             }
             

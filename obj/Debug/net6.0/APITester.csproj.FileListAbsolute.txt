@@ -2,10 +2,6 @@
 /home/runner/workspace/bin/Debug/net6.0/Examples/get-user-with-env.json
 /home/runner/workspace/bin/Debug/net6.0/Examples/get-user.json
 /home/runner/workspace/bin/Debug/net6.0/apitester
-/home/runner/workspace/bin/Debug/net6.0/apitester.deps.json
-/home/runner/workspace/bin/Debug/net6.0/apitester.runtimeconfig.json
-/home/runner/workspace/bin/Debug/net6.0/apitester.dll
-/home/runner/workspace/bin/Debug/net6.0/apitester.pdb
 /home/runner/workspace/bin/Debug/net6.0/ConsoleTableExt.dll
 /home/runner/workspace/bin/Debug/net6.0/Newtonsoft.Json.dll
 /home/runner/workspace/bin/Debug/net6.0/System.CommandLine.dll
@@ -31,5 +27,9 @@
 /home/runner/workspace/obj/Debug/net6.0/apitester.dll
 /home/runner/workspace/obj/Debug/net6.0/refint/apitester.dll
 /home/runner/workspace/obj/Debug/net6.0/apitester.pdb
+/home/runner/workspace/bin/Debug/net6.0/apitester.deps.json
+/home/runner/workspace/bin/Debug/net6.0/apitester.runtimeconfig.json
+/home/runner/workspace/bin/Debug/net6.0/apitester.dll
+/home/runner/workspace/bin/Debug/net6.0/apitester.pdb
 /home/runner/workspace/obj/Debug/net6.0/APITester.genruntimeconfig.cache
 /home/runner/workspace/obj/Debug/net6.0/ref/apitester.dll
