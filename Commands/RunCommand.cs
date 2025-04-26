@@ -54,17 +54,18 @@ namespace APITester.Commands
             ConsoleHelper.DisplayTitle("API Tester - Running Tests");
 
             var environmentService = new EnvironmentService();
-            var profiles = environmentService.LoadConfigurationProfiles();
             
-            // If there are no environment profiles, create a default one
-            if (profiles.Count == 0)
+            // Load the profile from the current directory
+            var profile = environmentService.LoadConfigurationProfile();
+            
+            if (profile == null)
             {
-                ConsoleHelper.WriteInfo("No environment profiles found. Creating default profile...");
+                ConsoleHelper.WriteInfo("No environment profile found. Creating default profile...");
                 environmentService.CreateDefaultEnvironmentFile();
-                profiles = environmentService.LoadConfigurationProfiles();
+                profile = environmentService.LoadConfigurationProfile();
             }
 
-            // Set active environment
+            // Set active environment - this will now use the single profile approach
             string profileToUse = profileName ?? "Default";
             if (!environmentService.SetCurrentEnvironment(profileToUse, environmentName))
             {
@@ -321,52 +322,47 @@ namespace APITester.Commands
             }
         }
         
-        private void ListEnvironments(List<ConfigurationProfile> profiles)
+        private void ListEnvironments(ConfigurationProfile profile)
         {
-            if (profiles.Count == 0)
+            if (profile == null)
             {
-                ConsoleHelper.WriteInfo("No environment profiles found.");
+                ConsoleHelper.WriteInfo("No environment profile found.");
                 return;
             }
             
-            ConsoleHelper.WriteSection("Available Configuration Profiles:");
+            ConsoleHelper.WriteSection("Available Configuration Profile:");
             
-            foreach (var profile in profiles)
+            ConsoleHelper.WriteLineColored($"Profile: {profile.Name}", ConsoleColor.Cyan);
+            
+            if (!string.IsNullOrEmpty(profile.Description))
             {
-                ConsoleHelper.WriteLineColored($"Profile: {profile.Name}", ConsoleColor.Cyan);
+                ConsoleHelper.WriteLineColored($"  Description: {profile.Description}", ConsoleColor.DarkGray);
+            }
+            
+            if (!string.IsNullOrEmpty(profile.DefaultEnvironment))
+            {
+                ConsoleHelper.WriteLineColored($"  Default Environment: {profile.DefaultEnvironment}", ConsoleColor.DarkCyan);
+            }
+            
+            ConsoleHelper.WriteLineColored("  Environments:", ConsoleColor.White);
+            
+            foreach (var env in profile.Environments)
+            {
+                ConsoleHelper.WriteLineColored($"    - {env.Name}", ConsoleColor.Green);
                 
-                if (!string.IsNullOrEmpty(profile.Description))
+                if (!string.IsNullOrEmpty(env.Description))
                 {
-                    ConsoleHelper.WriteLineColored($"  Description: {profile.Description}", ConsoleColor.DarkGray);
+                    ConsoleHelper.WriteLineColored($"      Description: {env.Description}", ConsoleColor.DarkGray);
                 }
                 
-                if (!string.IsNullOrEmpty(profile.DefaultEnvironment))
+                ConsoleHelper.WriteLineColored($"      Variables: {env.Variables.Count}", ConsoleColor.DarkYellow);
+                
+                // Display variable names (not values to protect sensitive information)
+                if (env.Variables.Count > 0)
                 {
-                    ConsoleHelper.WriteLineColored($"  Default Environment: {profile.DefaultEnvironment}", ConsoleColor.DarkCyan);
+                    var variableNames = string.Join(", ", env.Variables.Keys);
+                    ConsoleHelper.WriteLineColored($"      Names: {variableNames}", ConsoleColor.DarkGray);
                 }
-                
-                ConsoleHelper.WriteLineColored("  Environments:", ConsoleColor.White);
-                
-                foreach (var env in profile.Environments)
-                {
-                    ConsoleHelper.WriteLineColored($"    - {env.Name}", ConsoleColor.Green);
-                    
-                    if (!string.IsNullOrEmpty(env.Description))
-                    {
-                        ConsoleHelper.WriteLineColored($"      Description: {env.Description}", ConsoleColor.DarkGray);
-                    }
-                    
-                    ConsoleHelper.WriteLineColored($"      Variables: {env.Variables.Count}", ConsoleColor.DarkYellow);
-                    
-                    // Display variable names (not values to protect sensitive information)
-                    if (env.Variables.Count > 0)
-                    {
-                        var variableNames = string.Join(", ", env.Variables.Keys);
-                        ConsoleHelper.WriteLineColored($"      Names: {variableNames}", ConsoleColor.DarkGray);
-                    }
-                }
-                
-                Console.WriteLine(); // Add blank line between profiles
             }
         }
     }
