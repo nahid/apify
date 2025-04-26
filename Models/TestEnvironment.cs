@@ -4,9 +4,7 @@ using Newtonsoft.Json;
 
 namespace APITester.Models
 {
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
-                               DynamicallyAccessedMemberTypes.PublicFields |
-                               DynamicallyAccessedMemberTypes.PublicConstructors)]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     public class TestEnvironment
     {
         // Default constructor for general use
@@ -25,8 +23,9 @@ namespace APITester.Models
             Description = description;
         }
         
-        // JsonConstructor must be on the default constructor for AOT compatibility
+        // Special constructor for Newtonsoft.Json deserialization
         [JsonConstructor]
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private TestEnvironment(bool _) : this()
         {
             // This constructor is used by Newtonsoft.Json during deserialization

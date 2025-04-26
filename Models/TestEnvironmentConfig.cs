@@ -4,12 +4,10 @@ using Newtonsoft.Json;
 
 namespace APITester.Models
 {
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
-                               DynamicallyAccessedMemberTypes.PublicFields |
-                               DynamicallyAccessedMemberTypes.PublicConstructors)]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     public class TestEnvironmentConfig
     {
-        // Default constructor
+        // Default constructor with default values
         public TestEnvironmentConfig()
         {
             Name = "Default";
@@ -17,18 +15,22 @@ namespace APITester.Models
             DefaultEnvironment = "Development";
         }
 
-        // Parameterized constructor for AOT compatibility
-        [JsonConstructor]
-        public TestEnvironmentConfig(
-            [JsonProperty("Name")] string name,
-            [JsonProperty("Description")] string? description,
-            [JsonProperty("Environments")] List<TestEnvironment> environments,
-            [JsonProperty("DefaultEnvironment")] string? defaultEnvironment)
+        // Parameterized constructor for programmatic creation
+        public TestEnvironmentConfig(string name, string? description, List<TestEnvironment> environments, string? defaultEnvironment)
         {
             Name = name ?? "Default";
             Description = description;
             Environments = environments ?? new List<TestEnvironment>();
             DefaultEnvironment = defaultEnvironment ?? "Development";
+        }
+
+        // Special constructor for Newtonsoft.Json deserialization
+        [JsonConstructor]
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private TestEnvironmentConfig(bool _) : this()
+        {
+            // This empty constructor is specifically for Json.NET to use during deserialization
+            // Properties will be populated through setters
         }
 
         [JsonProperty("Name")]

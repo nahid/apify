@@ -8,10 +8,31 @@
     <type fullname="APITester.Models.FileUpload" preserve="all" />
     <type fullname="APITester.Models.PayloadType" preserve="all" />
     <type fullname="APITester.Models.TestEnvironment" preserve="all" />
-    <type fullname="APITester.Models.ConfigurationProfile" preserve="all" />
+    <type fullname="APITester.Models.TestEnvironmentConfig" preserve="all" />
     <type fullname="APITester.Services.ApiResponse" preserve="all" />
     
     <!-- Also preserve all methods in the JsonHelper -->
     <type fullname="APITester.Utils.JsonHelper" preserve="all" />
+  </assembly>
+  
+  <!-- Preserve Newtonsoft.Json types that we use for deserialization -->
+  <assembly fullname="Newtonsoft.Json">
+    <type fullname="Newtonsoft.Json.JsonConvert" preserve="all" />
+    <type fullname="Newtonsoft.Json.JsonSerializerSettings" preserve="all" />
+    <type fullname="Newtonsoft.Json.Serialization.*" preserve="all" />
+    <type fullname="Newtonsoft.Json.Linq.JObject" preserve="all" />
+    <type fullname="Newtonsoft.Json.Linq.JArray" preserve="all" />
+    <type fullname="Newtonsoft.Json.Linq.JToken" preserve="all" />
+    <type fullname="Newtonsoft.Json.Linq.JProperty" preserve="all" />
+    <type fullname="Newtonsoft.Json.Linq.JContainer" preserve="all" />
+    <type fullname="Newtonsoft.Json.Linq.JValue" preserve="all" />
+    <type fullname="Newtonsoft.Json.JsonSerializer" preserve="all" />
+    <type fullname="Newtonsoft.Json.JsonPropertyAttribute" preserve="all" />
+    <type fullname="Newtonsoft.Json.JsonConstructorAttribute" preserve="all" />
+  </assembly>
+  
+  <!-- Preserve System.CommandLine types -->
+  <assembly fullname="System.CommandLine">
+    <type fullname="System.CommandLine.*" preserve="all" />
   </assembly>
 </linker>
