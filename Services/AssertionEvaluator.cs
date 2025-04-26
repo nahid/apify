@@ -12,7 +12,27 @@ namespace APITester.Services
             try
             {
                 var assertionType = assertion.GetAssertionType();
+                var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
                 
+                // Use the new format if available
+                if (!string.IsNullOrEmpty(assertion.AssertType))
+                {
+                    switch (assertion.AssertType.ToLowerInvariant())
+                    {
+                        case "statuscode":
+                            return EvaluateStatusCodeNewFormat(assertion, response);
+                        case "containsproperty":
+                            return EvaluateContainsPropertyNewFormat(assertion, response);
+                        case "headercontains":
+                            return EvaluateHeaderContainsNewFormat(assertion, response);
+                        case "responsetimebelow":
+                            return EvaluateResponseTimeBelowNewFormat(assertion, response);
+                        default:
+                            return TestResult.Failure(name, $"Unknown assertion type: {assertion.AssertType}");
+                    }
+                }
+                
+                // Fall back to the original format
                 switch (assertionType)
                 {
                     case AssertionType.StatusCode:
@@ -24,12 +44,198 @@ namespace APITester.Services
                     case AssertionType.ResponseTime:
                         return EvaluateResponseTimeAssertion(assertion, response);
                     default:
-                        return TestResult.Failure(assertion.Name, "Unknown assertion type");
+                        return TestResult.Failure(name, "Unknown assertion type");
                 }
             }
             catch (Exception ex)
             {
-                return TestResult.Failure(assertion.Name, $"Error evaluating assertion: {ex.Message}");
+                var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
+                return TestResult.Failure(name, $"Error evaluating assertion: {ex.Message}");
+            }
+        }
+        
+        private TestResult EvaluateStatusCodeNewFormat(TestAssertion assertion, ApiResponse response)
+        {
+            var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
+            
+            if (string.IsNullOrEmpty(assertion.ExpectedValue))
+            {
+                return TestResult.Failure(name, "Missing expected status code value");
+            }
+            
+            if (int.TryParse(assertion.ExpectedValue, out int expectedStatusCode))
+            {
+                if (response.StatusCode == expectedStatusCode)
+                {
+                    return TestResult.Success(name);
+                }
+                else
+                {
+                    return TestResult.Failure(
+                        name,
+                        $"Status code {response.StatusCode} does not match expected {expectedStatusCode}",
+                        response.StatusCode.ToString(),
+                        expectedStatusCode.ToString()
+                    );
+                }
+            }
+            else
+            {
+                return TestResult.Failure(name, $"Invalid status code value: {assertion.ExpectedValue}");
+            }
+        }
+        
+        private TestResult EvaluateContainsPropertyNewFormat(TestAssertion assertion, ApiResponse response)
+        {
+            var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
+            
+            if (string.IsNullOrEmpty(assertion.ExpectedValue))
+            {
+                return TestResult.Failure(name, "Missing expected property name");
+            }
+            
+            string propertyName = assertion.ExpectedValue;
+            
+            try
+            {
+                // Try parsing the response as JSON
+                JObject jsonObj = JObject.Parse(response.Body);
+                
+                // Simple property check at root level
+                if (jsonObj[propertyName] != null)
+                {
+                    return TestResult.Success(name);
+                }
+                
+                // Perform a deep search for the property
+                bool found = false;
+                SearchForProperty(jsonObj, propertyName, ref found);
+                
+                if (found)
+                {
+                    return TestResult.Success(name);
+                }
+                else
+                {
+                    return TestResult.Failure(
+                        name,
+                        $"Property '{propertyName}' not found in response",
+                        response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
+                        propertyName
+                    );
+                }
+            }
+            catch (JsonException ex)
+            {
+                return TestResult.Failure(
+                    name,
+                    $"Invalid JSON in response: {ex.Message}",
+                    response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
+                    "Valid JSON expected"
+                );
+            }
+        }
+        
+        private void SearchForProperty(JToken token, string propertyName, ref bool found)
+        {
+            if (found) return;
+            
+            if (token is JObject obj)
+            {
+                if (obj[propertyName] != null)
+                {
+                    found = true;
+                    return;
+                }
+                
+                foreach (var property in obj.Properties())
+                {
+                    SearchForProperty(property.Value, propertyName, ref found);
+                    if (found) return;
+                }
+            }
+            else if (token is JArray array)
+            {
+                foreach (var item in array)
+                {
+                    SearchForProperty(item, propertyName, ref found);
+                    if (found) return;
+                }
+            }
+        }
+        
+        private TestResult EvaluateHeaderContainsNewFormat(TestAssertion assertion, ApiResponse response)
+        {
+            var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
+            
+            if (string.IsNullOrEmpty(assertion.Property))
+            {
+                return TestResult.Failure(name, "Missing header name");
+            }
+            
+            if (string.IsNullOrEmpty(assertion.ExpectedValue))
+            {
+                return TestResult.Failure(name, "Missing expected header value");
+            }
+            
+            string headerName = assertion.Property;
+            string expectedValue = assertion.ExpectedValue;
+            
+            string actualValue = response.GetHeader(headerName);
+            
+            if (string.IsNullOrEmpty(actualValue))
+            {
+                return TestResult.Failure(
+                    name,
+                    $"Header '{headerName}' not found in response",
+                    string.Join(", ", response.Headers.Keys.Concat(response.ContentHeaders.Keys)),
+                    headerName
+                );
+            }
+            
+            if (actualValue.Contains(expectedValue))
+            {
+                return TestResult.Success(name);
+            }
+            else
+            {
+                return TestResult.Failure(
+                    name,
+                    $"Header '{headerName}' value '{actualValue}' does not contain '{expectedValue}'",
+                    actualValue,
+                    expectedValue
+                );
+            }
+        }
+        
+        private TestResult EvaluateResponseTimeBelowNewFormat(TestAssertion assertion, ApiResponse response)
+        {
+            var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
+            
+            if (string.IsNullOrEmpty(assertion.ExpectedValue))
+            {
+                return TestResult.Failure(name, "Missing expected response time value");
+            }
+            
+            if (int.TryParse(assertion.ExpectedValue, out int maxTime))
+            {
+                if (response.ResponseTimeMs < maxTime)
+                {
+                    return TestResult.Success(name);
+                }
+                else
+                {
+                    return TestResult.Failure(
+                        name,
+                        $"Response time {response.ResponseTimeMs}ms exceeds maximum {maxTime}ms",
+                        response.ResponseTimeMs.ToString() + "ms",
+                        maxTime.ToString() + "ms"
+                    );
+                }
+            }
+            else
+            {
+                return TestResult.Failure(name, $"Invalid response time value: {assertion.ExpectedValue}");
             }
         }
 

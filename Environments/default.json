@@ -1,0 +1,25 @@
+{
+  "Name": "Default",
+  "Description": "Default configuration profile with development and production environments",
+  "DefaultEnvironment": "Development",
+  "Environments": [
+    {
+      "Name": "Development",
+      "Description": "Development environment for testing",
+      "Variables": {
+        "baseUrl": "https://jsonplaceholder.typicode.com",
+        "userId": "1",
+        "timeout": "30000"
+      }
+    },
+    {
+      "Name": "Production",
+      "Description": "Production environment",
+      "Variables": {
+        "baseUrl": "https://jsonplaceholder.typicode.com",
+        "userId": "2",
+        "timeout": "10000"
+      }
+    }
+  ]
+}

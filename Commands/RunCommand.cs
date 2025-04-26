@@ -30,28 +30,49 @@ namespace APITester.Commands
             verboseOption.AddAlias("-v");
             Command.AddOption(verboseOption);
 
-            var envOption = new Option<string?>(
+            var profileOption = new Option<string?>(
+                name: "--profile",
+                description: "Configuration profile to use (defaults to 'Default')");
+            profileOption.AddAlias("-p");
+            Command.AddOption(profileOption);
+
+            var environmentOption = new Option<string?>(
                 name: "--env",
-                description: "Environment file to use for variable substitution");
-            envOption.AddAlias("-e");
-            Command.AddOption(envOption);
+                description: "Environment to use from the configuration profile");
+            environmentOption.AddAlias("-e");
+            Command.AddOption(environmentOption);
 
             // Set the handler
-            Command.SetHandler(async (files, verbose, env) =>
+            Command.SetHandler(async (files, verbose, profile, environment) =>
             {
-                await ExecuteRunCommand(files, verbose, env);
-            }, fileArgument, verboseOption, envOption);
+                await ExecuteRunCommand(files, verbose, profile, environment);
+            }, fileArgument, verboseOption, profileOption, environmentOption);
         }
 
-        private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? envFile)
+        private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? profileName, string? environmentName)
         {
             ConsoleHelper.DisplayTitle("API Tester - Running Tests");
 
-            if (envFile != null)
+            var environmentService = new EnvironmentService();
+            var profiles = environmentService.LoadConfigurationProfiles();
+            
+            // If there are no environment profiles, create a default one
+            if (profiles.Count == 0)
             {
-                ConsoleHelper.WriteKeyValue("Environment File", envFile);
-                // Environment file handling would go here
+                ConsoleHelper.WriteInfo("No environment profiles found. Creating default profile...");
+                environmentService.CreateDefaultEnvironmentFile();
+                profiles = environmentService.LoadConfigurationProfiles();
             }
+
+            // Set active environment
+            string profileToUse = profileName ?? "Default";
+            if (!environmentService.SetCurrentEnvironment(profileToUse, environmentName))
+            {
+                return; // Error message already displayed by the service
+            }
+
+            ConsoleHelper.WriteKeyValue("Using Profile", profileToUse);
+            ConsoleHelper.WriteKeyValue("Active Environment", environmentService.CurrentEnvironment?.Name ?? "None");
 
             int totalTests = 0;
             int passedTests = 0;
@@ -77,6 +98,9 @@ namespace APITester.Commands
                         ConsoleHelper.WriteError($"Failed to parse {path}");
                         continue;
                     }
+
+                    // Apply environment variables
+                    apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
 
                     if (verbose)
                     {
@@ -232,6 +256,55 @@ namespace APITester.Commands
             {
                 // If formatting fails, display raw response
                 Console.WriteLine(response.Body);
+            }
+        }
+        
+        private void ListEnvironments(List<ConfigurationProfile> profiles)
+        {
+            if (profiles.Count == 0)
+            {
+                ConsoleHelper.WriteInfo("No environment profiles found.");
+                return;
+            }
+            
+            ConsoleHelper.WriteSection("Available Configuration Profiles:");
+            
+            foreach (var profile in profiles)
+            {
+                ConsoleHelper.WriteLineColored($"Profile: {profile.Name}", ConsoleColor.Cyan);
+                
+                if (!string.IsNullOrEmpty(profile.Description))
+                {
+                    ConsoleHelper.WriteLineColored($"  Description: {profile.Description}", ConsoleColor.DarkGray);
+                }
+                
+                if (!string.IsNullOrEmpty(profile.DefaultEnvironment))
+                {
+                    ConsoleHelper.WriteLineColored($"  Default Environment: {profile.DefaultEnvironment}", ConsoleColor.DarkCyan);
+                }
+                
+                ConsoleHelper.WriteLineColored("  Environments:", ConsoleColor.White);
+                
+                foreach (var env in profile.Environments)
+                {
+                    ConsoleHelper.WriteLineColored($"    - {env.Name}", ConsoleColor.Green);
+                    
+                    if (!string.IsNullOrEmpty(env.Description))
+                    {
+                        ConsoleHelper.WriteLineColored($"      Description: {env.Description}", ConsoleColor.DarkGray);
+                    }
+                    
+                    ConsoleHelper.WriteLineColored($"      Variables: {env.Variables.Count}", ConsoleColor.DarkYellow);
+                    
+                    // Display variable names (not values to protect sensitive information)
+                    if (env.Variables.Count > 0)
+                    {
+                        var variableNames = string.Join(", ", env.Variables.Keys);
+                        ConsoleHelper.WriteLineColored($"      Names: {variableNames}", ConsoleColor.DarkGray);
+                    }
+                }
+                
+                Console.WriteLine(); // Add blank line between profiles
             }
         }
     }

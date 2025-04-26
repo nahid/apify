@@ -6,9 +6,21 @@ namespace APITester.Models
     {
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+        
+        [JsonPropertyName("Description")]
+        public string Description { get; set; } = string.Empty;
 
         [JsonPropertyName("assertion")]
         public string Assertion { get; set; } = string.Empty;
+        
+        [JsonPropertyName("AssertType")]
+        public string AssertType { get; set; } = string.Empty;
+        
+        [JsonPropertyName("Property")]
+        public string? Property { get; set; }
+        
+        [JsonPropertyName("ExpectedValue")]
+        public string? ExpectedValue { get; set; }
 
         [JsonPropertyName("expected")]
         public object? Expected { get; set; }
@@ -16,6 +28,26 @@ namespace APITester.Models
         // Helper properties to understand the assertion type
         public AssertionType GetAssertionType()
         {
+            // Support both formats
+            if (!string.IsNullOrEmpty(AssertType))
+            {
+                // New format using AssertType property
+                switch (AssertType.ToLowerInvariant())
+                {
+                    case "statuscode":
+                        return AssertionType.StatusCode;
+                    case "containsproperty":
+                        return AssertionType.ResponseBody;
+                    case "headercontains":
+                        return AssertionType.ResponseHeader;
+                    case "responsetimebelow":
+                        return AssertionType.ResponseTime;
+                    default:
+                        return AssertionType.Unknown;
+                }
+            }
+            
+            // Legacy format using Assertion string
             if (Assertion.StartsWith("status"))
                 return AssertionType.StatusCode;
             if (Assertion.StartsWith("response.body"))
@@ -30,6 +62,26 @@ namespace APITester.Models
 
         public string GetComparisonType()
         {
+            // Support both formats
+            if (!string.IsNullOrEmpty(AssertType))
+            {
+                // New format using AssertType property
+                switch (AssertType.ToLowerInvariant())
+                {
+                    case "statuscode":
+                        return "equals";
+                    case "containsproperty":
+                        return "contains";
+                    case "headercontains":
+                        return "contains";
+                    case "responsetimebelow":
+                        return "lessThan";
+                    default:
+                        return "unknown";
+                }
+            }
+            
+            // Legacy format using Assertion string
             if (Assertion.Contains("=="))
                 return "equals";
             if (Assertion.Contains("!="))
@@ -52,6 +104,20 @@ namespace APITester.Models
                 return "matches";
 
             return "unknown";
+        }
+        
+        // Constructor for consistent property naming
+        public TestAssertion()
+        {
+            // Make sure Name is populated from either Description or Name
+            if (string.IsNullOrEmpty(Name) && !string.IsNullOrEmpty(Description))
+            {
+                Name = Description;
+            }
+            else if (string.IsNullOrEmpty(Description) && !string.IsNullOrEmpty(Name))
+            {
+                Description = Name;
+            }
         }
     }
 

@@ -14,51 +14,27 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "APITester"
+args = "APITester-ListEnv"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "apitester"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "APITester-Fixed"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "APITester-Colorful"
+args = "APITester-EnvTest"
 
 [[workflows.workflow]]
-name = "APITester"
+name = "APITester-ListEnv"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "dotnet run run Examples/get-user.json --verbose"
+args = "dotnet run -- --list-env"
 
 [[workflows.workflow]]
-name = "apitester"
+name = "APITester-EnvTest"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "dotnet build && dotnet run run Examples/get-user.json"
-
-[[workflows.workflow]]
-name = "APITester-Fixed"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "dotnet run run Examples/get-user.json --verbose"
-
-[[workflows.workflow]]
-name = "APITester-Colorful"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "dotnet build && dotnet run run Examples/get-user.json --verbose"
+args = "dotnet run run Examples/get-user-with-env.json --verbose"
 
 [deployment]
 run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]
