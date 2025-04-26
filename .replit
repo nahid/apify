@@ -26,7 +26,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "dotnet run run Examples/get-user.json"
+args = "dotnet run run Examples/get-user.json --verbose"
 
 [[workflows.workflow]]
 name = "apitester"
@@ -37,4 +37,4 @@ task = "shell.exec"
 args = "dotnet build && dotnet run run Examples/get-user.json"
 
 [deployment]
-run = ["sh", "-c", "dotnet run run Examples/get-user.json"]
+run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]

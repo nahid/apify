@@ -85,6 +85,12 @@ namespace APITester.Commands
                     }
 
                     var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
+                    
+                    if (verbose)
+                    {
+                        DisplayApiResponse(response);
+                    }
+                    
                     var testResults = await testRunner.RunTestsAsync(apiDefinition, response);
 
                     totalTests += testResults.Count;
@@ -172,6 +178,44 @@ namespace APITester.Commands
                         Console.WriteLine($"  Error: {result.ErrorMessage}");
                     }
                 }
+            }
+        }
+        
+        private void DisplayApiResponse(ApiResponse response)
+        {
+            Console.WriteLine("\nAPI Response:");
+            Console.WriteLine($"Status Code: {response.StatusCode}");
+            Console.WriteLine($"Response Time: {response.ResponseTimeMs}ms");
+            
+            if (response.Headers.Count > 0)
+            {
+                Console.WriteLine("\nResponse Headers:");
+                foreach (var header in response.Headers)
+                {
+                    Console.WriteLine($"  {header.Key}: {header.Value}");
+                }
+            }
+            
+            if (response.ContentHeaders.Count > 0)
+            {
+                Console.WriteLine("\nContent Headers:");
+                foreach (var header in response.ContentHeaders)
+                {
+                    Console.WriteLine($"  {header.Key}: {header.Value}");
+                }
+            }
+            
+            Console.WriteLine("\nResponse Body:");
+            try
+            {
+                // Try to format JSON for better readability
+                var formattedBody = APITester.Utils.JsonHelper.FormatJson(response.Body);
+                Console.WriteLine(formattedBody);
+            }
+            catch
+            {
+                // If formatting fails, display raw response
+                Console.WriteLine(response.Body);
             }
         }
     }
