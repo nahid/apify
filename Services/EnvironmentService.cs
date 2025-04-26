@@ -117,7 +117,8 @@ namespace APITester.Services
         
         private ConfigurationProfile CreateDefaultProfile()
         {
-            string baseUrl = "https://jsonplaceholder.typicode.com"; // Set a better default URL for testing
+            // Use a default URL for testing, which can be overridden by config file
+            string baseUrl = "https://api.example.com"; 
             
             return new ConfigurationProfile
             {
@@ -183,7 +184,7 @@ namespace APITester.Services
                         Description = "Development environment",
                         Variables = new Dictionary<string, string>
                         {
-                            { "baseUrl", "https://jsonplaceholder.typicode.com" },
+                            { "baseUrl", "https://api.example.com" },
                             { "timeout", "30000" },
                             { "userId", "1" },
                             { "apiKey", "dev-api-key" }
@@ -214,7 +215,7 @@ namespace APITester.Services
                         Description = "Development environment",
                         Variables = new Dictionary<string, string>
                         {
-                            { "baseUrl", "https://jsonplaceholder.typicode.com" },
+                            { "baseUrl", "https://api.example.com" },
                             { "timeout", "30000" },
                             { "userId", "1" },
                             { "apiKey", "dev-api-key" }
