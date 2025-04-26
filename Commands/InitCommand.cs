@@ -160,7 +160,7 @@ namespace APITester.Commands
                 var samplePostTest = new ApiDefinition
                 {
                     Name = "Sample POST API Test",
-                    Uri = "{{baseUrl}}/posts",
+                    Uri = "{{baseUrl}}/post",
                     Method = "POST",
                     Headers = new Dictionary<string, string>
                     {
@@ -177,16 +177,16 @@ namespace APITester.Commands
                     Tests = new List<TestAssertion>
                     {
                         new TestAssertion { 
-                            Name = "Status code is created", 
-                            Description = "Status code is 201",
+                            Name = "Status code is OK", 
+                            Description = "Status code is 200",
                             AssertType = "StatusCode",
-                            ExpectedValue = "201"
+                            ExpectedValue = "200"
                         },
                         new TestAssertion { 
-                            Name = "Response contains post ID", 
-                            Description = "Response contains id property",
+                            Name = "Response contains JSON data", 
+                            Description = "Response contains json property",
                             AssertType = "ContainsProperty",
-                            ExpectedValue = "id"
+                            ExpectedValue = "json"
                         }
                     }
                 };

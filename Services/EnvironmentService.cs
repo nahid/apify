@@ -28,53 +28,23 @@ namespace APITester.Services
         // Function to get the configuration file path - always uses current working directory
         private string GetConfigFilePath()
         {
-            // Try multiple locations for the config file, in order of priority:
-            // 1. Current working directory (where the user is executing from)
-            // 2. Application base directory (where the executable is located)
-            // 3. Parent directory of the executable
-            
-            // Get current directory path
+            // Only use the current working directory (where the command is executed from)
             string currentDir = Directory.GetCurrentDirectory();
             string currentPath = Path.Combine(currentDir, ConfigFileName);
             
-            // Check if the file exists in the current directory
+            // If the file exists, log it
             if (File.Exists(currentPath))
             {
                 string absolutePath = Path.GetFullPath(currentPath);
                 Console.WriteLine($"Using configuration file: {absolutePath}");
-                _configFilePath = currentPath;
-                return currentPath;
             }
-            
-            // If not found, try the application base directory
-            string appDir = AppDomain.CurrentDomain.BaseDirectory;
-            string appPath = Path.Combine(appDir, ConfigFileName);
-            
-            if (File.Exists(appPath))
+            else
             {
-                string absolutePath = Path.GetFullPath(appPath);
-                Console.WriteLine($"Using configuration file: {absolutePath}");
-                _configFilePath = appPath;
-                return appPath;
+                // File doesn't exist yet, so we'll use this path for creating it
+                Console.WriteLine($"Configuration file not found. Will use: {Path.GetFullPath(currentPath)}");
             }
             
-            // If still not found, try parent directory of the executable
-            string? parentDir = Path.GetDirectoryName(appDir);
-            if (!string.IsNullOrEmpty(parentDir))
-            {
-                string parentPath = Path.Combine(parentDir, ConfigFileName);
-                if (File.Exists(parentPath))
-                {
-                    string absolutePath = Path.GetFullPath(parentPath);
-                    Console.WriteLine($"Using configuration file: {absolutePath}");
-                    _configFilePath = parentPath;
-                    return parentPath;
-                }
-            }
-            
-            // If we get here, the file doesn't exist yet, so return the current directory path
-            // as the preferred location for creating it
-            Console.WriteLine($"Configuration file not found. Will use: {Path.GetFullPath(currentPath)}");
+            // Always use the current directory path
             _configFilePath = currentPath;
             return currentPath;
         }
