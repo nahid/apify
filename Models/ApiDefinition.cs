@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace APITester.Models
 {
@@ -20,7 +22,97 @@ namespace APITester.Models
         public Dictionary<string, string>? Headers { get; set; }
 
         [JsonPropertyName("payload")]
-        public string? Payload { get; set; }
+        [JsonIgnore] // This is ignored in system.text.json serialization
+        private string? _payloadString;
+
+        [JsonPropertyName("payloadObject")]
+        [JsonIgnore] // This is ignored in system.text.json serialization
+        private object? _payloadObject;
+
+        // This property is used by Newtonsoft.Json for serialization/deserialization
+        [Newtonsoft.Json.JsonProperty("payload")]
+        public object? Payload 
+        { 
+            get => PayloadType == PayloadType.Json ? (object?)_payloadObject : _payloadString;
+            set 
+            {
+                if (value is JObject || value is JArray)
+                {
+                    _payloadObject = value;
+                    PayloadType = PayloadType.Json;
+                }
+                else if (value is string str)
+                {
+                    _payloadString = str;
+                    
+                    // Try to parse as JSON if payloadType is set to JSON
+                    if (PayloadType == PayloadType.Json)
+                    {
+                        try
+                        {
+                            _payloadObject = JToken.Parse(str);
+                        }
+                        catch
+                        {
+                            // If not valid JSON, keep as string
+                            _payloadString = str;
+                        }
+                    }
+                }
+                else if (value != null)
+                {
+                    _payloadObject = value;
+                    PayloadType = PayloadType.Json;
+                }
+            }
+        }
+
+        // Methods to get the payload in different formats
+        public string? GetPayloadAsString()
+        {
+            if (_payloadString != null)
+                return _payloadString;
+            
+            if (_payloadObject != null)
+                return Newtonsoft.Json.JsonConvert.SerializeObject(_payloadObject);
+            
+            return null;
+        }
+
+        public T? GetPayloadAsObject<T>()
+        {
+            if (_payloadObject != null)
+            {
+                if (_payloadObject is JToken jToken)
+                {
+                    return jToken.ToObject<T>();
+                }
+                
+                try
+                {
+                    return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(
+                        Newtonsoft.Json.JsonConvert.SerializeObject(_payloadObject));
+                }
+                catch
+                {
+                    return default;
+                }
+            }
+            
+            if (_payloadString != null)
+            {
+                try
+                {
+                    return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(_payloadString);
+                }
+                catch
+                {
+                    return default;
+                }
+            }
+            
+            return default;
+        }
 
         [JsonPropertyName("payloadType")]
         public PayloadType PayloadType { get; set; } = PayloadType.Json;

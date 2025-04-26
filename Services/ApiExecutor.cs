@@ -55,7 +55,7 @@ namespace APITester.Services
                         await AddMultipartFormDataContentAsync(request, apiDefinition);
                     }
                     // Then check for payload
-                    else if (!string.IsNullOrEmpty(apiDefinition.Payload))
+                    else if (apiDefinition.Payload != null)
                     {
                         AddPayloadContent(request, apiDefinition);
                     }
@@ -108,47 +108,52 @@ namespace APITester.Services
                 };
             }
 
+            // Get the payload as a string or object depending on the type
+            string? payloadString = apiDefinition.GetPayloadAsString();
+            
             // Process payload based on type
             StringContent content;
             switch (apiDefinition.PayloadType)
             {
                 case PayloadType.Json:
-                    // Try to format JSON if it's not already formatted
-                    try
-                    {
-                        // Verify it's valid JSON and format it
-                        var jsonObj = JsonConvert.DeserializeObject(apiDefinition.Payload!);
-                        string formattedJson = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
-                        content = new StringContent(formattedJson, Encoding.UTF8);
-                    }
-                    catch
-                    {
-                        // If not valid JSON or error occurs, use as-is
-                        content = new StringContent(apiDefinition.Payload!, Encoding.UTF8);
-                    }
+                    // Payload is already an object, just serialize it with indentation
+                    string formattedJson = JsonConvert.SerializeObject(apiDefinition.Payload, Formatting.Indented);
+                    content = new StringContent(formattedJson, Encoding.UTF8);
                     break;
 
                 case PayloadType.FormData:
                     // For form data, we need to format as key=value&key2=value2...
                     try
                     {
-                        // Try to parse as a dictionary or use as is
-                        var formData = new FormUrlEncodedContent(
-                            JsonConvert.DeserializeObject<Dictionary<string, string>>(apiDefinition.Payload!)!
-                        );
-                        request.Content = formData;
-                        return; // Skip the content-type setting below as FormUrlEncodedContent sets it
+                        // Use the GetPayloadAsObject method to get the form fields
+                        var formFields = apiDefinition.GetPayloadAsObject<Dictionary<string, string>>();
+                        if (formFields != null)
+                        {
+                            var formData = new FormUrlEncodedContent(formFields);
+                            request.Content = formData;
+                            return; // Skip the content-type setting below as FormUrlEncodedContent sets it
+                        }
+                        else
+                        {
+                            // Fall back to string if conversion fails
+                            content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
+                        }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // If not valid JSON dictionary, use as-is
-                        content = new StringContent(apiDefinition.Payload!, Encoding.UTF8);
+                        ConsoleHelper.WriteWarning($"Error processing form data: {ex.Message}");
+                        content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
                     }
                     break;
 
                 case PayloadType.Text:
+                    content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
+                    break;
+                    
+                case PayloadType.None:
                 default:
-                    content = new StringContent(apiDefinition.Payload!, Encoding.UTF8);
+                    // For "none" payload type, create an empty content
+                    content = new StringContent(string.Empty, Encoding.UTF8);
                     break;
             }
 
@@ -161,11 +166,11 @@ namespace APITester.Services
             var multipartContent = new MultipartFormDataContent();
 
             // Add text fields from payload if specified and if it's a form data payload
-            if (!string.IsNullOrEmpty(apiDefinition.Payload) && apiDefinition.PayloadType == PayloadType.FormData)
+            if (apiDefinition.Payload != null && apiDefinition.PayloadType == PayloadType.FormData)
             {
                 try
                 {
-                    var formFields = JsonConvert.DeserializeObject<Dictionary<string, string>>(apiDefinition.Payload);
+                    var formFields = apiDefinition.GetPayloadAsObject<Dictionary<string, string>>();
                     if (formFields != null)
                     {
                         foreach (var field in formFields)

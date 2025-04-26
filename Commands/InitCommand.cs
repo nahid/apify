@@ -160,7 +160,12 @@ namespace APITester.Commands
                         { "Accept", "application/json" },
                         { "Content-Type", "application/json" }
                     },
-                    Payload = "{\n  \"title\": \"Sample Post\",\n  \"body\": \"This is a sample post body\",\n  \"userId\": 1\n}",
+                    Payload = new Dictionary<string, object>
+                    {
+                        { "title", "Sample Post" },
+                        { "body", "This is a sample post body" },
+                        { "userId", 1 }
+                    },
                     PayloadType = PayloadType.Json,
                     Tests = new List<TestAssertion>
                     {

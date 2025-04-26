@@ -176,12 +176,31 @@ No payload is sent with the request. Typically used for GET requests.
 
 ### JSON
 
-JSON formatted payload. The Content-Type header is automatically set to "application/json".
+The tool supports two ways to specify JSON payloads:
+
+1. **Native JSON Objects** (recommended): The payload is specified as an actual JSON object, not a string:
+
+```json
+"Payload": {
+  "name": "John Doe",
+  "email": "john@example.com",
+  "roles": ["admin", "user"],
+  "profile": {
+    "age": 30,
+    "location": "New York"
+  }
+},
+"PayloadType": "json"
+```
+
+2. **JSON as String** (legacy support): The payload is specified as a string containing JSON:
 
 ```json
 "Payload": "{ \"name\": \"John Doe\", \"email\": \"john@example.com\" }",
 "PayloadType": "json"
 ```
+
+Both approaches are supported, but using native JSON objects is recommended as it provides better type safety and avoids string escaping issues. The Content-Type header is automatically set to "application/json" in both cases.
 
 ### Text
 
@@ -200,7 +219,10 @@ Plain text payload. The Content-Type header is automatically set to "text/plain"
 URL encoded form data. The Content-Type header is automatically set to "application/x-www-form-urlencoded".
 
 ```json
-"Payload": "{ \"username\": \"johndoe\", \"password\": \"secret\" }",
+"Payload": {
+  "username": "johndoe",
+  "password": "secret"
+},
 "PayloadType": "formData"
 ```
 
@@ -380,7 +402,11 @@ Environment variables can be used in API test definitions by enclosing them in d
     "Accept": "application/json",
     "Content-Type": "application/json"
   },
-  "Payload": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"role\": \"admin\"\n}",
+  "Payload": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "admin"
+  },
   "PayloadType": "json",
   "Tests": [
     {
