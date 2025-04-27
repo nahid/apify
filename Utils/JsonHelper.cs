@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq; // Add this for JObject
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
-namespace APITester.Utils
+namespace Apify.Utils
 {
     public static class JsonHelper
     {

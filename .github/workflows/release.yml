@@ -83,14 +83,14 @@ jobs:
     - name: Rename Artifact
       run: |
         mkdir -p ./artifacts
-        cp ./bin/Release/net8.0/${{ matrix.rid }}/publish/apitester${{ matrix.artifact_extension }} ./artifacts/apitester-${{ steps.set_version.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
+        cp ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./artifacts/apify-${{ steps.set_version.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
       shell: bash
     
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: apitester-${{ matrix.platform }}
-        path: ./artifacts/apitester-${{ steps.set_version.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
+        name: apify-${{ matrix.platform }}
+        path: ./artifacts/apify-${{ steps.set_version.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
         
   create-release:
     needs: build-single-file
@@ -124,25 +124,25 @@ jobs:
     - name: Download Linux Artifact
       uses: actions/download-artifact@v4
       with:
-        name: apitester-Linux
+        name: apify-Linux
         path: ./release-artifacts
         
     - name: Download Windows Artifact
       uses: actions/download-artifact@v4
       with:
-        name: apitester-Windows
+        name: apify-Windows
         path: ./release-artifacts
         
     - name: Download macOS Artifact
       uses: actions/download-artifact@v4
       with:
-        name: apitester-macOS
+        name: apify-macOS
         path: ./release-artifacts
         
     - name: Download macOS ARM64 Artifact
       uses: actions/download-artifact@v4
       with:
-        name: apitester-macOS-arm64
+        name: apify-macOS-arm64
         path: ./release-artifacts
     
     - name: List prepared artifacts

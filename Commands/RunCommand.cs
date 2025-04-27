@@ -1,10 +1,10 @@
-using APITester.Models;
-using APITester.Services;
-using APITester.Utils;
+using Apify.Models;
+using Apify.Services;
+using Apify.Utils;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 
-namespace APITester.Commands
+namespace Apify.Commands
 {
     public class RunCommand
     {
@@ -51,7 +51,7 @@ namespace APITester.Commands
 
         private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? profileName, string? environmentName)
         {
-            ConsoleHelper.DisplayTitle("API Tester - Running Tests");
+            ConsoleHelper.DisplayTitle("Apify - Running Tests");
 
             var environmentService = new EnvironmentService();
             

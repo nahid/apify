@@ -5,8 +5,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>apitester</AssemblyName>
-    <RootNamespace>APITester</RootNamespace>
+    <AssemblyName>apify</AssemblyName>
+    <RootNamespace>Apify</RootNamespace>
     <LangVersion>latest</LangVersion>
     <AnalysisLevel>latest</AnalysisLevel>
     <!-- Target .NET 9 compatibility -->

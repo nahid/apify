@@ -183,9 +183,9 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/runner/workspace/APITester.csproj",
-      "projectName": "apitester",
-      "projectPath": "/home/runner/workspace/APITester.csproj",
+      "projectUniqueName": "/home/runner/workspace/Apify.csproj",
+      "projectName": "apify",
+      "projectPath": "/home/runner/workspace/Apify.csproj",
       "packagesPath": "/home/runner/.nuget/packages/",
       "outputPath": "/home/runner/workspace/obj/",
       "projectStyle": "PackageReference",

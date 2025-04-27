@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-using APITester.Models;
+using Apify.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 
-namespace APITester.Services
+namespace Apify.Services
 {
     public class EnvironmentService
     {

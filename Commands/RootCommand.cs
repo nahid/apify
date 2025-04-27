@@ -1,8 +1,8 @@
 using System.CommandLine;
-using APITester.Services;
-using APITester.Utils;
+using Apify.Services;
+using Apify.Utils;
 
-namespace APITester.Commands
+namespace Apify.Commands
 {
     public class RootCommand
     {
@@ -12,7 +12,7 @@ namespace APITester.Commands
         {
             Command = new System.CommandLine.RootCommand
             {
-                Description = "API Tester - A CLI tool for testing APIs similar to Postman"
+                Description = "Apify - A CLI tool for testing APIs similar to Postman"
             };
             
             // Add the list-env command
@@ -33,7 +33,7 @@ namespace APITester.Commands
         
         private void ListEnvironments()
         {
-            ConsoleHelper.DisplayTitle("API Tester - Available Environments");
+            ConsoleHelper.DisplayTitle("Apify - Available Environments");
             
             var environmentService = new EnvironmentService();
             var profile = environmentService.LoadConfigurationProfile();

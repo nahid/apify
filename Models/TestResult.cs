@@ -1,4 +1,4 @@
-namespace APITester.Models
+namespace Apify.Models
 {
     public class TestResult
     {

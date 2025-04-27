@@ -1,8 +1,8 @@
-# API Tester Documentation
+# Apify Documentation
 
 ## Overview
 
-API Tester is a robust command-line tool designed for API testing and validation. It allows developers to define API tests in JSON format and execute them against endpoints, providing detailed output of the request, response, and test results. The tool offers centralized environment management, variable substitution, and support for various payload types and file uploads.
+Apify is a robust command-line tool designed for API testing and validation. It allows developers to define API tests in JSON format and execute them against endpoints, providing detailed output of the request, response, and test results. The tool offers centralized environment management, variable substitution, and support for various payload types and file uploads.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ API Tester is a robust command-line tool designed for API testing and validation
 
 ## Installation
 
-To use API Tester, you need to have .NET 8.0 SDK installed on your system.
+To use Apify, you need to have .NET 8.0 SDK installed on your system.
 
 ```bash
 # Clone the repository
@@ -36,7 +36,7 @@ dotnet run
 
 ### Native AOT Compilation
 
-API Tester supports Native AOT (Ahead-of-Time) compilation, which produces a self-contained executable with no dependency on the .NET runtime. This results in:
+Apify supports Native AOT (Ahead-of-Time) compilation, which produces a self-contained executable with no dependency on the .NET runtime. This results in:
 
 - Faster startup time
 - Smaller deployment size
@@ -54,12 +54,12 @@ dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishAot=true
 ```
 
 The resulting executable will be located at:
-`bin/Release/net8.0/linux-x64/publish/apitester`
+`bin/Release/net8.0/linux-x64/publish/apify`
 
 You can run it directly without needing the .NET runtime:
 
 ```bash
-./bin/Release/net8.0/linux-x64/publish/apitester
+./bin/Release/net8.0/linux-x64/publish/apify
 ```
 
 #### Platform-Specific Builds
@@ -201,7 +201,7 @@ API tests are defined in JSON files with the following structure:
 
 ## Payload Types
 
-API Tester supports multiple payload types for flexibility in testing different types of API endpoints. This section details all available payload types and their specific configurations.
+Apify supports multiple payload types for flexibility in testing different types of API endpoints. This section details all available payload types and their specific configurations.
 
 | Payload Type | Description | Content-Type Header | Typical Use Cases |
 |--------------|-------------|---------------------|-------------------|
@@ -313,7 +313,7 @@ When combined with file uploads, the content type automatically changes to multi
 
 ## File Uploads
 
-API Tester supports file uploads using multipart/form-data:
+Apify supports file uploads using multipart/form-data:
 
 ```json
 "Files": [
@@ -345,7 +345,7 @@ When files are included, the request is automatically sent as multipart/form-dat
 
 ## Test Assertions
 
-API Tester provides comprehensive assertion capabilities to validate API responses. All test assertions support variable substitution in their parameters.
+Apify provides comprehensive assertion capabilities to validate API responses. All test assertions support variable substitution in their parameters.
 
 ### Supported Assertion Types
 
@@ -454,7 +454,7 @@ Variables can be used in both the `PropertyPath` and `ExpectedValue` fields, mak
 
 ## Configuration Properties
 
-This section details all the configuration properties used in the API Tester, both for the global configuration file (`apify-config.json`) and individual API test files.
+This section details all the configuration properties used in the Apify, both for the global configuration file (`apify-config.json`) and individual API test files.
 
 ### Configuration File Properties
 
@@ -522,7 +522,7 @@ Each test in the `Tests` array contains:
 
 ## Variable System
 
-API Tester provides a flexible variable system with three levels of variables: project-level, environment-specific, and request-specific variables.
+Apify provides a flexible variable system with three levels of variables: project-level, environment-specific, and request-specific variables.
 
 ### Configuration File
 
@@ -574,7 +574,7 @@ Environment variables can be used in API test definitions by enclosing them in d
 
 ## Custom Variables
 
-In addition to environment variables, API Tester allows defining custom variables directly within each API test definition file. These custom variables provide more flexibility and portability for your test files.
+In addition to environment variables, Apify allows defining custom variables directly within each API test definition file. These custom variables provide more flexibility and portability for your test files.
 
 ### Defining Custom Variables
 
@@ -608,7 +608,7 @@ Custom variables are defined in the "Variables" section of the API test definiti
 
 ### Variable Priority System
 
-The API Tester implements a hierarchical variable priority system:
+The Apify implements a hierarchical variable priority system:
 
 1. **Request-specific variables** (Highest priority)
    - Defined in the "Variables" section of each API test file

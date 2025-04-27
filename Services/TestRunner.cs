@@ -1,6 +1,6 @@
-using APITester.Models;
+using Apify.Models;
 
-namespace APITester.Services
+namespace Apify.Services
 {
     public class TestRunner
     {

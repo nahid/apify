@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace APITester.Models
+namespace Apify.Models
 {
     // Add DynamicallyAccessedMembers attribute to preserve public members for reflection
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 

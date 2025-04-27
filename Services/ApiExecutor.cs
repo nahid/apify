@@ -1,11 +1,11 @@
-using APITester.Models;
-using APITester.Utils;
+using Apify.Models;
+using Apify.Utils;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace APITester.Services
+namespace Apify.Services
 {
     public class ApiExecutor
     {

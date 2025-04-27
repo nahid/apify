@@ -1,7 +1,7 @@
 using ConsoleTableExt;
 using System.Text;
 
-namespace APITester.Utils
+namespace Apify.Utils
 {
     public static class ConsoleHelper
     {

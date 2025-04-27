@@ -1,9 +1,9 @@
-using APITester.Commands;
-using APITester.Services;
-using APITester.Utils;
+using Apify.Commands;
+using Apify.Services;
+using Apify.Utils;
 using System.CommandLine;
 
-namespace APITester
+namespace Apify
 {
     public class Program
     {
@@ -11,7 +11,7 @@ namespace APITester
         {
             var rootCommand = new System.CommandLine.RootCommand
             {
-                Description = "API Tester - A CLI tool for testing APIs"
+                Description = "Apify - A CLI tool for testing APIs"
             };
 
             // Add the list-env command directly to the root command
@@ -29,7 +29,7 @@ namespace APITester
 
         private static void ListEnvironments()
         {
-            ConsoleHelper.DisplayTitle("API Tester - Available Environments");
+            ConsoleHelper.DisplayTitle("Apify - Available Environments");
             
             var environmentService = new EnvironmentService();
             

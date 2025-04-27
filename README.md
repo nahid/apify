@@ -1,4 +1,4 @@
-# API Tester
+# Apify
 
 A powerful C# CLI application for comprehensive API testing, enabling developers to streamline API validation workflows with rich configuration and execution capabilities.
 
@@ -53,17 +53,17 @@ dotnet publish -c Release -r linux-x64 --self-contained true
 
 ### Integration into Existing API Projects
 
-You can use API Tester within your existing API projects:
+You can use Apify within your existing API projects:
 
-1. **Build and Install API Tester**
+1. **Build and Install Apify**
    ```bash
    # Build as a single file executable
    dotnet publish -c Release -r <your-platform> --self-contained true
    
    # Copy the executable to a location in your PATH, or use it directly
-   cp bin/Release/net8.0/<your-platform>/publish/apitester /usr/local/bin/
+   cp bin/Release/net8.0/<your-platform>/publish/apify /usr/local/bin/
    # or for Windows
-   # copy bin\Release\net8.0\win-x64\publish\apitester.exe C:\path\to\your\bin\
+   # copy bin\Release\net8.0\win-x64\publish\apify.exe C:\path\to\your\bin\
    ```
 
 2. **Initialize API Testing in Your Project Directory**
@@ -72,9 +72,9 @@ You can use API Tester within your existing API projects:
    cd /path/to/your/weatherapi
    
    # Initialize API testing (creates apify-config.json and apis/ directory)
-   apitester init --name "Weather API Tests" --base-url "https://api.weather.com"
+   apify init --name "Weather API Tests" --base-url "https://api.weather.com"
    # If you didn't install globally, use the full path to the executable
-   # /path/to/apitester init --name "Weather API Tests" --base-url "https://api.weather.com"
+   # /path/to/apify init --name "Weather API Tests" --base-url "https://api.weather.com"
    ```
 
 3. **Create API Test Definitions**
@@ -84,19 +84,19 @@ You can use API Tester within your existing API projects:
 4. **Run Tests**
    ```bash
    # From your project directory where apify-config.json is located
-   apitester run apis/get-weather.json
+   apify run apis/get-weather.json
    
    # Run with verbose output
-   apitester run apis/get-weather.json --verbose
+   apify run apis/get-weather.json --verbose
    
    # Run with a specific environment
-   apitester run apis/get-weather.json --env Production
+   apify run apis/get-weather.json --env Production
    ```
 
 5. **View Environment Configuration**
    ```bash
    # From your project directory
-   apitester list-env
+   apify list-env
    ```
 
 ### Direct Usage (without installation)
@@ -187,7 +187,7 @@ API tests are defined in JSON files with this structure:
 
 ## Example: Testing a Weather API
 
-Here's a practical example of how to use API Tester with a Weather API project:
+Here's a practical example of how to use Apify with a Weather API project:
 
 ### Step 1: Setup
 
@@ -196,7 +196,7 @@ Here's a practical example of how to use API Tester with a Weather API project:
 cd ~/projects/weatherapi
 
 # Initialize API testing (creates apify-config.json and apis/ directory)
-apitester init --name "Weather API Tests" --base-url "https://api.weather.com"
+apify init --name "Weather API Tests" --base-url "https://api.weather.com"
 ```
 
 ### Step 2: Create API Test Definitions
@@ -267,7 +267,7 @@ Edit `apify-config.json` to add your environment variables:
 
 ```bash
 # From your Weather API project directory
-apitester run apis/get-current-weather.json --verbose
+apify run apis/get-current-weather.json --verbose
 ```
 
 ## License

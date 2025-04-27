@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
-using APITester.Utils;
+using Apify.Utils;
 
-namespace APITester.Models
+namespace Apify.Models
 {
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
                                DynamicallyAccessedMemberTypes.PublicFields | 

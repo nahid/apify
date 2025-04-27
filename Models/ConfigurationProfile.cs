@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
 
-namespace APITester.Models
+namespace Apify.Models
 {
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
                                DynamicallyAccessedMemberTypes.PublicFields |

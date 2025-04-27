@@ -1,10 +1,10 @@
 using System.CommandLine;
 using System.Text.Json;
-using APITester.Models;
-using APITester.Utils;
+using Apify.Models;
+using Apify.Utils;
 using Newtonsoft.Json;
 
-namespace APITester.Commands
+namespace Apify.Commands
 {
     public class InitCommand : Command
     {

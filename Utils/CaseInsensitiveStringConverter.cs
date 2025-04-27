@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using System;
 
-namespace APITester.Utils
+namespace Apify.Utils
 {
     public class CaseInsensitiveStringConverter : JsonConverter<string>
     {
