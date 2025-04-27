@@ -11,13 +11,14 @@ A powerful C# CLI application for comprehensive API testing, enabling developers
 - **Test Assertions**: Validate response status, headers, body content
 - **Detailed Reports**: Comprehensive output with request and response details
 - **Single File Deployment**: Simplified deployment as a single executable file
-- **.NET 9 Ready**: Forward compatibility with upcoming .NET versions
+- **.NET 9 Ready**: Automatic multi-targeting with .NET 9.0 when available
 
 ## Getting Started
 
 ### Prerequisites
 
-- .NET 8.0 SDK
+- .NET 8.0 SDK (required)
+- .NET 9.0 SDK (optional, for building with .NET 9.0 when available)
 
 ### Installation
 

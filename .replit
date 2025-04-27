@@ -76,6 +76,14 @@ args = "TestDebugList"
 task = "workflow.run"
 args = "TestBuild"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestBuildNet8"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestBuildUpdated"
+
 [[workflows.workflow]]
 name = "APITester-ListEnv"
 author = "agent"
@@ -198,6 +206,22 @@ args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx
 
 [[workflows.workflow]]
 name = "TestBuild"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet build"
+
+[[workflows.workflow]]
+name = "TestBuildNet8"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet build -f net8.0"
+
+[[workflows.workflow]]
+name = "TestBuildUpdated"
 author = "agent"
 
 [[workflows.workflow.tasks]]
