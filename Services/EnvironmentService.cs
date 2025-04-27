@@ -121,6 +121,12 @@ namespace APITester.Services
             return new TestEnvironmentConfig
             {
                 DefaultEnvironment = "Development",
+                // Project-level variables (shared across all environments)
+                Variables = new Dictionary<string, string>
+                {
+                    { "projectId", "api-test-1" },
+                    { "version", "1.0.0" }
+                },
                 Environments = new List<TestEnvironment>
                 {
                     new TestEnvironment
@@ -221,12 +227,19 @@ namespace APITester.Services
         
         public ApiDefinition ApplyEnvironmentVariables(ApiDefinition apiDefinition)
         {
-            // Create a merged dictionary of variables (custom variables in API definition take precedence)
+            // Create a merged dictionary of variables with priority:
+            // 1. Request-specific variables (highest)
+            // 2. Project-level variables (middle)
+            // 3. Environment variables (lowest)
             var mergedVariables = new Dictionary<string, string>();
             
+            // Load config to access project-level variables
+            var config = LoadConfigurationProfile();
+            
+            // First, add environment-specific variables (lowest priority)
             if (_currentEnvironment == null)
             {
-                Console.WriteLine("Warning: No active environment set. Only custom variables will be applied.");
+                Console.WriteLine("Warning: No active environment set. Only project and request variables will be applied.");
             }
             else
             {
@@ -239,19 +252,37 @@ namespace APITester.Services
                 }
             }
             
-            // Add custom variables from API definition (will override environment variables with same name)
+            // Next, add project-level variables (middle priority - overrides environment variables)
+            if (config.Variables != null && config.Variables.Count > 0)
+            {
+                Console.WriteLine("Applying project-level variables from apify-config.json...");
+                foreach (var projectVar in config.Variables)
+                {
+                    if (mergedVariables.ContainsKey(projectVar.Key))
+                    {
+                        Console.WriteLine($"  Project-level variable '{projectVar.Key}' overrides environment variable with same name");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  Added project-level variable: {projectVar.Key}");
+                    }
+                    mergedVariables[projectVar.Key] = projectVar.Value;
+                }
+            }
+            
+            // Finally, add request-specific variables (highest priority - overrides both project and environment variables)
             if (apiDefinition.Variables != null && apiDefinition.Variables.Count > 0)
             {
-                Console.WriteLine("Applying custom variables from API definition...");
+                Console.WriteLine("Applying request-specific variables from API definition...");
                 foreach (var customVar in apiDefinition.Variables)
                 {
                     if (mergedVariables.ContainsKey(customVar.Key))
                     {
-                        Console.WriteLine($"  Custom variable '{customVar.Key}' overrides environment variable with same name");
+                        Console.WriteLine($"  Request-specific variable '{customVar.Key}' overrides variable with same name");
                     }
                     else
                     {
-                        Console.WriteLine($"  Added custom variable: {customVar.Key}");
+                        Console.WriteLine($"  Added request-specific variable: {customVar.Key}");
                     }
                     mergedVariables[customVar.Key] = customVar.Value;
                 }

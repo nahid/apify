@@ -36,6 +36,31 @@ namespace APITester.Utils
             
             try
             {
+                // Add debug info for TestAssertion
+                if (typeof(T).Name == "ApiDefinition")
+                {
+                    Console.WriteLine($"DEBUG - Loading API definition JSON: {Path.GetFileName(filePath)}");
+                    // For debugging: try using JObject to check property names
+                    try {
+                        var jObj = JObject.Parse(json);
+                        if (jObj["Tests"] is JArray tests)
+                        {
+                            foreach (var test in tests)
+                            {
+                                if (test["AssertType"]?.ToString().ToLowerInvariant() == "equal")
+                                {
+                                    Console.WriteLine("DEBUG - Found Equal assertion:");
+                                    Console.WriteLine($"  Name: {test["Name"]}");
+                                    Console.WriteLine($"  propertyPath: {test["propertyPath"]}");
+                                    Console.WriteLine($"  PropertyPath: {test["PropertyPath"]}");
+                                    Console.WriteLine($"  Property: {test["Property"]}");
+                                    Console.WriteLine($"  ExpectedValue: {test["ExpectedValue"]}");
+                                }
+                            }
+                        }
+                    } catch {}
+                }
+                
                 return JsonConvert.DeserializeObject<T>(json, settings);
             }
             catch (Exception ex)
