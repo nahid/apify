@@ -9,7 +9,7 @@ namespace Apify.Commands
     public class InitCommand : Command
     {
         private const string DefaultConfigFileName = "apify-config.json";
-        private const string DefaultApiDirectoryName = "apis";
+        private const string DefaultApiDirectoryName = ".apify";
 
         public InitCommand() : base("init", "Initialize a new API testing project in the current directory")
         {
@@ -318,17 +318,19 @@ namespace Apify.Commands
                 
                 if (isCompiledExecutable)
                 {
-                    // Running as a standalone executable like ./apitester
-                    ConsoleHelper.WriteInfo($"To run tests, use: ./{exeName} run apis/sample-api.json");
+                    // Running as a standalone executable like ./apify
+                    ConsoleHelper.WriteInfo($"To run tests, use: ./{exeName} run sample-api");
                     ConsoleHelper.WriteInfo($"To list environments, use: ./{exeName} list-env");
                     ConsoleHelper.WriteInfo($"Tests will use the configuration from the current directory: {configFilePath}");
+                    ConsoleHelper.WriteInfo($"The .apify directory is the default location for your API test files");
                 }
                 else
                 {
                     // Running via dotnet run
-                    ConsoleHelper.WriteInfo("To run tests, use: dotnet run run apis/sample-api.json");
+                    ConsoleHelper.WriteInfo("To run tests, use: dotnet run run sample-api");
                     ConsoleHelper.WriteInfo("To list environments, use: dotnet run list-env");
                     ConsoleHelper.WriteInfo($"Tests will use the configuration from the current directory: {configFilePath}");
+                    ConsoleHelper.WriteInfo($"The .apify directory is the default location for your API test files");
                 }
             }
             catch (Exception ex)

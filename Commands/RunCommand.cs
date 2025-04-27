@@ -12,12 +12,12 @@ namespace Apify.Commands
 
         public RunCommand()
         {
-            Command = new Command("run", "Run API tests from JSON definition files");
+            Command = new Command("run", "Run API tests from the .apify directory (uses simplified path format)");
 
             // Add arguments
             var fileArgument = new Argument<string[]>(
                 name: "files",
-                description: "API definition files to test (supports wildcards)")
+                description: "API definition files to test (located in .apify directory by default, no need to specify file extension, supports dot notation for nested directories and wildcards)")
             {
                 Arity = ArgumentArity.OneOrMore
             };
@@ -176,23 +176,72 @@ namespace Apify.Commands
             ConsoleHelper.WriteLineColored("==========================", ConsoleColor.Cyan);
         }
 
+        private const string DefaultApiDirectory = ".apify";
+
         private List<string> ExpandWildcards(string[] filePaths)
         {
             var expandedPaths = new List<string>();
             
-            foreach (var path in filePaths)
+            foreach (var originalPath in filePaths)
             {
+                string path = originalPath;
+                
+                // Handle dot notation for nested directories and add .json extension if missing
+                if (!Path.HasExtension(path) || !path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Convert dot notation to directory separators
+                    if (path.Contains('.'))
+                    {
+                        var pathParts = path.Split('.');
+                        var fileName = pathParts[pathParts.Length - 1];
+                        var directories = pathParts.Take(pathParts.Length - 1);
+                        
+                        // Reconstruct path using directory separators
+                        path = Path.Combine(string.Join(Path.DirectorySeparatorChar.ToString(), directories), fileName);
+                    }
+                    
+                    // Add .json extension if it's missing
+                    if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        path = path + ".json";
+                    }
+                }
+                
+                // If the path doesn't include a directory separator and doesn't start with a dot (hidden file),
+                // assume it's in the default .apify directory
+                if (!path.Contains(Path.DirectorySeparatorChar) && !path.Contains(Path.AltDirectorySeparatorChar) && 
+                    !path.StartsWith("."))
+                {
+                    path = Path.Combine(DefaultApiDirectory, path);
+                }
+                
                 if (path.Contains("*") || path.Contains("?"))
                 {
                     var directory = Path.GetDirectoryName(path) ?? ".";
                     var filePattern = Path.GetFileName(path);
                     var matchingFiles = Directory.GetFiles(directory, filePattern)
-                                                .Where(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+                                              .Where(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
                     expandedPaths.AddRange(matchingFiles);
                 }
                 else if (File.Exists(path))
                 {
                     expandedPaths.Add(path);
+                }
+                else
+                {
+                    // If file doesn't exist, provide helpful error
+                    ConsoleHelper.WriteError($"Could not find file: {path}");
+                    if (originalPath != path)
+                    {
+                        ConsoleHelper.WriteInfo($"Original input was '{originalPath}', which was interpreted as '{path}'");
+                    }
+                    
+                    // Check if the directory exists at least
+                    var dir = Path.GetDirectoryName(path);
+                    if (dir != null && !Directory.Exists(dir))
+                    {
+                        ConsoleHelper.WriteError($"Directory does not exist: {dir}");
+                    }
                 }
             }
 
