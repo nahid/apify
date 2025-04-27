@@ -10,7 +10,8 @@ A powerful C# CLI application for comprehensive API testing, enabling developers
 - **Environment Variables**: Use different configurations for development, staging, production
 - **Test Assertions**: Validate response status, headers, body content
 - **Detailed Reports**: Comprehensive output with request and response details
-- **Native AOT Support**: Improved performance with ahead-of-time compilation
+- **Single File Deployment**: Simplified deployment as a single executable file
+- **.NET 9 Ready**: Forward compatibility with upcoming .NET versions
 
 ## Getting Started
 
@@ -32,15 +33,19 @@ dotnet build
 dotnet run
 ```
 
-### Native AOT Build
+### Single File Build
 
-For improved performance, you can build using Native AOT:
+For simplified deployment, you can build a single executable file:
 
 ```bash
-# Build with Native AOT
-./build-native.sh
-# Or manually:
-dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishAot=true
+# Build a single file executable
+dotnet publish -c Release -r linux-x64 --self-contained true
+# Windows:
+# dotnet publish -c Release -r win-x64 --self-contained true
+# macOS:
+# dotnet publish -c Release -r osx-x64 --self-contained true
+# macOS ARM64:
+# dotnet publish -c Release -r osx-arm64 --self-contained true
 ```
 
 ## Usage
@@ -51,8 +56,8 @@ You can use API Tester within your existing API projects:
 
 1. **Build and Install API Tester**
    ```bash
-   # Build with Native AOT (recommended)
-   dotnet publish -c Release -r <your-platform> --self-contained true -p:PublishAot=true
+   # Build as a single file executable
+   dotnet publish -c Release -r <your-platform> --self-contained true
    
    # Copy the executable to a location in your PATH, or use it directly
    cp bin/Release/net8.0/<your-platform>/publish/apitester /usr/local/bin/
@@ -146,7 +151,7 @@ To create a release:
    - Enter the version number (e.g., "1.0.0")
 
 This will:
-- Build native AOT executables for Windows, Linux, macOS (x64), and macOS (ARM64)
+- Build single file executables for Windows, Linux, macOS (x64), and macOS (ARM64)
 - Create a GitHub release with the executables attached
 - Tag the release with the specified version
 

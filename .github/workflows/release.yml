@@ -18,7 +18,7 @@ permissions:
   actions: read
 
 jobs:
-  build-native:
+  build-single-file:
     strategy:
       matrix:
         include:
@@ -55,8 +55,8 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
       
-    - name: Build Native AOT
-      run: dotnet publish -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishAot=true
+    - name: Build Single File
+      run: dotnet publish -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true
     
     - name: Get Version (from tag)
       id: get_version_tag
@@ -93,7 +93,7 @@ jobs:
         path: ./artifacts/apitester-${{ steps.set_version.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
         
   create-release:
-    needs: build-native
+    needs: build-single-file
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
