@@ -227,16 +227,27 @@ namespace APITester.Services
         
         public ApiDefinition ApplyEnvironmentVariables(ApiDefinition apiDefinition)
         {
-            // Create a merged dictionary of variables with priority:
-            // 1. Request-specific variables (highest)
-            // 2. Project-level variables (middle)
-            // 3. Environment variables (lowest)
+            // Create a merged dictionary of variables with updated priority:
+            // 1. Request-specific variables (highest priority)
+            // 2. Environment variables (medium priority)
+            // 3. Project-level variables (lowest priority)
             var mergedVariables = new Dictionary<string, string>();
             
             // Load config to access project-level variables
             var config = LoadConfigurationProfile();
             
-            // First, add environment-specific variables (lowest priority)
+            // First, add project-level variables (lowest priority)
+            if (config.Variables != null && config.Variables.Count > 0)
+            {
+                Console.WriteLine("Applying project-level variables from apify-config.json...");
+                foreach (var projectVar in config.Variables)
+                {
+                    Console.WriteLine($"  Added project-level variable: {projectVar.Key}");
+                    mergedVariables[projectVar.Key] = projectVar.Value;
+                }
+            }
+            
+            // Next, add environment-specific variables (medium priority - overrides project variables)
             if (_currentEnvironment == null)
             {
                 Console.WriteLine("Warning: No active environment set. Only project and request variables will be applied.");
@@ -248,25 +259,15 @@ namespace APITester.Services
                 // Add environment variables from the current environment
                 foreach (var envVar in _currentEnvironment.Variables)
                 {
-                    mergedVariables[envVar.Key] = envVar.Value;
-                }
-            }
-            
-            // Next, add project-level variables (middle priority - overrides environment variables)
-            if (config.Variables != null && config.Variables.Count > 0)
-            {
-                Console.WriteLine("Applying project-level variables from apify-config.json...");
-                foreach (var projectVar in config.Variables)
-                {
-                    if (mergedVariables.ContainsKey(projectVar.Key))
+                    if (mergedVariables.ContainsKey(envVar.Key))
                     {
-                        Console.WriteLine($"  Project-level variable '{projectVar.Key}' overrides environment variable with same name");
+                        Console.WriteLine($"  Environment variable '{envVar.Key}' overrides project variable with same name");
                     }
                     else
                     {
-                        Console.WriteLine($"  Added project-level variable: {projectVar.Key}");
+                        Console.WriteLine($"  Added environment variable: {envVar.Key}");
                     }
-                    mergedVariables[projectVar.Key] = projectVar.Value;
+                    mergedVariables[envVar.Key] = envVar.Value;
                 }
             }
             
