@@ -7,6 +7,52 @@ namespace APITester.Utils
 {
     public static class JsonHelper
     {
+        // Custom method to extract propertyPath from JSON files
+        public static Dictionary<string, string> ExtractPropertyPaths(string filePath)
+        {
+            var result = new Dictionary<string, string>();
+            
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    Console.WriteLine($"File not found: {filePath}");
+                    return result;
+                }
+                
+                string json = File.ReadAllText(filePath);
+                var jObject = JObject.Parse(json);
+                
+                if (jObject["Tests"] is JArray tests)
+                {
+                    foreach (var test in tests)
+                    {
+                        if (test is JObject testObj && 
+                            test["AssertType"]?.ToString().ToLowerInvariant() == "equal" &&
+                            test["propertyPath"] != null)
+                        {
+                            var testName = test["Name"]?.ToString() ?? "Unknown Test";
+                            var propertyPath = test["propertyPath"]?.ToString();
+                            
+                            Console.WriteLine($"Direct Access - Found propertyPath '{propertyPath}' in test '{testName}'");
+                            
+                            if (!string.IsNullOrEmpty(propertyPath))
+                            {
+                                result[testName] = propertyPath;
+                            }
+                        }
+                    }
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error extracting properties from {filePath}: {ex.Message}");
+                return result;
+            }
+        }
+        
         // Add UnconditionalSuppressMessage attribute to suppress trimming warnings
         [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
             Justification = "JSON types are preserved in TrimmerRoots.xml")]
@@ -31,11 +77,49 @@ namespace APITester.Utils
                     args.ErrorContext.Handled = true;
                 },
                 MissingMemberHandling = MissingMemberHandling.Ignore,
-                NullValueHandling = NullValueHandling.Ignore
+                NullValueHandling = NullValueHandling.Ignore,
+                ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver
+                {
+                    NamingStrategy = new Newtonsoft.Json.Serialization.CamelCaseNamingStrategy
+                    {
+                        ProcessDictionaryKeys = true,
+                        OverrideSpecifiedNames = false
+                    }
+                }
             };
             
             try
             {
+                // Add debug info for TestAssertion
+                if (typeof(T).Name == "ApiDefinition")
+                {
+                    Console.WriteLine($"DEBUG - Loading API definition JSON: {Path.GetFileName(filePath)}");
+                    // For debugging: try using JObject to check property names
+                    try {
+                        var jObj = JObject.Parse(json);
+                        if (jObj["Tests"] is JArray tests)
+                        {
+                            foreach (var test in tests)
+                            {
+                                if (test["AssertType"]?.ToString().ToLowerInvariant() == "equal")
+                                {
+                                    Console.WriteLine("DEBUG - Found Equal assertion:");
+                                    Console.WriteLine($"  Name: {test["Name"]}");
+                                    if (test["propertyPath"] != null)
+                                    {
+                                        Console.WriteLine($"  propertyPath: {test["propertyPath"]}");
+                                        Console.WriteLine($"  PropertyPath case-sensitive: {test["PropertyPath"]}");
+                                        // Just log the information here
+                                        Console.WriteLine($"  Found propertyPath in JSON");
+                                    }
+                                    Console.WriteLine($"  Property: {test["Property"]}");
+                                    Console.WriteLine($"  ExpectedValue: {test["ExpectedValue"]}");
+                                }
+                            }
+                        }
+                    } catch {}
+                }
+                
                 return JsonConvert.DeserializeObject<T>(json, settings);
             }
             catch (Exception ex)

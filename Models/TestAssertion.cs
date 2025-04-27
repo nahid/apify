@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
+using APITester.Utils;
 
 namespace APITester.Models
 {
@@ -48,6 +49,10 @@ namespace APITester.Models
         [JsonPropertyName("Property")]
         public string? Property { get; set; }
         
+        [JsonPropertyName("propertyPath")]
+        [Newtonsoft.Json.JsonProperty("propertyPath")]
+        public string? PropertyPath { get; set; }
+        
         [JsonPropertyName("ExpectedValue")]
         public string? ExpectedValue { get; set; }
 
@@ -71,6 +76,8 @@ namespace APITester.Models
                         return AssertionType.ResponseHeader;
                     case "responsetimebelow":
                         return AssertionType.ResponseTime;
+                    case "equal":
+                        return AssertionType.ResponseBody;
                     default:
                         return AssertionType.Unknown;
                 }
@@ -105,6 +112,8 @@ namespace APITester.Models
                         return "contains";
                     case "responsetimebelow":
                         return "lessThan";
+                    case "equal":
+                        return "equals";
                     default:
                         return "unknown";
                 }

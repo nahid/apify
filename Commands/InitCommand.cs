@@ -107,11 +107,18 @@ namespace APITester.Commands
                     }
                 };
 
-                // Create environment configuration
+                // Create environment configuration with project-level variables
                 var config = new TestEnvironmentConfig
                 {
                     Name = "Default",
                     Description = $"Configuration for {projectName}",
+                    // Add project-level variables (shared across all environments)
+                    Variables = new Dictionary<string, string>
+                    {
+                        { "projectId", $"{projectName.ToLower().Replace(" ", "-")}" },
+                        { "version", "1.0.0" },
+                        { "apiVersion", "v1" }
+                    },
                     DefaultEnvironment = environment,
                     Environments = new List<TestEnvironment> { defaultEnvironment, productionEnvironment }
                 };
@@ -239,6 +246,11 @@ namespace APITester.Commands
   ""Name"": ""Default"",
   ""Description"": ""Configuration for " + projectName + @""",
   ""DefaultEnvironment"": """ + environment + @""",
+  ""Variables"": {
+    ""projectId"": """ + projectName.ToLower().Replace(" ", "-") + @""",
+    ""version"": ""1.0.0"",
+    ""apiVersion"": ""v1""
+  },
   ""Environments"": [
     {
       ""Name"": """ + environment + @""",

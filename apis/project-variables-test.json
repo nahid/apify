@@ -1,0 +1,30 @@
+{
+  "Name": "Project Variables Test",
+  "Uri": "{{baseUrl}}/posts/1",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "application/json",
+    "X-API-Version": "{{apiVersion}}",
+    "X-Project-ID": "{{projectId}}",
+    "X-Version": "{{version}}",
+    "X-Custom-Header": "{{commonHeader}}"
+  },
+  "Tests": [
+    {
+      "Name": "Status code should be 200",
+      "Description": "Checks if the status code is 200",
+      "AssertType": "StatusCode",
+      "ExpectedValue": "200"
+    },
+    {
+      "Name": "Response contains userId property",
+      "Description": "Validates that the response has the userId property",
+      "AssertType": "ContainsProperty",
+      "ExpectedValue": "userId"
+    }
+  ],
+  "Variables": {
+    "testId": "project-variables-test"
+  },
+  "Timeout": 15000
+}

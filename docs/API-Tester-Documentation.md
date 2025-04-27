@@ -14,8 +14,9 @@ API Tester is a robust command-line tool designed for API testing and validation
 6. [File Uploads](#file-uploads)
 7. [Test Assertions](#test-assertions)
 8. [Environment Variables](#environment-variables)
-9. [Examples](#examples)
-10. [Troubleshooting](#troubleshooting)
+9. [Custom Variables](#custom-variables)
+10. [Examples](#examples)
+11. [Troubleshooting](#troubleshooting)
 
 ## Installation
 
@@ -196,23 +197,36 @@ API tests are defined in JSON files with the following structure:
 | `Files` | Array | Files to upload (for multipart/form-data) | No |
 | `Tests` | Array | Test assertions to validate the response | No |
 | `Timeout` | Number | Request timeout in milliseconds | No |
+| `Variables` | Object | Custom variables defined in the test file | No |
 
 ## Payload Types
 
-API Tester supports multiple payload types for flexibility in testing different types of API endpoints:
+API Tester supports multiple payload types for flexibility in testing different types of API endpoints. This section details all available payload types and their specific configurations.
+
+| Payload Type | Description | Content-Type Header | Typical Use Cases |
+|--------------|-------------|---------------------|-------------------|
+| `none` | No request body | None | GET, DELETE requests |
+| `json` | JSON structured data | application/json | Most modern REST APIs |
+| `text` | Plain text content | text/plain | Simple text-based APIs |
+| `formData` | URL-encoded form data | application/x-www-form-urlencoded | Traditional web forms, legacy APIs |
 
 ### None
 
-No payload is sent with the request. Typically used for GET requests.
+Use this when no payload should be sent with the request. This is the default for GET, HEAD, and DELETE requests.
 
 ```json
 "Payload": null,
 "PayloadType": "none"
 ```
 
+When using this payload type:
+- No request body is sent
+- No Content-Type header is automatically added
+- Any Content-Type header you specify in the Headers section will still be included
+
 ### JSON
 
-The tool supports two ways to specify JSON payloads:
+JSON is the most common payload type for modern REST APIs. The tool supports two ways to specify JSON payloads:
 
 1. **Native JSON Objects** (recommended): The payload is specified as an actual JSON object, not a string:
 
@@ -236,11 +250,15 @@ The tool supports two ways to specify JSON payloads:
 "PayloadType": "json"
 ```
 
-Both approaches are supported, but using native JSON objects is recommended as it provides better type safety and avoids string escaping issues. The Content-Type header is automatically set to "application/json" in both cases.
+Key features of JSON payload type:
+- The Content-Type header is automatically set to "application/json" if not otherwise specified
+- Native JSON objects provide better type safety and avoid string escaping issues
+- JSON objects can be arbitrarily complex with nested objects and arrays
+- Variable substitution is supported in JSON string values (not in keys)
 
 ### Text
 
-Plain text payload. The Content-Type header is automatically set to "text/plain".
+Use this type when you need to send plain text data in the request body:
 
 ```json
 "Payload": "This is a text message",
@@ -250,16 +268,47 @@ Plain text payload. The Content-Type header is automatically set to "text/plain"
 }
 ```
 
+Key features of Text payload type:
+- The Content-Type header is automatically set to "text/plain" if not otherwise specified
+- Useful for APIs that expect simple string data
+- Variable substitution works within the text string
+- Appropriate for non-structured data or custom formats
+
 ### Form Data
 
-URL encoded form data. The Content-Type header is automatically set to "application/x-www-form-urlencoded".
+Form Data is used for sending data that would traditionally be submitted by HTML forms. The Content-Type header is automatically set to "application/x-www-form-urlencoded".
 
 ```json
 "Payload": {
   "username": "johndoe",
-  "password": "secret"
+  "password": "secret",
+  "remember": "true"
 },
 "PayloadType": "formData"
+```
+
+Key features of Form Data payload type:
+- Data is sent as key-value pairs in URL-encoded format (e.g., `username=johndoe&password=secret`)
+- Suitable for legacy APIs and endpoints that expect traditional form submissions
+- More compact than JSON for simple key-value data
+- Can be combined with file uploads (which automatically switches to multipart/form-data)
+- Variable substitution works in both keys and values
+
+When combined with file uploads, the content type automatically changes to multipart/form-data:
+
+```json
+"Payload": {
+  "description": "Profile update"
+},
+"PayloadType": "formData",
+"Files": [
+  {
+    "Name": "Profile Picture",
+    "FieldName": "avatar",
+    "FilePath": "./images/profile.jpg",
+    "ContentType": "image/jpeg"
+  }
+]
 ```
 
 ## File Uploads
@@ -296,11 +345,21 @@ When files are included, the request is automatically sent as multipart/form-dat
 
 ## Test Assertions
 
-API Tester provides various assertion types to validate API responses:
+API Tester provides comprehensive assertion capabilities to validate API responses. All test assertions support variable substitution in their parameters.
+
+### Supported Assertion Types
+
+| Assertion Type | Description | Required Parameters | Example Usage |
+|----------------|-------------|---------------------|--------------|
+| `StatusCode` | Validates the HTTP status code | `ExpectedValue` | Verify status 200, 201, 404, etc. |
+| `ContainsProperty` | Checks if response JSON contains a specific property | `ExpectedValue` | Check if "id", "name", or nested properties exist |
+| `HeaderContains` | Validates a response header's value | `Property`, `ExpectedValue` | Check Content-Type, Cache-Control, etc. |
+| `ResponseTimeBelow` | Verifies response time is below threshold | `ExpectedValue` | Ensure response is under specified milliseconds |
+| `Equal` | Checks if a JSON property equals a specific value | `PropertyPath`, `ExpectedValue` | Verify exact field values |
 
 ### Status Code
 
-Validates the HTTP status code:
+Validates the HTTP status code returned by the API.
 
 ```json
 {
@@ -311,9 +370,11 @@ Validates the HTTP status code:
 }
 ```
 
+This assertion passes if the API returns a status code that exactly matches the expected value. You can use variables in the `ExpectedValue` field, e.g., `"ExpectedValue": "{{expectedStatus}}"`.
+
 ### Contains Property
 
-Validates that a JSON response contains a specific property:
+Validates that a JSON response contains a specific property at any level in the hierarchy.
 
 ```json
 {
@@ -324,9 +385,11 @@ Validates that a JSON response contains a specific property:
 }
 ```
 
+The assertion searches the entire JSON object recursively, so it will find the property even if it's nested inside arrays or other objects. This is useful for verifying that required fields are present in the response.
+
 ### Header Contains
 
-Validates that a response header contains a specific value:
+Validates that a response header contains a specific value.
 
 ```json
 {
@@ -338,9 +401,14 @@ Validates that a response header contains a specific value:
 }
 ```
 
+* `Property`: The name of the header to check (case-insensitive)
+* `ExpectedValue`: The value that should be contained within the header value
+
+The assertion passes if the specified header contains the expected value as a substring. This allows for partial matching, which is useful for headers like Content-Type where the value might include additional parameters (e.g., "application/json; charset=utf-8").
+
 ### Response Time Below
 
-Validates that the response time is below a specific threshold:
+Validates that the response time is below a specific threshold in milliseconds.
 
 ```json
 {
@@ -351,13 +419,114 @@ Validates that the response time is below a specific threshold:
 }
 ```
 
-## Environment Variables
+This assertion is useful for performance testing and ensuring that your API meets response time requirements. The response time is measured from when the request is sent until the full response is received.
 
-Environment variables allow you to customize your API tests for different environments (development, staging, production, etc.).
+### Equal
+
+Validates that a specific property in the JSON response has an exact value.
+
+```json
+{
+  "Name": "Check user ID value",
+  "Description": "Verifies the user ID is correct",
+  "AssertType": "Equal",
+  "PropertyPath": "id",
+  "ExpectedValue": "123"
+}
+```
+
+* `PropertyPath`: The path to the property to check (supports dot notation for nested properties, e.g., "user.address.city")
+* `ExpectedValue`: The exact value the property should have
+
+For nested properties, you can use dot notation:
+
+```json
+{
+  "Name": "Check nested value",
+  "Description": "Verifies a nested property value",
+  "AssertType": "Equal",
+  "PropertyPath": "user.profile.settings.theme",
+  "ExpectedValue": "dark"
+}
+```
+
+Variables can be used in both the `PropertyPath` and `ExpectedValue` fields, making this assertion type very flexible.
+
+## Configuration Properties
+
+This section details all the configuration properties used in the API Tester, both for the global configuration file (`apify-config.json`) and individual API test files.
+
+### Configuration File Properties
+
+The main configuration file (`apify-config.json`) contains the following properties:
+
+| Property | Description | Required | Type |
+|----------|-------------|----------|------|
+| `Name` | The name of the configuration profile | Yes | String |
+| `Description` | A description of what this configuration is for | No | String |
+| `Environments` | An array of environment configurations | Yes | Array of Environment objects |
+| `DefaultEnvironment` | The name of the default environment to use | Yes | String |
+| `Variables` | Project-level variables that apply across all environments | No | Object (key-value pairs) |
+
+#### Environment Object Properties
+
+Each environment in the `Environments` array contains:
+
+| Property | Description | Required | Type |
+|----------|-------------|----------|------|
+| `Name` | The name of the environment (e.g., "Development", "Production") | Yes | String |
+| `Description` | A description of the environment | No | String |
+| `Variables` | Environment-specific variables | Yes | Object (key-value pairs) |
+
+### API Test File Properties
+
+Each API test is defined in a JSON file with the following properties:
+
+| Property | Description | Required | Type | Default |
+|----------|-------------|----------|------|---------|
+| `Name` | The name of the API test | Yes | String | - |
+| `Description` | A description of what this test does | No | String | - |
+| `Uri` | The endpoint URI (supports variable substitution) | Yes | String | - |
+| `Method` | HTTP method (GET, POST, PUT, DELETE, etc.) | Yes | String | "GET" |
+| `Headers` | HTTP headers as key-value pairs | No | Object | null |
+| `Payload` | The request body (can be JSON object, string, etc.) | No | Object/String | null |
+| `PayloadType` | Type of payload (none, json, text, formData) | No | String | "json" |
+| `Files` | Files to upload (for multipart/form-data) | No | Array of File objects | null |
+| `Tests` | Test assertions to validate the response | No | Array of Test objects | null |
+| `Timeout` | Request timeout in milliseconds | No | Number | 30000 |
+| `Variables` | Custom variables defined for this test | No | Object | null |
+
+#### File Object Properties
+
+Each file in the `Files` array contains:
+
+| Property | Description | Required | Type |
+|----------|-------------|----------|------|
+| `Name` | Descriptive name for the file | Yes | String |
+| `FieldName` | Form field name for the file | Yes | String |
+| `FilePath` | Path to the file on disk | Yes | String |
+| `ContentType` | MIME type of the file | Yes | String |
+
+#### Test Object Properties
+
+Each test in the `Tests` array contains:
+
+| Property | Description | Required | Type |
+|----------|-------------|----------|------|
+| `Name` | Name of the test | Yes | String |
+| `Description` | Description of what the test validates | No | String |
+| `AssertType` | Type of assertion (StatusCode, ContainsProperty, etc.) | Yes | String |
+| `PropertyPath` | Path to the property to check (for Equal assertions) | Required for Equal | String |
+| `Property` | Header name (for HeaderContains) | Required for HeaderContains | String |
+| `ExpectedValue` | The expected value to check against | Yes | String |
+
+## Variable System
+
+API Tester provides a flexible variable system with three levels of variables: project-level, environment-specific, and request-specific variables.
 
 ### Configuration File
 
-The environment configuration is stored in `apify-config.json`:
+The configuration is stored in `apify-config.json`:
 
 ```json
 {
@@ -383,7 +552,12 @@ The environment configuration is stored in `apify-config.json`:
       }
     }
   ],
-  "DefaultEnvironment": "Development"
+  "DefaultEnvironment": "Development",
+  "Variables": {
+    "projectId": "test-api-project",
+    "version": "1.0.0",
+    "apiVersion": "v1"
+  }
 }
 ```
 
@@ -397,6 +571,74 @@ Environment variables can be used in API test definitions by enclosing them in d
   "Authorization": "Bearer {{token}}"
 }
 ```
+
+## Custom Variables
+
+In addition to environment variables, API Tester allows defining custom variables directly within each API test definition file. These custom variables provide more flexibility and portability for your test files.
+
+### Defining Custom Variables
+
+Custom variables are defined in the "Variables" section of the API test definition:
+
+```json
+{
+  "Name": "Custom Variables Test",
+  "Uri": "{{baseUrl}}/users/{{userId}}",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "{{acceptHeader}}",
+    "X-Custom-Header": "{{customValue}}"
+  },
+  "Tests": [
+    {
+      "Name": "Status code check",
+      "Description": "Status code should be {{expectedStatus}}",
+      "AssertType": "StatusCode",
+      "ExpectedValue": "{{expectedStatus}}"
+    }
+  ],
+  "Variables": {
+    "userId": "123",
+    "acceptHeader": "application/json",
+    "customValue": "custom-header-value",
+    "expectedStatus": "200"
+  }
+}
+```
+
+### Variable Priority System
+
+The API Tester implements a hierarchical variable priority system:
+
+1. **Request-specific variables** (Highest priority)
+   - Defined in the "Variables" section of each API test file
+   - Override both environment variables and project-level variables
+   - Specific to a single API test
+
+2. **Environment variables** (Medium priority)
+   - Defined in the environment sections of the apify-config.json
+   - Override project-level variables
+   - Environment-specific (Development, Production, etc.)
+
+3. **Project-level variables** (Lowest priority)
+   - Defined at the root level "Variables" section in apify-config.json
+   - Shared across all environments
+   - Provide baseline values for the entire project
+
+When the tool encounters variables with the same name at different levels, it follows this priority order. For example, if a variable named "timeout" is defined in all three levels, the request-specific value will be used.
+
+This hierarchical system allows you to:
+1. Define project-wide settings at the project level
+2. Override them with environment-specific values
+3. Further customize them for specific API tests
+
+### Benefits of Custom Variables
+
+* **Test-Specific Values**: Define values that only apply to a specific test
+* **Portability**: Tests can be shared without requiring environment setup
+* **Testing Different Scenarios**: Easily change test behavior by modifying variables
+* **Default Values**: Provide fallbacks even if environment variables are missing
+* **Self-Documentation**: Variables defined in the test show what values the test expects
 
 ## Examples
 
@@ -424,6 +666,44 @@ Environment variables can be used in API test definitions by enclosing them in d
       "ExpectedValue": "id"
     }
   ]
+}
+```
+
+### GET Request with Custom Variables
+
+```json
+{
+  "Name": "Get Post with Custom Variables",
+  "Uri": "{{baseUrl}}/posts/{{postId}}",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "{{acceptHeader}}",
+    "X-Test-Header": "{{customHeaderValue}}"
+  },
+  "Tests": [
+    {
+      "Name": "Status code should be {{expectedStatus}}",
+      "Description": "Checks if the status code matches the expected value",
+      "AssertType": "StatusCode",
+      "ExpectedValue": "{{expectedStatus}}"
+    },
+    {
+      "Name": "Response contains Content-Type with {{contentType}}",
+      "Description": "Validates that the response has the correct content type",
+      "AssertType": "HeaderContains",
+      "Property": "Content-Type",
+      "ExpectedValue": "{{contentType}}"
+    }
+  ],
+  "Variables": {
+    "postId": "1",
+    "acceptHeader": "application/json",
+    "customHeaderValue": "custom-header-test-value",
+    "expectedStatus": "200",
+    "contentType": "application/json",
+    "timeout": "15000"
+  },
+  "Timeout": 15000
 }
 ```
 
@@ -508,6 +788,13 @@ Environment variables can be used in API test definitions by enclosing them in d
 3. **File upload issues:**
    - Ensure the file exists at the specified path
    - Verify that the content type is correct for the file
+   
+4. **Variable substitution problems:**
+   - Check project-level variables in the root "Variables" section of apify-config.json
+   - Verify environment variables in each environment section of apify-config.json
+   - For request-specific variables, check they are properly defined in the test file's "Variables" section
+   - Remember the priority order: request-specific > environment > project-level variables
+   - Ensure variable names match exactly (they are case-sensitive)
 
 ### Debug Options
 

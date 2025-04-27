@@ -121,6 +121,12 @@ namespace APITester.Services
             return new TestEnvironmentConfig
             {
                 DefaultEnvironment = "Development",
+                // Project-level variables (shared across all environments)
+                Variables = new Dictionary<string, string>
+                {
+                    { "projectId", "api-test-1" },
+                    { "version", "1.0.0" }
+                },
                 Environments = new List<TestEnvironment>
                 {
                     new TestEnvironment
@@ -221,23 +227,78 @@ namespace APITester.Services
         
         public ApiDefinition ApplyEnvironmentVariables(ApiDefinition apiDefinition)
         {
+            // Create a merged dictionary of variables with updated priority:
+            // 1. Request-specific variables (highest priority)
+            // 2. Environment variables (medium priority)
+            // 3. Project-level variables (lowest priority)
+            var mergedVariables = new Dictionary<string, string>();
+            
+            // Load config to access project-level variables
+            var config = LoadConfigurationProfile();
+            
+            // First, add project-level variables (lowest priority)
+            if (config.Variables != null && config.Variables.Count > 0)
+            {
+                Console.WriteLine("Applying project-level variables from apify-config.json...");
+                foreach (var projectVar in config.Variables)
+                {
+                    Console.WriteLine($"  Added project-level variable: {projectVar.Key}");
+                    mergedVariables[projectVar.Key] = projectVar.Value;
+                }
+            }
+            
+            // Next, add environment-specific variables (medium priority - overrides project variables)
             if (_currentEnvironment == null)
             {
-                Console.WriteLine("Warning: No active environment set. Environment variables will not be applied.");
-                return apiDefinition;
+                Console.WriteLine("Warning: No active environment set. Only project and request variables will be applied.");
             }
+            else
+            {
+                Console.WriteLine($"Applying environment variables from '{_currentEnvironment.Name}' environment...");
                 
-            Console.WriteLine($"Applying environment variables from '{_currentEnvironment.Name}' environment...");
+                // Add environment variables from the current environment
+                foreach (var envVar in _currentEnvironment.Variables)
+                {
+                    if (mergedVariables.ContainsKey(envVar.Key))
+                    {
+                        Console.WriteLine($"  Environment variable '{envVar.Key}' overrides project variable with same name");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  Added environment variable: {envVar.Key}");
+                    }
+                    mergedVariables[envVar.Key] = envVar.Value;
+                }
+            }
+            
+            // Finally, add request-specific variables (highest priority - overrides both project and environment variables)
+            if (apiDefinition.Variables != null && apiDefinition.Variables.Count > 0)
+            {
+                Console.WriteLine("Applying request-specific variables from API definition...");
+                foreach (var customVar in apiDefinition.Variables)
+                {
+                    if (mergedVariables.ContainsKey(customVar.Key))
+                    {
+                        Console.WriteLine($"  Request-specific variable '{customVar.Key}' overrides variable with same name");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  Added request-specific variable: {customVar.Key}");
+                    }
+                    mergedVariables[customVar.Key] = customVar.Value;
+                }
+            }
             
             var modifiedApi = new ApiDefinition
             {
-                Name = ApplyEnvironmentVariables(apiDefinition.Name),
-                Uri = ApplyEnvironmentVariables(apiDefinition.Uri),
+                Name = ApplyVariables(apiDefinition.Name, mergedVariables),
+                Uri = ApplyVariables(apiDefinition.Uri, mergedVariables),
                 Method = apiDefinition.Method,
-                Payload = ProcessPayload(apiDefinition.Payload),
+                Payload = ProcessPayload(apiDefinition.Payload, mergedVariables),
                 PayloadType = apiDefinition.PayloadType,
                 Files = apiDefinition.Files, // Preserve file upload configurations
-                Tests = new List<TestAssertion>()
+                Tests = new List<TestAssertion>(),
+                Variables = apiDefinition.Variables // Keep the original variables for reference
             };
             
             // Log URI transformation for debugging
@@ -251,7 +312,7 @@ namespace APITester.Services
                 modifiedApi.Headers = new Dictionary<string, string>();
                 foreach (var header in apiDefinition.Headers)
                 {
-                    var transformedValue = ApplyEnvironmentVariables(header.Value);
+                    var transformedValue = ApplyVariables(header.Value, mergedVariables);
                     modifiedApi.Headers[header.Key] = transformedValue;
                     
                     // Log header transformation for debugging
@@ -262,19 +323,19 @@ namespace APITester.Services
                 }
             }
             
-            // Process test assertions and apply environment variables
+            // Process test assertions and apply variables
             if (apiDefinition.Tests != null)
             {
                 foreach (var test in apiDefinition.Tests)
                 {
                     var originalValue = test.ExpectedValue;
-                    var transformedValue = originalValue != null ? ApplyEnvironmentVariables(originalValue) : null;
+                    var transformedValue = originalValue != null ? ApplyVariables(originalValue, mergedVariables) : null;
                     
                     var modifiedTest = new TestAssertion
                     {
                         Name = test.Name,
                         Description = test.Description,
-                        Assertion = ApplyEnvironmentVariables(test.Assertion),
+                        Assertion = ApplyVariables(test.Assertion, mergedVariables),
                         AssertType = test.AssertType,
                         Property = test.Property,
                         ExpectedValue = transformedValue,
@@ -291,75 +352,38 @@ namespace APITester.Services
                 }
             }
             
-            // Check if the environment has all variables that might be needed
-            CheckForMissingVariables(apiDefinition.Uri);
+            // Check if there are any variables that might be needed but are missing
+            CheckForMissingVariables(apiDefinition.Uri, mergedVariables);
             
             return modifiedApi;
         }
         
-        private void CheckForMissingVariables(string input)
+        // Method to apply variable substitution using a provided dictionary
+        private string ApplyVariables(string input, Dictionary<string, string> variables)
         {
-            if (_currentEnvironment == null || string.IsNullOrEmpty(input))
-                return;
+            if (string.IsNullOrEmpty(input) || variables == null || variables.Count == 0)
+                return input;
                 
-            var matches = VariablePattern.Matches(input);
-            foreach (Match match in matches)
+            return VariablePattern.Replace(input, match =>
             {
                 var variableName = match.Groups[1].Value.Trim();
-                if (!_currentEnvironment.Variables.ContainsKey(variableName))
+                if (variables.TryGetValue(variableName, out var value))
                 {
-                    // Show a warning for missing variables
-                    Console.WriteLine($"  Warning: Environment variable '{variableName}' is referenced but not defined in the environment.");
+                    return value;
                 }
-            }
+                return match.Value; // Keep original if not found
+            });
         }
         
-        // Process payload data based on type
-        private object? ProcessPayload(object? payload)
-        {
-            if (payload == null)
-                return null;
-                
-            if (payload is string strPayload)
-            {
-                return ApplyEnvironmentVariables(strPayload);
-            }
-            else if (payload is JObject jObject)
-            {
-                // Process JObject to apply environment variables
-                var processed = ProcessJToken(jObject);
-                return processed;
-            }
-            else if (payload is JArray jArray)
-            {
-                // Process JArray to apply environment variables
-                var processed = ProcessJToken(jArray);
-                return processed;
-            }
-            
-            // For other payload types (like Dictionary), try serializing and deserializing
-            try
-            {
-                var json = JsonConvert.SerializeObject(payload);
-                var processedJson = ApplyEnvironmentVariables(json);
-                return JsonConvert.DeserializeObject(processedJson);
-            }
-            catch
-            {
-                // If conversion fails, return the original payload
-                return payload;
-            }
-        }
-        
-        // Process JToken (JObject or JArray) recursively to apply environment variables
-        private JToken ProcessJToken(JToken token)
+        // Process JToken (JObject or JArray) recursively to apply variables
+        private JToken ProcessJToken(JToken token, Dictionary<string, string> mergedVariables)
         {
             switch (token.Type)
             {
                 case JTokenType.Object:
                     foreach (var prop in token.Children<JProperty>().ToList())
                     {
-                        var value = ProcessJToken(prop.Value);
+                        var value = ProcessJToken(prop.Value, mergedVariables);
                         prop.Value = value;
                     }
                     break;
@@ -369,16 +393,16 @@ namespace APITester.Services
                         var item = token[i];
                         if (item != null)
                         {
-                            token[i] = ProcessJToken(item);
+                            token[i] = ProcessJToken(item, mergedVariables);
                         }
                     }
                     break;
                 case JTokenType.String:
-                    // Apply environment variables to string values
+                    // Apply variables to string values
                     var stringValue = token.Value<string>();
                     if (stringValue != null)
                     {
-                        var transformed = ApplyEnvironmentVariables(stringValue);
+                        var transformed = ApplyVariables(stringValue, mergedVariables);
                         if (transformed != stringValue)
                         {
                             return new JValue(transformed);
@@ -388,6 +412,75 @@ namespace APITester.Services
             }
             
             return token;
+        }
+        
+        // Process payload data based on type using merged variables
+        private object? ProcessPayload(object? payload, Dictionary<string, string> mergedVariables)
+        {
+            if (payload == null)
+                return null;
+                
+            if (payload is string strPayload)
+            {
+                return ApplyVariables(strPayload, mergedVariables);
+            }
+            else if (payload is JObject jObject)
+            {
+                // Process JObject to apply variables
+                var processed = ProcessJToken(jObject, mergedVariables);
+                return processed;
+            }
+            else if (payload is JArray jArray)
+            {
+                // Process JArray to apply variables
+                var processed = ProcessJToken(jArray, mergedVariables);
+                return processed;
+            }
+            
+            // For other payload types (like Dictionary), try serializing and deserializing
+            try
+            {
+                var json = JsonConvert.SerializeObject(payload);
+                var processedJson = ApplyVariables(json, mergedVariables);
+                return JsonConvert.DeserializeObject(processedJson);
+            }
+            catch
+            {
+                // If conversion fails, return the original payload
+                return payload;
+            }
+        }
+        
+        // Check for missing variables in the input string
+        private void CheckForMissingVariables(string input, Dictionary<string, string> mergedVariables)
+        {
+            if (string.IsNullOrEmpty(input))
+                return;
+                
+            var matches = VariablePattern.Matches(input);
+            foreach (Match match in matches)
+            {
+                var variableName = match.Groups[1].Value.Trim();
+                if (!mergedVariables.ContainsKey(variableName))
+                {
+                    // Show a warning for missing variables
+                    Console.WriteLine($"  Warning: Variable '{variableName}' is referenced but not defined in environment or custom variables.");
+                }
+            }
+        }
+        
+        // Legacy method for backward compatibility
+        private JToken ProcessJToken(JToken token)
+        {
+            var vars = _currentEnvironment?.Variables ?? new Dictionary<string, string>();
+            return ProcessJToken(token, vars);
+        }
+        
+        // Legacy method for backward compatibility
+        private object? ProcessPayload(object? payload)
+        {
+            var vars = _currentEnvironment?.Variables ?? new Dictionary<string, string>();
+            return ProcessPayload(payload, vars);
         }
         
         public void CreateDefaultEnvironmentFile()
@@ -421,23 +514,43 @@ namespace APITester.Services
             }
         }
         
-        public void ListEnvironmentVariables()
+        public void ListEnvironmentVariables(Dictionary<string, string>? customVariables = null)
         {
-            if (_currentEnvironment == null)
+            bool hasEnvironmentVars = _currentEnvironment != null && _currentEnvironment.Variables.Count > 0;
+            bool hasCustomVars = customVariables != null && customVariables.Count > 0;
+            
+            if (!hasEnvironmentVars && !hasCustomVars)
             {
-                Console.WriteLine("No active environment set.");
+                Console.WriteLine("No environment or custom variables available.");
                 return;
             }
             
-            Console.WriteLine("Environment Variables:");
-            foreach (var variable in _currentEnvironment.Variables)
+            if (hasEnvironmentVars)
             {
-                string displayValue = variable.Key.ToLower().Contains("key") || 
-                                      variable.Key.ToLower().Contains("secret") || 
-                                      variable.Key.ToLower().Contains("password") ? 
-                                      "********" : variable.Value;
-                
-                Console.WriteLine($"  {variable.Key}: {displayValue}");
+                Console.WriteLine($"Environment Variables (from '{_currentEnvironment!.Name}' environment):");
+                foreach (var variable in _currentEnvironment.Variables)
+                {
+                    string displayValue = variable.Key.ToLower().Contains("key") || 
+                                          variable.Key.ToLower().Contains("secret") || 
+                                          variable.Key.ToLower().Contains("password") ? 
+                                          "********" : variable.Value;
+                    
+                    Console.WriteLine($"  {variable.Key}: {displayValue}");
+                }
+            }
+            
+            if (hasCustomVars)
+            {
+                Console.WriteLine("Custom Variables (from API definition):");
+                foreach (var variable in customVariables!)
+                {
+                    string displayValue = variable.Key.ToLower().Contains("key") || 
+                                          variable.Key.ToLower().Contains("secret") || 
+                                          variable.Key.ToLower().Contains("password") ? 
+                                          "********" : variable.Value;
+                    
+                    Console.WriteLine($"  {variable.Key}: {displayValue}");
+                }
             }
         }
     }

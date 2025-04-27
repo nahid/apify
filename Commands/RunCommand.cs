@@ -118,11 +118,29 @@ namespace APITester.Commands
                 {
                     ConsoleHelper.WriteSection($"Processing {path}...");
                     
+                    // Extract property paths directly from the JSON file before deserialization
+                    // This helps us work around issues with property name case sensitivity
+                    var propertyPaths = JsonHelper.ExtractPropertyPaths(path);
+                    
                     var apiDefinition = JsonHelper.DeserializeFromFile<ApiDefinition>(path);
                     if (apiDefinition == null)
                     {
                         ConsoleHelper.WriteError($"Failed to parse {path}");
                         continue;
+                    }
+                    
+                    // Apply extracted property paths to the test assertions if available
+                    if (propertyPaths.Count > 0 && apiDefinition.Tests != null)
+                    {
+                        foreach (var test in apiDefinition.Tests)
+                        {
+                            if (propertyPaths.TryGetValue(test.Name, out var propertyPath) && 
+                                string.IsNullOrEmpty(test.PropertyPath))
+                            {
+                                test.PropertyPath = propertyPath;
+                                Console.WriteLine($"Applied propertyPath '{propertyPath}' to test '{test.Name}'");
+                            }
+                        }
                     }
 
                     // Apply environment variables

@@ -1,0 +1,43 @@
+{
+  "Name": "Custom Variables Test",
+  "Uri": "{{baseUrl}}/posts/{{postId}}",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "{{acceptHeader}}",
+    "X-Test-Header": "{{customHeaderValue}}"
+  },
+  "PayloadType": 0,
+  "Tests": [
+    {
+      "Name": "Status code check",
+      "Description": "Status code should be {{expectedStatus}}",
+      "Assertion": "",
+      "AssertType": "StatusCode",
+      "ExpectedValue": "{{expectedStatus}}"
+    },
+    {
+      "Name": "Response format check",
+      "Description": "Response contains Content-Type with {{contentType}}",
+      "Assertion": "",
+      "AssertType": "HeaderContains",
+      "Property": "Content-Type",
+      "ExpectedValue": "{{contentType}}"
+    },
+    {
+      "Name": "Response contains user ID",
+      "Description": "Response contains userId property",
+      "Assertion": "response.body.$.userId exists",
+      "AssertType": "ContainsProperty",
+      "ExpectedValue": "userId"
+    }
+  ],
+  "Timeout": 15000,
+  "Variables": {
+    "postId": "1",
+    "acceptHeader": "application/json",
+    "customHeaderValue": "custom-header-test-value",
+    "expectedStatus": "200",
+    "contentType": "application/json",
+    "timeout": "15000"
+  }
+}
