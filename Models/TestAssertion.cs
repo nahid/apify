@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
+using APITester.Utils;
 
 namespace APITester.Models
 {

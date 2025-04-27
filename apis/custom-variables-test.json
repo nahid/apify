@@ -27,7 +27,8 @@
       "Name": "Response contains user ID",
       "Description": "Response contains userId property",
       "Assertion": "response.body.$.userId exists",
-      "AssertType": "Custom"
+      "AssertType": "ContainsProperty",
+      "ExpectedValue": "userId"
     }
   ],
   "Timeout": 15000,
