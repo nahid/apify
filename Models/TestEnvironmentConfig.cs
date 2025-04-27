@@ -1,10 +1,8 @@
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
 
 namespace APITester.Models
 {
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
     public class TestEnvironmentConfig
     {
         // Default constructor with default values
@@ -22,15 +20,6 @@ namespace APITester.Models
             Description = description;
             Environments = environments ?? new List<TestEnvironment>();
             DefaultEnvironment = defaultEnvironment ?? "Development";
-        }
-
-        // Special constructor for Newtonsoft.Json deserialization
-        [JsonConstructor]
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-        private TestEnvironmentConfig(bool _) : this()
-        {
-            // This empty constructor is specifically for Json.NET to use during deserialization
-            // Properties will be populated through setters
         }
 
         [JsonProperty("Name")]

@@ -81,76 +81,11 @@ namespace APITester.Services
                     },
                     MissingMemberHandling = MissingMemberHandling.Ignore,
                     NullValueHandling = NullValueHandling.Ignore,
-                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                    TypeNameHandling = TypeNameHandling.None, // For security
-                    MetadataPropertyHandling = MetadataPropertyHandling.Ignore
+                    TypeNameHandling = TypeNameHandling.None // For security
                 };
                 
-                // Try to deserialize the config using explicit AOT-friendly approach
-                TestEnvironmentConfig? config;
-                
-                try 
-                {
-                    config = JsonConvert.DeserializeObject<TestEnvironmentConfig>(content, settings);
-                }
-                catch (Exception jsonEx)
-                {
-                    Console.WriteLine($"Primary deserialization failed: {jsonEx.Message}. Trying alternate method.");
-                    
-                    try
-                    {
-                        // Fallback deserialization method that's more AOT-friendly
-                        var jObject = JsonConvert.DeserializeObject<JObject>(content);
-                        if (jObject == null)
-                        {
-                            throw new JsonException("Could not parse JSON content");
-                        }
-                        
-                        var name = jObject.Value<string>("Name") ?? "Default";
-                        var description = jObject.Value<string>("Description");
-                        var defaultEnv = jObject.Value<string>("DefaultEnvironment") ?? "Development";
-                        
-                        var environments = new List<TestEnvironment>();
-                        var envsToken = jObject["Environments"];
-                        if (envsToken is JArray envsArray)
-                        {
-                            foreach (var envToken in envsArray.Children<JObject>())
-                            {
-                                var envName = envToken.Value<string>("Name") ?? "Unknown";
-                                var envDescription = envToken.Value<string>("Description") ?? "";
-                                
-                                var variables = new Dictionary<string, string>();
-                                var varsToken = envToken["Variables"];
-                                if (varsToken is JObject varsObject)
-                                {
-                                    foreach (var prop in varsObject.Properties())
-                                    {
-                                        variables[prop.Name] = prop.Value?.ToString() ?? "";
-                                    }
-                                }
-                                
-                                // Create a new environment with the parsed values - use explicit invocation to avoid ambiguity
-                                var newEnv = new TestEnvironment();
-                                newEnv.Name = envName;
-                                newEnv.Variables = variables;
-                                newEnv.Description = envDescription;
-                                environments.Add(newEnv);
-                            }
-                        }
-                        
-                        config = new TestEnvironmentConfig(
-                            name,
-                            description,
-                            environments,
-                            defaultEnv
-                        );
-                    }
-                    catch (Exception fallbackEx)
-                    {
-                        Console.WriteLine($"Fallback deserialization also failed: {fallbackEx.Message}. Using default config.");
-                        config = CreateDefaultConfig();
-                    }
-                }
+                // Try to deserialize the config
+                TestEnvironmentConfig? config = JsonConvert.DeserializeObject<TestEnvironmentConfig>(content, settings);
                 
                 if (config != null)
                 {

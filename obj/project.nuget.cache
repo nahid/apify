@@ -1,15 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "4rA93iXYt34=",
+  "dgSpecHash": "9cPLFthVLaw=",
   "success": true,
   "projectFilePath": "/home/runner/workspace/APITester.csproj",
   "expectedPackageFiles": [
     "/home/runner/.nuget/packages/consoletableext/3.2.0/consoletableext.3.2.0.nupkg.sha512",
-    "/home/runner/.nuget/packages/microsoft.dotnet.ilcompiler/8.0.5/microsoft.dotnet.ilcompiler.8.0.5.nupkg.sha512",
-    "/home/runner/.nuget/packages/microsoft.net.illink.tasks/8.0.5/microsoft.net.illink.tasks.8.0.5.nupkg.sha512",
     "/home/runner/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512",
-    "/home/runner/.nuget/packages/system.commandline/2.0.0-beta4.22272.1/system.commandline.2.0.0-beta4.22272.1.nupkg.sha512",
-    "/home/runner/.nuget/packages/runtime.linux-x64.microsoft.dotnet.ilcompiler/8.0.5/runtime.linux-x64.microsoft.dotnet.ilcompiler.8.0.5.nupkg.sha512"
+    "/home/runner/.nuget/packages/system.commandline/2.0.0-beta4.22272.1/system.commandline.2.0.0-beta4.22272.1.nupkg.sha512"
   ],
   "logs": []
 }
