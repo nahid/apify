@@ -71,26 +71,32 @@ You can use Apify within your existing API projects:
    # Navigate to your API project
    cd /path/to/your/weatherapi
    
-   # Initialize API testing (creates apify-config.json and apis/ directory)
+   # Initialize API testing (creates apify-config.json and .apify/ directory)
    apify init --name "Weather API Tests" --base-url "https://api.weather.com"
    # If you didn't install globally, use the full path to the executable
    # /path/to/apify init --name "Weather API Tests" --base-url "https://api.weather.com"
    ```
 
 3. **Create API Test Definitions**
-   - Add test files to the `apis/` directory in your project
+   - You can use the interactive command to create API request definitions:
+     ```bash
+     # Create a new API request in .apify/users/all.json
+     apify create request --file users.all
+     ```
+   - Or manually add test files to the `.apify/` directory in your project
    - Each JSON file represents an API endpoint test
+   - You can use dot notation for nested directories (e.g., `users.all` for `.apify/users/all.json`)
 
 4. **Run Tests**
    ```bash
    # From your project directory where apify-config.json is located
-   apify run apis/get-weather.json
+   apify run users.all
    
    # Run with verbose output
-   apify run apis/get-weather.json --verbose
+   apify run users.all --verbose
    
    # Run with a specific environment
-   apify run apis/get-weather.json --env Production
+   apify run users.all --env Production
    ```
 
 5. **View Environment Configuration**
@@ -107,17 +113,24 @@ You can use Apify within your existing API projects:
 dotnet run init --name "My API Project" --base-url "https://api.example.com"
 ```
 
+### Create API Requests
+
+```bash
+# Create a new API request interactively
+dotnet run create request --file users.all
+```
+
 ### Run API Tests
 
 ```bash
 # Run a specific test
-dotnet run run apis/sample-api.json
+dotnet run run users.all
 
 # Run with verbose output
-dotnet run run apis/sample-api.json --verbose
+dotnet run run users.all --verbose
 
 # Run with a specific environment
-dotnet run run apis/sample-api.json --env Production
+dotnet run run users.all --env Production
 ```
 
 ### List Environments
@@ -195,13 +208,18 @@ Here's a practical example of how to use Apify with a Weather API project:
 # Navigate to your Weather API project
 cd ~/projects/weatherapi
 
-# Initialize API testing (creates apify-config.json and apis/ directory)
+# Initialize API testing (creates apify-config.json and .apify/ directory)
 apify init --name "Weather API Tests" --base-url "https://api.weather.com"
 ```
 
 ### Step 2: Create API Test Definitions
 
-Create a file `apis/get-current-weather.json`:
+Create a file `.apify/weather/current.json` using the interactive command:
+```bash
+apify create request --file weather.current
+```
+
+Or manually create a file with the following content:
 
 ```json
 {
@@ -267,7 +285,7 @@ Edit `apify-config.json` to add your environment variables:
 
 ```bash
 # From your Weather API project directory
-apify run apis/get-current-weather.json --verbose
+apify run weather.current --verbose
 ```
 
 ## License

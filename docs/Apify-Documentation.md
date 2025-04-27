@@ -9,6 +9,10 @@ Apify is a robust command-line tool designed for API testing and validation. It 
 1. [Installation](#installation)
 2. [Getting Started](#getting-started)
 3. [Command Reference](#command-reference)
+   - [Init Command](#init-command)
+   - [Run Command](#run-command)
+   - [List Environment Command](#list-env-command)
+   - [Create Request Command](#create-request-command)
 4. [API Test Definition](#api-test-definition)
 5. [Payload Types](#payload-types)
 6. [File Uploads](#file-uploads)
@@ -108,6 +112,7 @@ dotnet run run apis/sample-api.json --verbose
 | `init` | Initialize a new API testing project |
 | `run` | Execute API tests from JSON definition files |
 | `list-env` | List available environments |
+| `create request` | Create a new API request definition interactively |
 
 ### Command Options
 
@@ -152,6 +157,36 @@ Lists all available environments and their variables.
 
 ```bash
 dotnet run list-env
+```
+
+#### `create request` Command
+
+Creates a new API request definition interactively.
+
+| Option | Description | Required | Default |
+|--------|-------------|----------|---------|
+| `--file` | The file path for the new API request definition | Yes | - |
+
+The file path supports dot notation for creating nested directories:
+- `users.all` will create a file at `.apify/users/all.json`
+- `auth.login` will create a file at `.apify/auth/login.json`
+
+The command will interactively prompt for:
+1. API request name 
+2. HTTP method (GET, POST, PUT, DELETE, etc.)
+3. Endpoint URI
+4. Optional: JSON payload for POST/PUT methods
+5. Optional: HTTP headers
+
+Example:
+```bash
+# Create a new API request
+dotnet run create request --file users.all
+
+# Create a request in a nested directory structure
+dotnet run create request --file auth.login
+
+# The .json extension is automatically added
 ```
 
 ## API Test Definition
