@@ -14,8 +14,9 @@ API Tester is a robust command-line tool designed for API testing and validation
 6. [File Uploads](#file-uploads)
 7. [Test Assertions](#test-assertions)
 8. [Environment Variables](#environment-variables)
-9. [Examples](#examples)
-10. [Troubleshooting](#troubleshooting)
+9. [Custom Variables](#custom-variables)
+10. [Examples](#examples)
+11. [Troubleshooting](#troubleshooting)
 
 ## Installation
 
@@ -196,6 +197,7 @@ API tests are defined in JSON files with the following structure:
 | `Files` | Array | Files to upload (for multipart/form-data) | No |
 | `Tests` | Array | Test assertions to validate the response | No |
 | `Timeout` | Number | Request timeout in milliseconds | No |
+| `Variables` | Object | Custom variables defined in the test file | No |
 
 ## Payload Types
 
@@ -398,6 +400,57 @@ Environment variables can be used in API test definitions by enclosing them in d
 }
 ```
 
+## Custom Variables
+
+In addition to environment variables, API Tester allows defining custom variables directly within each API test definition file. These custom variables provide more flexibility and portability for your test files.
+
+### Defining Custom Variables
+
+Custom variables are defined in the "Variables" section of the API test definition:
+
+```json
+{
+  "Name": "Custom Variables Test",
+  "Uri": "{{baseUrl}}/users/{{userId}}",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "{{acceptHeader}}",
+    "X-Custom-Header": "{{customValue}}"
+  },
+  "Tests": [
+    {
+      "Name": "Status code check",
+      "Description": "Status code should be {{expectedStatus}}",
+      "AssertType": "StatusCode",
+      "ExpectedValue": "{{expectedStatus}}"
+    }
+  ],
+  "Variables": {
+    "userId": "123",
+    "acceptHeader": "application/json",
+    "customValue": "custom-header-value",
+    "expectedStatus": "200"
+  }
+}
+```
+
+### Custom Variables Priority
+
+Custom variables take precedence over environment variables. If a custom variable has the same name as an environment variable, the custom variable value will be used.
+
+This allows you to:
+1. Override environment variables for specific tests
+2. Make API test files self-contained and portable
+3. Provide default values that can be used across environments
+
+### Benefits of Custom Variables
+
+* **Test-Specific Values**: Define values that only apply to a specific test
+* **Portability**: Tests can be shared without requiring environment setup
+* **Testing Different Scenarios**: Easily change test behavior by modifying variables
+* **Default Values**: Provide fallbacks even if environment variables are missing
+* **Self-Documentation**: Variables defined in the test show what values the test expects
+
 ## Examples
 
 ### Basic GET Request
@@ -424,6 +477,44 @@ Environment variables can be used in API test definitions by enclosing them in d
       "ExpectedValue": "id"
     }
   ]
+}
+```
+
+### GET Request with Custom Variables
+
+```json
+{
+  "Name": "Get Post with Custom Variables",
+  "Uri": "{{baseUrl}}/posts/{{postId}}",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "{{acceptHeader}}",
+    "X-Test-Header": "{{customHeaderValue}}"
+  },
+  "Tests": [
+    {
+      "Name": "Status code should be {{expectedStatus}}",
+      "Description": "Checks if the status code matches the expected value",
+      "AssertType": "StatusCode",
+      "ExpectedValue": "{{expectedStatus}}"
+    },
+    {
+      "Name": "Response contains Content-Type with {{contentType}}",
+      "Description": "Validates that the response has the correct content type",
+      "AssertType": "HeaderContains",
+      "Property": "Content-Type",
+      "ExpectedValue": "{{contentType}}"
+    }
+  ],
+  "Variables": {
+    "postId": "1",
+    "acceptHeader": "application/json",
+    "customHeaderValue": "custom-header-test-value",
+    "expectedStatus": "200",
+    "contentType": "application/json",
+    "timeout": "15000"
+  },
+  "Timeout": 15000
 }
 ```
 
@@ -508,6 +599,12 @@ Environment variables can be used in API test definitions by enclosing them in d
 3. **File upload issues:**
    - Ensure the file exists at the specified path
    - Verify that the content type is correct for the file
+   
+4. **Variable substitution problems:**
+   - Check environment variables in apify-config.json
+   - If using custom variables, verify they are properly defined in the Variables section
+   - Remember that custom variables override environment variables with the same name
+   - Ensure variable names match exactly (they are case-sensitive)
 
 ### Debug Options
 

@@ -12,7 +12,7 @@ namespace APITester.Models
                                DynamicallyAccessedMemberTypes.PublicConstructors)]
     public class ApiDefinition
     {
-        // This constructor is needed for Native AOT compatibility with JSON deserialization
+        // Constructor for JSON deserialization
         [Newtonsoft.Json.JsonConstructor]
         public ApiDefinition()
         {
@@ -20,6 +20,7 @@ namespace APITester.Models
             Uri = string.Empty;
             Method = "GET";
             Timeout = 30000;
+            Variables = new Dictionary<string, string>();
         }
         
         [JsonPropertyName("name")]
@@ -141,6 +142,9 @@ namespace APITester.Models
 
         [JsonPropertyName("timeout")]
         public int Timeout { get; set; } = 30000; // 30 seconds default timeout
+        
+        [JsonPropertyName("variables")]
+        public Dictionary<string, string>? Variables { get; set; }
     }
 
     public enum PayloadType

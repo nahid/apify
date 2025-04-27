@@ -35,5 +35,6 @@
       "ExpectedValue": "title"
     }
   ],
-  "Timeout": 30000
+  "Timeout": 30000,
+  "Variables": {}
 }
