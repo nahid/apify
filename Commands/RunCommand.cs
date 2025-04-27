@@ -184,76 +184,8 @@ namespace Apify.Commands
             
             foreach (var originalPath in filePaths)
             {
-                string finalPath = originalPath;
-                
-                // STEP 1: Determine if this is a dot notation path like "users.all"
-                bool hasDotNotation = false;
-                string filenameWithoutExt = originalPath;
-                string extension = "";
-                
-                // Extract extension if present
-                if (Path.HasExtension(originalPath))
-                {
-                    extension = Path.GetExtension(originalPath);
-                    filenameWithoutExt = Path.GetFileNameWithoutExtension(originalPath);
-                }
-                
-                // Detect if there's at least one dot in the filename part (not the extension)
-                hasDotNotation = filenameWithoutExt.Contains('.');
-                
-                // STEP 2: Process dot notation if present, converting "users.all" to "users/all"
-                if (hasDotNotation)
-                {
-                    // Determine if this is a real dot notation vs. just a filename with dots in it
-                    // Only treat as dot notation if directory separator not already present
-                    bool isRealDotNotation = !originalPath.Contains(Path.DirectorySeparatorChar) && 
-                                            !originalPath.Contains(Path.AltDirectorySeparatorChar);
-                    
-                    // We also check if this is likely a hidden file (starts with .) - those aren't dot notation
-                    if (isRealDotNotation && !originalPath.StartsWith("."))
-                    {
-                        string[] parts = filenameWithoutExt.Split('.');
-                        string filename = parts[parts.Length - 1]; // Last part is the filename
-                        string[] folderParts = parts.Take(parts.Length - 1).ToArray(); // Earlier parts form folder structure
-                        
-                        // Convert dots to directory separators
-                        finalPath = string.Join(Path.DirectorySeparatorChar.ToString(), folderParts) 
-                                  + Path.DirectorySeparatorChar + filename;
-                        
-                        // Add extension back if it existed
-                        if (!string.IsNullOrEmpty(extension))
-                        {
-                            finalPath += extension;
-                        }
-                        
-                        ConsoleHelper.WriteInfo($"Converted dot notation: {originalPath} → {finalPath}");
-                    }
-                }
-                
-                // STEP 3: Ensure .json extension is present
-                if (!finalPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                {
-                    finalPath += ".json";
-                }
-                
-                // STEP 4: Add .apify prefix unless path already contains a directory reference
-                bool hasDirectorySeparator = finalPath.Contains(Path.DirectorySeparatorChar) || 
-                                            finalPath.Contains(Path.AltDirectorySeparatorChar);
-                                            
-                bool alreadyHasApiDirectory = finalPath.StartsWith(DefaultApiDirectory + Path.DirectorySeparatorChar) || 
-                                              finalPath.StartsWith(DefaultApiDirectory + Path.AltDirectorySeparatorChar);
-                
-                // If this path has no directory separators OR
-                // has directory separators from dot notation conversion but doesn't already have the .apify prefix
-                if ((!hasDirectorySeparator && !finalPath.StartsWith(".")) || 
-                    (hasDirectorySeparator && !alreadyHasApiDirectory))
-                {
-                    // Ensure the .apify directory exists before trying to use it
-                    EnsureApiDirectoryExists();
-                    
-                    finalPath = Path.Combine(DefaultApiDirectory, finalPath);
-                    ConsoleHelper.WriteInfo($"Added default directory: {finalPath}");
-                }
+                // Use the ProcessFilePath method to ensure consistent behavior with CreateRequestCommand
+                string finalPath = ProcessFilePath(originalPath);
                 
                 // STEP 5: Handle wildcards, or add the path if the file exists
                 if (finalPath.Contains("*") || finalPath.Contains("?"))
@@ -463,6 +395,82 @@ namespace Apify.Commands
             }
         }
         
+        private void EnsureApiDirectoryExists()
+        {
+            if (!Directory.Exists(DefaultApiDirectory))
+            {
+                try
+                {
+                    Directory.CreateDirectory(DefaultApiDirectory);
+                    ConsoleHelper.WriteInfo($"Created '{DefaultApiDirectory}' directory as it didn't exist.");
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.WriteError($"Failed to create '{DefaultApiDirectory}' directory: {ex.Message}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Process a file path using the same logic as in CreateRequestCommand.
+        /// This ensures consistent behavior between commands.
+        /// </summary>
+        private string ProcessFilePath(string filePath)
+        {
+            // Apply the same logic as in CreateRequestCommand to handle dot notation
+            // and ensure .json extension 
+            
+            // Start with original path
+            string processedPath = filePath;
+            
+            // Add .json extension if missing
+            if (!processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                processedPath += ".json";
+            }
+            
+            // Convert dot notation to directory separators if present
+            string filenameWithoutExt = Path.GetFileNameWithoutExtension(processedPath);
+            
+            // If there are dots in the filename part (not in the extension)
+            if (filenameWithoutExt.Contains('.'))
+            {
+                string extension = Path.GetExtension(processedPath);
+                
+                // Only handle as dot notation if no directory separators already exist
+                bool hasDirectorySeparator = processedPath.Contains(Path.DirectorySeparatorChar) || 
+                                            processedPath.Contains(Path.AltDirectorySeparatorChar);
+                
+                if (!hasDirectorySeparator && !processedPath.StartsWith("."))
+                {
+                    string[] parts = filenameWithoutExt.Split('.');
+                    string filename = parts[parts.Length - 1]; // Last part becomes the filename
+                    string[] folderParts = parts.Take(parts.Length - 1).ToArray(); // Earlier parts become folders
+                    
+                    // Join with directory separators
+                    processedPath = string.Join(Path.DirectorySeparatorChar.ToString(), folderParts) + 
+                                   Path.DirectorySeparatorChar + filename + extension;
+                    
+                    ConsoleHelper.WriteInfo($"Converted dot notation: {filePath} → {processedPath}");
+                }
+            }
+            
+            // Add .apify prefix if not already present
+            bool alreadyHasApiDirectory = processedPath.StartsWith(DefaultApiDirectory + Path.DirectorySeparatorChar) || 
+                                         processedPath.StartsWith(DefaultApiDirectory + Path.AltDirectorySeparatorChar);
+            
+            if (!alreadyHasApiDirectory)
+            {
+                // Ensure the .apify directory exists
+                EnsureApiDirectoryExists();
+                
+                processedPath = Path.Combine(DefaultApiDirectory, processedPath);
+                ConsoleHelper.WriteInfo($"Added default directory: {processedPath}");
+            }
+            
+            return processedPath;
+        }
+        
         private void ListEnvironments(TestEnvironmentConfig config)
         {
             if (config == null)
@@ -507,24 +515,6 @@ namespace Apify.Commands
             }
         }
         
-        /// <summary>
-        /// Ensures the .apify directory exists in the current working directory.
-        /// If it doesn't exist, this method creates it.
-        /// </summary>
-        private void EnsureApiDirectoryExists()
-        {
-            if (!Directory.Exists(DefaultApiDirectory))
-            {
-                try
-                {
-                    Directory.CreateDirectory(DefaultApiDirectory);
-                    ConsoleHelper.WriteInfo($"Created '{DefaultApiDirectory}' directory as it didn't exist.");
-                }
-                catch (Exception ex)
-                {
-                    ConsoleHelper.WriteError($"Failed to create '{DefaultApiDirectory}' directory: {ex.Message}");
-                }
-            }
-        }
+
     }
 }

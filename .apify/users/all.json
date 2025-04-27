@@ -1,0 +1,16 @@
+{
+  "name": "Get All Users",
+  "uri": "{{baseUrl}}/users",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "payloadType": "None",
+  "tests": [
+    {
+      "name": "Status code should be 200",
+      "assertType": "StatusCode",
+      "expectedValue": "200"
+    }
+  ]
+}
