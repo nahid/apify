@@ -85,7 +85,7 @@ namespace Apify.Services
                 }
             }
 
-            public dynamic GetValue(string key)
+            public dynamic? GetValue(string key)
             {
                 switch (_value)
                 {
@@ -106,7 +106,7 @@ namespace Apify.Services
                 }
             }
 
-            public override bool Equals(object obj)
+            public override bool Equals(object? obj)
             {
                 if (obj is DynamicObject other)
                 {
@@ -143,7 +143,11 @@ namespace Apify.Services
             // Dynamic property accessor via indexer
             public dynamic this[string key]
             {
-                get => GetValue(key);
+                get
+                {
+                    var value = GetValue(key);
+                    return value ?? new object(); // Return empty object instead of null
+                }
             }
 
             // ToString for debugging

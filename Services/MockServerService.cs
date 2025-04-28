@@ -33,7 +33,7 @@ namespace Apify.Services
             // Load all mock definitions
             LoadMockDefinitions();
             
-            if (_mockDefinitions.Count == 0)
+            if (_mockDefinitions.Count == 0 && _advancedMockDefinitions.Count == 0)
             {
                 ConsoleHelper.WriteWarning("No mock API definitions found. Create .mock.json files in your .apify directory.");
                 ConsoleHelper.WriteInfo("Example path: .apify/users/all.mock.json");
@@ -52,9 +52,16 @@ namespace Apify.Services
                 ConsoleHelper.WriteSuccess($"Mock API Server started on http://0.0.0.0:{port}");
                 ConsoleHelper.WriteInfo("Available endpoints:");
                 
+                // Display legacy mock endpoints
                 foreach (var mock in _mockDefinitions)
                 {
                     ConsoleHelper.WriteSuccess($"[{mock.Method}] {mock.Endpoint} - {mock.Name}");
+                }
+                
+                // Display advanced mock endpoints
+                foreach (var mock in _advancedMockDefinitions)
+                {
+                    ConsoleHelper.WriteSuccess($"[{mock.Method}] {mock.Endpoint} - {mock.Name} (Advanced)");
                 }
                 
                 Console.WriteLine("\nPress Ctrl+C to stop the server...");
@@ -132,8 +139,21 @@ namespace Apify.Services
                 try
                 {
                     var json = File.ReadAllText(file);
-                    var mockDef = JsonConvert.DeserializeObject<MockApiDefinition>(json);
                     
+                    // First try to parse as advanced mock definition
+                    var advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json);
+                    if (advancedMockDef != null && advancedMockDef.Responses != null && advancedMockDef.Responses.Count > 0)
+                    {
+                        _advancedMockDefinitions.Add(advancedMockDef);
+                        if (_verbose)
+                        {
+                            ConsoleHelper.WriteInfo($"Loaded advanced mock API: {advancedMockDef.Name} [{advancedMockDef.Method}] {advancedMockDef.Endpoint}");
+                        }
+                        continue; // Skip legacy mock format if advanced format was detected
+                    }
+                    
+                    // If not advanced format, try legacy format
+                    var mockDef = JsonConvert.DeserializeObject<MockApiDefinition>(json);
                     if (mockDef != null)
                     {
                         // If the mock definition has a responseFile, load its content
@@ -196,6 +216,10 @@ namespace Apify.Services
                 catch (Exception ex)
                 {
                     ConsoleHelper.WriteError($"Error loading mock definition from {file}: {ex.Message}");
+                    if (_verbose)
+                    {
+                        Console.WriteLine(ex.StackTrace);
+                    }
                 }
             }
         }
@@ -221,10 +245,18 @@ namespace Apify.Services
                 }
             }
             
-            // Find matching mock definition
-            var mockDef = FindMatchingMockDefinition(request);
+            // Look for advanced mock definition first
+            var advancedMockDef = FindMatchingAdvancedMockDefinition(request);
             Dictionary<string, string> pathParams = new Dictionary<string, string>();
             
+            if (advancedMockDef != null)
+            {
+                await ProcessAdvancedMockResponseAsync(context, advancedMockDef, pathParams);
+                return;
+            }
+            
+            // If no advanced mock definition found, try legacy format
+            var mockDef = FindMatchingMockDefinition(request);            
             if (mockDef != null)
             {
                 // Extract path parameters for use in templates
@@ -444,15 +476,28 @@ namespace Apify.Services
                 response.StatusCode = 404;
                 response.ContentType = "application/json";
                 
+                // Combine both legacy and advanced mock endpoints in the error message
+                var availableEndpoints = new List<object>();
+                
+                availableEndpoints.AddRange(_mockDefinitions.Select(m => new { 
+                    method = m.Method, 
+                    endpoint = m.Endpoint,
+                    name = m.Name,
+                    type = "legacy"
+                }));
+                
+                availableEndpoints.AddRange(_advancedMockDefinitions.Select(m => new { 
+                    method = m.Method, 
+                    endpoint = m.Endpoint,
+                    name = m.Name,
+                    type = "advanced"
+                }));
+                
                 string notFoundResponse = JsonConvert.SerializeObject(new
                 {
                     error = "Not Found",
                     message = $"No mock defined for {method} {requestUrl}",
-                    availableEndpoints = _mockDefinitions.Select(m => new { 
-                        method = m.Method, 
-                        endpoint = m.Endpoint,
-                        name = m.Name
-                    }).ToList()
+                    availableEndpoints = availableEndpoints
                 }, Formatting.Indented);
                 
                 byte[] buffer = Encoding.UTF8.GetBytes(notFoundResponse);
@@ -682,6 +727,252 @@ namespace Apify.Services
                 
             text = text.Trim();
             return text.StartsWith("{") && text.EndsWith("}");
+        }
+        
+        private AdvancedMockApiDefinition? FindMatchingAdvancedMockDefinition(HttpListenerRequest request)
+        {
+            string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
+            string method = request.HttpMethod;
+            
+            // First try exact match
+            var exactMatch = _advancedMockDefinitions.FirstOrDefault(m => 
+                string.Equals(m.Endpoint, requestUrl, StringComparison.OrdinalIgnoreCase) && 
+                string.Equals(m.Method, method, StringComparison.OrdinalIgnoreCase));
+                
+            if (exactMatch != null)
+                return exactMatch;
+                
+            // Try wildcard/pattern match (for path parameters like /users/{id})
+            foreach (var mockDef in _advancedMockDefinitions)
+            {
+                if (!string.Equals(mockDef.Method, method, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                    
+                // Convert endpoint pattern to regex
+                // Example: "/users/{id}" becomes "^/users/[^/]+$"
+                if (mockDef.Endpoint.Contains("{") && mockDef.Endpoint.Contains("}"))
+                {
+                    string pattern = "^" + Regex.Escape(mockDef.Endpoint)
+                        .Replace("\\{", "{")
+                        .Replace("\\}", "}")
+                        .Replace("{[^/]+}", "[^/]+") + "$";
+                        
+                    // Convert parameters like {id} or {name} to regex capture groups
+                    pattern = Regex.Replace(pattern, "{([^/]+)}", "([^/]+)");
+                    
+                    if (Regex.IsMatch(requestUrl, pattern))
+                    {
+                        return mockDef;
+                    }
+                }
+            }
+            
+            return null;
+        }
+        
+        private async Task ProcessAdvancedMockResponseAsync(HttpListenerContext context, AdvancedMockApiDefinition mockDef, Dictionary<string, string> pathParams)
+        {
+            var request = context.Request;
+            var response = context.Response;
+            string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
+            string method = request.HttpMethod;
+            
+            // Extract path parameters for use in templates
+            ExtractPathParameters(mockDef.Endpoint, requestUrl, out pathParams);
+            
+            // Get Headers
+            Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string key in request.Headers.AllKeys)
+            {
+                if (!string.IsNullOrEmpty(key) && request.Headers[key] != null)
+                {
+                    string headerValue = request.Headers[key] ?? string.Empty;
+                    headers[key] = headerValue;
+                }
+            }
+            
+            // Get Query Parameters
+            Dictionary<string, string> queryParams = new Dictionary<string, string>();
+            foreach (string key in request.QueryString.Keys)
+            {
+                if (key != null && request.QueryString[key] != null)
+                {
+                    string queryValue = request.QueryString[key] ?? string.Empty;
+                    queryParams[key] = queryValue;
+                }
+            }
+            
+            // Get Body as JToken (null if not a valid JSON)
+            JToken? bodyContent = null;
+            string bodyString = string.Empty;
+            
+            if (request.HasEntityBody && request.ContentLength64 > 0)
+            {
+                try
+                {
+                    using (var reader = new StreamReader(request.InputStream, request.ContentEncoding, leaveOpen: true))
+                    {
+                        bodyString = reader.ReadToEnd();
+                    }
+                    
+                    // Reset stream position for further reads
+                    request.InputStream.Position = 0;
+                    
+                    if (IsJsonObject(bodyString) || bodyString.Trim().StartsWith("["))
+                    {
+                        bodyContent = JsonConvert.DeserializeObject<JToken>(bodyString);
+                    }
+                }
+                catch
+                {
+                    // If we can't parse as JSON, we'll use empty object 
+                    bodyContent = JToken.Parse("{}");
+                }
+            }
+            else
+            {
+                bodyContent = JToken.Parse("{}");
+            }
+            
+            // Find the matching response based on conditions
+            ConditionalResponse? matchedResponse = null;
+            
+            foreach (var responseOption in mockDef.Responses)
+            {
+                bool conditionMet = _conditionEvaluator.EvaluateCondition(
+                    responseOption.Condition, 
+                    headers, 
+                    bodyContent ?? JToken.Parse("{}"), 
+                    queryParams, 
+                    pathParams);
+                    
+                if (conditionMet)
+                {
+                    matchedResponse = responseOption;
+                    break;
+                }
+            }
+            
+            // Use fallback response if none of the conditions matched
+            if (matchedResponse == null)
+            {
+                matchedResponse = mockDef.Responses.FirstOrDefault(r => 
+                    string.Equals(r.Condition, "default", StringComparison.OrdinalIgnoreCase));
+            }
+            
+            if (matchedResponse == null)
+            {
+                if (_verbose)
+                {
+                    ConsoleHelper.WriteWarning($"No matching response found for {method} {requestUrl} and no default response.");
+                }
+                
+                // Return 500 error if no matching response
+                response.StatusCode = 500;
+                response.ContentType = "application/json";
+                
+                string errorContent = JsonConvert.SerializeObject(new
+                {
+                    error = "No Response Match",
+                    message = "No condition matched the request and no default response was defined"
+                }, Formatting.Indented);
+                
+                byte[] errorBuffer = Encoding.UTF8.GetBytes(errorContent);
+                response.ContentLength64 = errorBuffer.Length;
+                await response.OutputStream.WriteAsync(errorBuffer);
+                response.Close();
+                return;
+            }
+            
+            // Process the matched response
+            response.StatusCode = matchedResponse.StatusCode;
+            response.ContentType = "application/json"; // Default
+            
+            // Add headers
+            if (matchedResponse.Headers != null)
+            {
+                foreach (var header in matchedResponse.Headers)
+                {
+                    string headerValue = ApplyTemplateVariables(header.Value, pathParams);
+                    response.Headers.Add(header.Key, headerValue);
+                    
+                    // Set content type if it's in the headers
+                    if (string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        response.ContentType = headerValue;
+                    }
+                }
+            }
+            
+            // Process response template
+            string responseContent;
+            
+            if (matchedResponse.ResponseTemplate != null)
+            {
+                if (matchedResponse.ResponseTemplate is string str)
+                {
+                    responseContent = str;
+                }
+                else
+                {
+                    responseContent = JsonConvert.SerializeObject(matchedResponse.ResponseTemplate, Formatting.Indented);
+                }
+                
+                // Replace any template variables with actual values
+                responseContent = ApplyTemplateVariables(responseContent, pathParams);
+                
+                // Apply advanced template replacements
+                
+                // 1. Replace body.X references with actual body values
+                if (bodyContent != null && bodyContent.Type == JTokenType.Object)
+                {
+                    foreach (var prop in (JObject)bodyContent)
+                    {
+                        string placeholder = $"{{{{body.{prop.Key}}}}}";
+                        if (responseContent.Contains(placeholder))
+                        {
+                            string replacement = prop.Value?.ToString() ?? string.Empty;
+                            responseContent = responseContent.Replace(placeholder, replacement);
+                        }
+                    }
+                }
+                
+                // 2. Process random and date placeholders
+                responseContent = ProcessDynamicTemplate(responseContent, request);
+            }
+            else
+            {
+                responseContent = "{}";
+            }
+            
+            byte[] responseBuffer = Encoding.UTF8.GetBytes(responseContent);
+            response.ContentLength64 = responseBuffer.Length;
+            
+            try
+            {
+                await response.OutputStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
+                
+                if (_verbose)
+                {
+                    ConsoleHelper.WriteSuccess($"Responded to {method} {requestUrl} with status {response.StatusCode} (Advanced Mock)");
+                    ConsoleHelper.WriteInfo($"Response body: {responseContent}");
+                }
+                else
+                {
+                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode} (Advanced)");
+                }
+            }
+            catch (Exception ex)
+            {
+                if (_verbose)
+                {
+                    ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                }
+            }
+            finally
+            {
+                response.Close();
+            }
         }
         
         private async Task ProcessMultipartFormDataAsync(HttpListenerRequest request, 
