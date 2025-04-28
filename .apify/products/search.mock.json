@@ -5,7 +5,7 @@
   "endpoint": "/products/search",
   "responses": [
     {
-      "condition": "query.minPrice && query.maxPrice && int.Parse(query.minPrice) > int.Parse(query.maxPrice)",
+      "condition": "query.minPrice && query.maxPrice && Parse(query.minPrice) > Parse(query.maxPrice)",
       "statusCode": 400,
       "headers": {
         "Content-Type": "application/json"
@@ -16,7 +16,7 @@
       }
     },
     {
-      "condition": "query.category && (query.category.ToLower() == \"electronics\" || query.category.ToLower() == \"computers\")",
+      "condition": "query.category && (ToLower(query.category) == \"electronics\" || ToLower(query.category) == \"computers\")",
       "statusCode": 200,
       "headers": {
         "Content-Type": "application/json"

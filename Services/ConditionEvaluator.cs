@@ -17,6 +17,14 @@ namespace Apify.Services
         public ConditionEvaluator()
         {
             _interpreter = new Interpreter();
+            
+            // Register helper methods to be used in expressions
+            _interpreter.SetFunction("int", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0));
+            _interpreter.SetFunction("Parse", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0));
+            _interpreter.SetFunction("ToLower", new Func<string, string>(s => s?.ToLower() ?? string.Empty));
+            _interpreter.SetFunction("ToUpper", new Func<string, string>(s => s?.ToUpper() ?? string.Empty));
+            _interpreter.SetFunction("Contains", new Func<string, string, bool>((source, value) => 
+                source?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false));
         }
 
         /// <summary>

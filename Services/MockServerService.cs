@@ -140,8 +140,45 @@ namespace Apify.Services
                 {
                     var json = File.ReadAllText(file);
                     
+                    // Always log this file regardless of verbose setting
+                    bool isProductSearchMock = file.Contains("search.mock.json");
+                    if (isProductSearchMock || _verbose)
+                    {
+                        ConsoleHelper.WriteInfo($"Attempting to load mock from: {file}");
+                        if (isProductSearchMock)
+                        {
+                            Console.WriteLine($"Search mock JSON content: {json.Substring(0, Math.Min(100, json.Length))}...");
+                        }
+                    }
+                    
                     // First try to parse as advanced mock definition
-                    var advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json);
+                    AdvancedMockApiDefinition advancedMockDef;
+                    try
+                    {
+                        advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json);
+                        if (_verbose)
+                        {
+                            ConsoleHelper.WriteInfo($"Successfully parsed {file} as AdvancedMockApiDefinition");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        bool isProductSearchMockError = file.Contains("search.mock.json");
+                        ConsoleHelper.WriteError($"Error parsing {file} as AdvancedMockApiDefinition: {ex.Message}");
+                        if (isProductSearchMockError || _verbose)
+                        {
+                            Console.WriteLine($"Error details for {file}:");
+                            Console.WriteLine(ex.Message);
+                            Console.WriteLine(ex.StackTrace);
+                            if (ex.InnerException != null)
+                            {
+                                Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                                Console.WriteLine(ex.InnerException.StackTrace);
+                            }
+                        }
+                        continue;
+                    }
+                    
                     if (advancedMockDef != null && advancedMockDef.Responses != null && advancedMockDef.Responses.Count > 0)
                     {
                         _advancedMockDefinitions.Add(advancedMockDef);
