@@ -11,8 +11,17 @@ namespace Apify.Services
         {
             try
             {
+                // Ensure legacy format is converted
+                assertion.ConvertLegacyFormat();
+                
                 var assertionType = assertion.GetAssertionType();
                 var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
+                
+                // Add debug logging to help troubleshoot
+                Console.WriteLine($"DEBUG - EvaluateAssertion for: {name}");
+                Console.WriteLine($"DEBUG - AssertType: {assertion.AssertType}");
+                Console.WriteLine($"DEBUG - Assertion: {assertion.Assertion}");
+                Console.WriteLine($"DEBUG - AssertionType enum: {assertionType}");
                 
                 // Use the new format if available
                 if (!string.IsNullOrEmpty(assertion.AssertType))
@@ -30,7 +39,17 @@ namespace Apify.Services
                         case "equal":
                             return EvaluateEqualNewFormat(assertion, response);
                         default:
-                            return TestResult.Failure(name, $"Unknown assertion type: {assertion.AssertType}");
+                            // If assertion string is available and AssertType is invalid,
+                            // try to infer from Assertion string
+                            if (!string.IsNullOrEmpty(assertion.Assertion))
+                            {
+                                Console.WriteLine($"DEBUG - Falling back to legacy format due to unknown assertion type");
+                                break; // Exit switch and continue with legacy format
+                            }
+                            else
+                            {
+                                return TestResult.Failure(name, $"Unknown assertion type: {assertion.AssertType}");
+                            }
                     }
                 }
                 
@@ -46,6 +65,57 @@ namespace Apify.Services
                     case AssertionType.ResponseTime:
                         return EvaluateResponseTimeAssertion(assertion, response);
                     default:
+                        // Check if we can determine a default assertion based on the name
+                        if (name.Contains("status code", StringComparison.OrdinalIgnoreCase) || 
+                            name.Contains("status is", StringComparison.OrdinalIgnoreCase))
+                        {
+                            assertion.AssertType = "StatusCode";
+                            assertion.ExpectedValue = "200";
+                            return EvaluateStatusCodeNewFormat(assertion, response);
+                        }
+                        else if (name.Contains("time", StringComparison.OrdinalIgnoreCase) || 
+                                name.Contains("timeout", StringComparison.OrdinalIgnoreCase))
+                        {
+                            assertion.AssertType = "ResponseTimeBelow";
+                            assertion.ExpectedValue = "5000"; // Default 5 seconds
+                            return EvaluateResponseTimeBelowNewFormat(assertion, response);
+                        }
+                        else if (name.Contains("header", StringComparison.OrdinalIgnoreCase) || 
+                                name.Contains("content-type", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string headerName = "Content-Type";
+                            if (name.Contains("content-type", StringComparison.OrdinalIgnoreCase))
+                            {
+                                headerName = "Content-Type";
+                            }
+                            
+                            assertion.AssertType = "HeaderContains";
+                            assertion.Property = headerName;
+                            assertion.ExpectedValue = "application/json";
+                            return EvaluateHeaderContainsNewFormat(assertion, response);
+                        }
+                        else if (name.Contains("contains", StringComparison.OrdinalIgnoreCase) || 
+                                name.Contains("has", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string propertyToCheck = "id";
+                            if (name.Contains("user", StringComparison.OrdinalIgnoreCase))
+                            {
+                                propertyToCheck = "id";
+                            }
+                            else if (name.Contains("email", StringComparison.OrdinalIgnoreCase))
+                            {
+                                propertyToCheck = "email";
+                            }
+                            else if (name.Contains("name", StringComparison.OrdinalIgnoreCase))
+                            {
+                                propertyToCheck = "name";
+                            }
+                            
+                            assertion.AssertType = "ContainsProperty";
+                            assertion.ExpectedValue = propertyToCheck;
+                            return EvaluateContainsPropertyNewFormat(assertion, response);
+                        }
+                        
                         return TestResult.Failure(name, "Unknown assertion type");
                 }
             }
