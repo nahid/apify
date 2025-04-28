@@ -48,6 +48,13 @@ namespace Apify.Services
             {
                 return true;
             }
+            
+            // Log the query parameters for debugging
+            Console.WriteLine($"Query parameters count: {queryParams.Count}");
+            foreach (var param in queryParams)
+            {
+                Console.WriteLine($"Query parameter: {param.Key} = {param.Value}");
+            }
 
             try
             {
@@ -56,6 +63,12 @@ namespace Apify.Services
                 _interpreter.SetVariable("body", new DynamicObject(body));
                 _interpreter.SetVariable("query", new DynamicObject(queryParams));
                 _interpreter.SetVariable("params", new DynamicObject(pathParams));
+                
+                // Add direct access to individual query parameters for easier condition evaluation
+                foreach (var param in queryParams)
+                {
+                    _interpreter.SetVariable(param.Key, param.Value);
+                }
 
                 // Evaluate the expression
                 var result = _interpreter.Eval<bool>(condition);
@@ -154,7 +167,7 @@ namespace Apify.Services
                 get
                 {
                     var value = GetValue(key);
-                    return value ?? new object(); // Return empty object instead of null
+                    return value ?? new DynamicObject(null); // Return empty DynamicObject instead of null
                 }
             }
 

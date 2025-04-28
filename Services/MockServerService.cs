@@ -833,17 +833,45 @@ namespace Apify.Services
             
             // Get Query Parameters
             Dictionary<string, string> queryParams = new Dictionary<string, string>();
-            if (request.QueryString.Keys != null)
+            if (request.Url?.Query != null && request.Url.Query.Length > 0)
             {
+                // Debug log the full query string
+                Console.WriteLine($"Debug: Full query string: {request.Url.Query}");
+                
+                // Process query string manually to ensure correct handling
+                string query = request.Url.Query.TrimStart('?');
+                string[] pairs = query.Split('&');
+                
+                foreach (string pair in pairs)
+                {
+                    string[] keyValue = pair.Split('=');
+                    if (keyValue.Length >= 2)
+                    {
+                        string key = keyValue[0];
+                        string value = keyValue[1];
+                        queryParams[key] = Uri.UnescapeDataString(value);
+                        Console.WriteLine($"Debug: Added query parameter: {key}={queryParams[key]}");
+                    }
+                }
+            }
+            
+            // Also try the traditional way as a backup
+            if (request.QueryString.Keys != null && queryParams.Count == 0)
+            {
+                Console.WriteLine("Debug: Using traditional query string extraction");
                 foreach (string? key in request.QueryString.Keys)
                 {
                     if (key != null && request.QueryString[key] != null)
                     {
                         string queryValue = request.QueryString[key] ?? string.Empty;
                         queryParams[key] = queryValue;
+                        Console.WriteLine($"Debug: Added query parameter via QueryString: {key}={queryValue}");
                     }
                 }
             }
+            
+            // Log the final query parameters count
+            Console.WriteLine($"Debug: Total query parameters: {queryParams.Count}");
             
             // Get Body as JToken (null if not a valid JSON)
             JToken? bodyContent = null;
@@ -964,6 +992,9 @@ namespace Apify.Services
                 // Replace any template variables with actual values
                 responseContent = ApplyTemplateVariables(responseContent, pathParams);
                 
+                // Process dynamic template expressions (e.g., {{$random:int:1000:1999}})
+                responseContent = ProcessDynamicTemplate(responseContent, request);
+                
                 // Apply advanced template replacements
                 
                 // 1. Replace body.X references with actual body values
@@ -979,9 +1010,6 @@ namespace Apify.Services
                         }
                     }
                 }
-                
-                // 2. Process random and date placeholders
-                responseContent = ProcessDynamicTemplate(responseContent, request);
             }
             else
             {
@@ -1306,7 +1334,20 @@ namespace Apify.Services
                 }
             }
             
-            // Use regex to find and replace {{variable}} patterns
+            // First, process special templates like {{$random:int:1000:1999}}
+            var specialTemplatePattern = new Regex(@"{{(\$random:int:(\d+):(\d+))}}", RegexOptions.Compiled);
+            input = specialTemplatePattern.Replace(input, match =>
+            {
+                if (match.Groups.Count >= 4)
+                {
+                    int minValue = int.Parse(match.Groups[2].Value);
+                    int maxValue = int.Parse(match.Groups[3].Value);
+                    return new Random().Next(minValue, maxValue + 1).ToString();
+                }
+                return match.Value;
+            });
+            
+            // Then, use regex to find and replace standard {{variable}} patterns
             var variablePattern = new Regex(@"{{(.+?)}}", RegexOptions.Compiled);
             
             return variablePattern.Replace(input, match =>
