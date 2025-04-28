@@ -64,6 +64,33 @@ namespace Apify.Services
                     _ = ProcessRequestAsync(context);
                 }
             }
+            catch (HttpListenerException ex) when (ex.Message.Contains("Access is denied") || ex.ErrorCode == 5)
+            {
+                ConsoleHelper.WriteError($"Error starting mock server: {ex.Message}");
+                
+                // Provide helpful guidance for Windows users
+                if (OperatingSystem.IsWindows())
+                {
+                    Console.WriteLine();
+                    ConsoleHelper.WriteInfo("This error commonly occurs on Windows when binding to HTTP ports without administrator privileges.");
+                    Console.WriteLine();
+                    ConsoleHelper.WriteInfo("To resolve this issue, you can:");
+                    Console.WriteLine("1. Run your command prompt as Administrator");
+                    Console.WriteLine("   Right-click on cmd/PowerShell and select 'Run as administrator'");
+                    Console.WriteLine();
+                    Console.WriteLine("2. Add a URL reservation (one-time setup, preferred solution):");
+                    Console.WriteLine($"   Run this in an Administrator PowerShell: netsh http add urlacl url=http://+:{port}/ user=Everyone");
+                    Console.WriteLine();
+                    Console.WriteLine("3. Try using a port number above 1024 (e.g., 8080):");
+                    Console.WriteLine($"   dotnet run mock-server --port 8080");
+                    Console.WriteLine();
+                }
+                
+                if (_verbose)
+                {
+                    Console.WriteLine(ex.StackTrace);
+                }
+            }
             catch (Exception ex)
             {
                 ConsoleHelper.WriteError($"Error starting mock server: {ex.Message}");
