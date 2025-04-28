@@ -98,15 +98,7 @@ args = "TestVariablePriority"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "TestCreateRequest"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "TestDotNotationRun"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "TestCreateDotNotation"
 
 [[workflows.workflow]]
 name = "APITester-ListEnv"
@@ -277,28 +269,12 @@ task = "shell.exec"
 args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run apis/variable-priority-test.json --verbose"
 
 [[workflows.workflow]]
-name = "TestCreateRequest"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet build && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run create request --file users.all"
-
-[[workflows.workflow]]
 name = "TestDotNotationRun"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run users.all --verbose"
-
-[[workflows.workflow]]
-name = "TestCreateDotNotation"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run create request --file users.all"
 
 [deployment]
 run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]

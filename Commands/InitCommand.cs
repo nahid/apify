@@ -462,8 +462,9 @@ namespace Apify.Commands
             {
                 string? input = ConsoleHelper.PromptInput($"{prompt} (y/n)").Trim().ToLower();
                 
-                if (input == "y" || input == "yes") return true;
-                if (input == "n" || input == "no") return false;
+                // More lenient checking to handle potential whitespace or newlines
+                if (input.StartsWith("y")) return true;
+                if (input.StartsWith("n")) return false;
                 
                 ConsoleHelper.WriteWarning("Please enter 'y' or 'n'.");
             }
