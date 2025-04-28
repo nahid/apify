@@ -741,6 +741,184 @@ This hierarchical system allows you to:
 * **Default Values**: Provide fallbacks even if environment variables are missing
 * **Self-Documentation**: Variables defined in the test show what values the test expects
 
+## Mock Server
+
+The Mock Server is a powerful feature that allows you to create virtual API endpoints without needing access to real backend services. This is particularly valuable for:
+
+1. Frontend development when the backend is not ready
+2. Testing error scenarios and edge cases
+3. Offline development
+4. Creating reproducible test environments
+
+### Mock Definition Files
+
+Mock API definitions are JSON files with a `.mock.json` extension placed in the `.apify` directory. The naming convention is:
+
+```
+<endpoint-name>.mock.json
+```
+
+For example:
+- `.apify/users/all.mock.json` - Mocks a "Get All Users" endpoint
+- `.apify/users/user.mock.json` - Mocks a "Get User by ID" endpoint
+
+### Mock Definition Structure
+
+A mock definition file follows this structure:
+
+```json
+{
+  "Name": "Get User by ID",
+  "Description": "Returns a single user by ID",
+  "Method": "GET",
+  "Path": "/users/:id",
+  "ResponseStatus": 200,
+  "ResponseHeaders": {
+    "Content-Type": "application/json",
+    "Cache-Control": "max-age=3600"
+  },
+  "ResponseBody": {
+    "id": "{{:id}}",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "isActive": true
+  },
+  "Conditions": [
+    {
+      "Type": "HeaderContains",
+      "Field": "Authorization",
+      "Value": "Bearer invalid",
+      "ResponseStatus": 401,
+      "ResponseHeaders": {
+        "Content-Type": "application/json"
+      },
+      "ResponseBody": {
+        "error": "Invalid authentication token"
+      }
+    }
+  ]
+}
+```
+
+### Fields Explained
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| `Name` | String | Name of the mock endpoint | Yes |
+| `Description` | String | Description of the endpoint | No |
+| `Method` | String | HTTP method (GET, POST, PUT, DELETE, etc.) | Yes |
+| `Path` | String | The endpoint path pattern, supporting route parameters (e.g., `/users/:id`) | Yes |
+| `ResponseStatus` | Number | Default HTTP status code to return | Yes |
+| `ResponseHeaders` | Object | Default HTTP headers to include in the response | No |
+| `ResponseBody` | Object/Array/String | Default response body to return | No |
+| `Conditions` | Array | Conditional response configurations | No |
+
+### Path Parameters
+
+The mock server supports path parameters in the URL pattern through the `:parameter` syntax:
+
+```json
+"Path": "/users/:id"
+```
+
+When a request is made to `/users/123`, the value `123` is captured as the `:id` parameter. This value can be used in the response with the `{{:id}}` template syntax:
+
+```json
+"ResponseBody": {
+  "id": "{{:id}}",
+  "name": "John Doe"
+}
+```
+
+This allows you to create dynamic responses that reflect the request parameters.
+
+### Conditional Responses
+
+The `Conditions` array allows you to define different responses based on request properties. Each condition is evaluated in order, and the first matching condition's response is used.
+
+#### Available Condition Types
+
+| Condition Type | Description | Fields |
+|----------------|-------------|--------|
+| `HeaderContains` | Checks if a request header contains a value | `Field`, `Value` |
+| `BodyContains` | Checks if the request body contains a value | `Value` |
+| `BodyPropertyEquals` | Checks if a JSON property in the request equals a value | `PropertyPath`, `Value` |
+| `QueryStringContains` | Checks if a query parameter contains a value | `Field`, `Value` |
+| `PathParameterEquals` | Checks if a path parameter equals a value | `Parameter`, `Value` |
+
+Example of conditional responses:
+
+```json
+"Conditions": [
+  {
+    "Type": "HeaderContains",
+    "Field": "Authorization",
+    "Value": "Bearer invalid",
+    "ResponseStatus": 401,
+    "ResponseBody": {
+      "error": "Invalid token"
+    }
+  },
+  {
+    "Type": "BodyPropertyEquals",
+    "PropertyPath": "user.role",
+    "Value": "admin",
+    "ResponseStatus": 200,
+    "ResponseBody": {
+      "message": "Admin access granted"
+    }
+  }
+]
+```
+
+### Dynamic Response Templates
+
+The mock server supports dynamic content generation in responses using template variables:
+
+| Template Variable | Description | Example |
+|-------------------|-------------|---------|
+| `{{$timestamp}}` | Current Unix timestamp | 1618435200 |
+| `{{$date}}` | Current date in ISO format | 2023-04-15T12:00:00Z |
+| `{{$random:int:min:max}}` | Random integer between min and max | {{$random:int:1:100}} |
+| `{{$random:uuid}}` | Random UUID | 123e4567-e89b-12d3-a456-426614174000 |
+| `{{$random:string:length}}` | Random alphanumeric string | {{$random:string:10}} |
+| `{{:paramName}}` | Path parameter value | {{:id}} |
+
+Example of using dynamic template variables:
+
+```json
+"ResponseBody": {
+  "id": "{{:id}}",
+  "name": "Jane Doe",
+  "createdAt": "{{$date}}",
+  "token": "{{$random:uuid}}",
+  "randomCode": "{{$random:string:8}}"
+}
+```
+
+### File Upload Handling
+
+The mock server can handle file uploads by storing them temporarily and providing details about the uploaded files in the response:
+
+```json
+"ResponseBody": {
+  "message": "File uploaded successfully",
+  "fileDetails": "{{$uploadedFiles}}"
+}
+```
+
+The `{{$uploadedFiles}}` template variable is replaced with information about all files uploaded in the request.
+
+### Running the Mock Server
+
+To start the mock server:
+
+```bash
+dotnet run mock-server --port 8080 --verbose
+```
+
+The mock server will display available endpoints on startup and log incoming requests, making it easy to debug your application's interactions with the API.
+
 ## Examples
 
 ### Basic GET Request
