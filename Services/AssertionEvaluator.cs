@@ -69,7 +69,7 @@ namespace Apify.Services
             {
                 if (response.StatusCode == expectedStatusCode)
                 {
-                    return TestResult.Success(name);
+                    return TestResult.CreateSuccess(name);
                 }
                 else
                 {
@@ -117,7 +117,7 @@ namespace Apify.Services
                 // Simple property check at root level
                 if (jsonObj[propertyName] != null)
                 {
-                    return TestResult.Success(name);
+                    return TestResult.CreateSuccess(name);
                 }
                 
                 // Perform a deep search for the property
@@ -126,7 +126,7 @@ namespace Apify.Services
                 
                 if (found)
                 {
-                    return TestResult.Success(name);
+                    return TestResult.CreateSuccess(name);
                 }
                 else
                 {
@@ -228,7 +228,7 @@ namespace Apify.Services
             
             if (actualValue.Contains(expectedValue))
             {
-                return TestResult.Success(name);
+                return TestResult.CreateSuccess(name);
             }
             else
             {
@@ -254,7 +254,7 @@ namespace Apify.Services
             {
                 if (response.ResponseTimeMs < maxTime)
                 {
-                    return TestResult.Success(name);
+                    return TestResult.CreateSuccess(name);
                 }
                 else
                 {
@@ -381,7 +381,7 @@ namespace Apify.Services
                 // Compare values
                 if (actualValue.Equals(expectedValue, StringComparison.InvariantCulture))
                 {
-                    return TestResult.Success(name);
+                    return TestResult.CreateSuccess(name);
                 }
                 else
                 {
@@ -442,7 +442,7 @@ namespace Apify.Services
                         
                         if (minCheck && maxCheck)
                         {
-                            return TestResult.Success(assertion.Name);
+                            return TestResult.CreateSuccess(assertion.Name);
                         }
                         else
                         {
@@ -477,7 +477,7 @@ namespace Apify.Services
                 
                 if (passed)
                 {
-                    return TestResult.Success(assertion.Name);
+                    return TestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
@@ -505,7 +505,7 @@ namespace Apify.Services
                 
                 if (response.Body.Contains(expectedValue))
                 {
-                    return TestResult.Success(assertion.Name);
+                    return TestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
@@ -574,7 +574,7 @@ namespace Apify.Services
                     
                     if (passed)
                     {
-                        return TestResult.Success(assertion.Name);
+                        return TestResult.CreateSuccess(assertion.Name);
                     }
                     else
                     {
@@ -646,7 +646,7 @@ namespace Apify.Services
                 
                 if (passed)
                 {
-                    return TestResult.Success(assertion.Name);
+                    return TestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
@@ -667,7 +667,7 @@ namespace Apify.Services
                 
                 if (response.Headers.ContainsKey(headerName) || response.ContentHeaders.ContainsKey(headerName))
                 {
-                    return TestResult.Success(assertion.Name);
+                    return TestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
@@ -707,7 +707,7 @@ namespace Apify.Services
                 
                 if (passed)
                 {
-                    return TestResult.Success(assertion.Name);
+                    return TestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {

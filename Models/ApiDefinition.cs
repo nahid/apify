@@ -145,6 +145,9 @@ namespace Apify.Models
         
         [JsonPropertyName("variables")]
         public Dictionary<string, string>? Variables { get; set; }
+        
+        [JsonPropertyName("tags")]
+        public List<string>? Tags { get; set; }
     }
 
     public enum PayloadType

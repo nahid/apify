@@ -23,6 +23,7 @@ namespace Apify
             rootCommand.AddCommand(new RunCommand().Command);
             rootCommand.AddCommand(new InitCommand());
             rootCommand.AddCommand(new CreateRequestCommand());
+            rootCommand.AddCommand(new TestsCommand());
 
             // Parse and execute
             return await rootCommand.InvokeAsync(args);

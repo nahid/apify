@@ -32,11 +32,15 @@ namespace Apify.Commands
             // Add the create command
             var createCommand = new CreateRequestCommand();
             
+            // Add the tests command
+            var testsCommand = new TestsCommand();
+            
             // Add commands to root command
             Command.AddCommand(listEnvCommand);
             Command.AddCommand(initCommand);
             Command.AddCommand(runCommand.Command);
             Command.AddCommand(createCommand);
+            Command.AddCommand(testsCommand);
         }
         
         private void ListEnvironments()
