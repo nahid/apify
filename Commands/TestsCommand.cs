@@ -74,13 +74,41 @@ namespace Apify.Commands
             
             var startTime = DateTime.Now;
             
+            // Spinner characters for animation
+            var spinner = new string[] { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
+            var spinnerIndex = 0;
+            var spinnerTimer = new System.Timers.Timer(100); // Update spinner every 100ms
+            
+            // Setup a timer to update the spinner animation
+            spinnerTimer.Elapsed += (sender, e) => 
+            {
+                spinnerIndex++;
+                // Only update if we're not at the end of a line (to avoid flickering)
+                try
+                {
+                    int cursorLeft = Console.CursorLeft;
+                    int cursorTop = Console.CursorTop;
+                    
+                    if (cursorLeft > 2) // Make sure we're not at beginning of line
+                    {
+                        Console.SetCursorPosition(1, cursorTop);
+                        Console.Write(spinner[spinnerIndex % spinner.Length]);
+                        Console.SetCursorPosition(cursorLeft, cursorTop);
+                    }
+                }
+                catch
+                {
+                    // Ignore any console errors - they can happen if window is resized
+                }
+            };
+            spinnerTimer.Start();
+            
             for (int i = 0; i < apiFiles.Count; i++)
             {
                 var apiFile = apiFiles[i];
-                var spinner = new string[] { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
-                var spinnerIndex = 0;
                 
-                // Display progress
+                // Display progress with file counter and clear the whole line first
+                Console.Write($"\r{new string(' ', Console.WindowWidth - 1)}"); // Clear line
                 Console.Write($"\r[{spinner[spinnerIndex % spinner.Length]}] Processing {i+1}/{apiFiles.Count}: {Path.GetFileName(apiFile)}");
                 
                 try
@@ -102,9 +130,11 @@ namespace Apify.Commands
                         continue;
                     }
                     
-                    // Show current API being processed
+                    // Show current API being processed with highlighted box
                     Console.WriteLine();
-                    ConsoleHelper.WriteInfo($"Running tests for: {apiDefinition.Name}");
+                    Console.WriteLine(new string('─', 50));
+                    ConsoleHelper.WriteLineColored($"▶ TESTING: {apiDefinition.Name}", ConsoleColor.Cyan);
+                    Console.WriteLine(new string('─', 50));
                     
                     // Apply environment variables (this was missing!)
                     apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
@@ -148,6 +178,10 @@ namespace Apify.Commands
             
             var endTime = DateTime.Now;
             var executionTime = (endTime - startTime).TotalSeconds;
+            
+            // Stop and dispose the spinner timer
+            spinnerTimer.Stop();
+            spinnerTimer.Dispose();
             
             // Display summary
             Console.WriteLine();

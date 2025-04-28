@@ -79,28 +79,43 @@ namespace Apify.Services
                 // Run the tests
                 var testResults = await RunTestsAsync(apiDefinition, response);
                 
-                // Only show the test results
-                if (!verbose)
+                // Always show progress indicators for each test
+                Console.WriteLine();
+                Console.WriteLine("Running Tests:");
+                
+                if (apiDefinition.Tests != null && apiDefinition.Tests.Count > 0)
                 {
+                    // Show a progress of tests that will run
                     Console.Write("  ");
-                    foreach (var result in testResults)
+                    foreach (var test in apiDefinition.Tests)
                     {
-                        if (result.Success)
-                        {
-                            ConsoleHelper.WriteColored("✓", ConsoleColor.Green);
-                        }
-                        else
-                        {
-                            ConsoleHelper.WriteColored("✗", ConsoleColor.Red);
-                        }
-                        Console.Write(" ");
+                        Console.Write("◯ ");
                     }
                     Console.WriteLine();
+                    
+                    // Clear the line and show actual test results
+                    Console.Write("\r  ");
                 }
-                else
+                
+                foreach (var result in testResults)
+                {
+                    if (result.Success)
+                    {
+                        ConsoleHelper.WriteColored("✓", ConsoleColor.Green);
+                    }
+                    else
+                    {
+                        ConsoleHelper.WriteColored("✗", ConsoleColor.Red);
+                    }
+                    Console.Write(" ");
+                }
+                Console.WriteLine();
+                
+                // In verbose mode, also show detailed results
+                if (verbose)
                 {
                     // Display detailed test results
-                    Console.WriteLine("Test Results:");
+                    Console.WriteLine("\nDetailed Test Results:");
                     foreach (var result in testResults)
                     {
                         if (result.Success)
