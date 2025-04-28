@@ -919,6 +919,40 @@ dotnet run mock-server --port 8080 --verbose
 
 The mock server will display available endpoints on startup and log incoming requests, making it easy to debug your application's interactions with the API.
 
+### Mock Server Configuration
+
+The mock server can be configured in the `MockServer` section of the `apify-config.json` file:
+
+```json
+{
+  "MockServer": {
+    "Port": 8080,
+    "Directory": ".apify",
+    "EnableCORS": true,
+    "LogRequests": true,
+    "DefaultHeaders": {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "FileStoragePath": ".apify/uploads"
+  }
+}
+```
+
+#### Configuration Options
+
+| Option | Type | Description | Default |
+|--------|------|-------------|---------|
+| `Port` | Number | Port number to run the mock server on | 8080 |
+| `Directory` | String | Directory containing mock definitions | ".apify" |
+| `EnableCORS` | Boolean | Enable Cross-Origin Resource Sharing (CORS) | true |
+| `LogRequests` | Boolean | Log detailed request information | true |
+| `DefaultHeaders` | Object | Headers to include in all responses | CORS headers |
+| `FileStoragePath` | String | Directory for storing uploaded files | ".apify/uploads" |
+
+This configuration is automatically generated during project initialization but can be manually adjusted as needed.
+
 ## Examples
 
 ### Basic GET Request

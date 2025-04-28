@@ -175,6 +175,7 @@ namespace Apify.Utils
             WriteInfo("Project Structure:");
             WriteKeyValue("  Configuration", configFilePath);
             WriteKeyValue("  API Definitions", apiDirectoryName);
+            WriteKeyValue("  Mock API Definitions", $"{apiDirectoryName}/*/*.mock.json");
             Console.WriteLine();
             
             WriteInfo("Try these commands:");
@@ -182,6 +183,8 @@ namespace Apify.Utils
             WriteKeyValue($"  {exeCommand} run sample-post", "Run the sample POST API test");
             WriteKeyValue($"  {exeCommand} list-env", "List all configured environments");
             WriteKeyValue($"  {exeCommand} create request --file users.get", "Create a new API request file");
+            WriteKeyValue($"  {exeCommand} mock-server --port 8080 --verbose", "Start the mock API server");
+            WriteKeyValue($"  {exeCommand} tests", "Run all tests with progress indicators");
             Console.WriteLine();
             
             WriteTip("You can use shortened paths like 'users.all' instead of '.apify/users/all.json'");
@@ -191,6 +194,18 @@ namespace Apify.Utils
             Console.WriteLine("2. Create your own API tests using the 'create request' command");
             Console.WriteLine("3. Configure additional environment variables in apify-config.json");
             Console.WriteLine("4. Run your API tests using the 'run' command");
+            Console.WriteLine();
+            
+            // Add the mock server section
+            WriteInfo("Mock Server:");
+            Console.WriteLine("- Create .mock.json files in subdirectories of .apify to define mock endpoints");
+            Console.WriteLine("- Mock server configuration is in the MockServer section of apify-config.json");
+            Console.WriteLine("- Start the mock server with 'mock-server' command for offline development");
+            Console.WriteLine("- Use dynamic templates like {{$date}} or {{$random:uuid}} in mock responses");
+            Console.WriteLine("- Define route parameters with :param syntax (e.g., /users/:id)");
+            Console.WriteLine();
+            
+            WriteTip("Check the docs/Apify-Documentation.md file for detailed mock server usage instructions");
             Console.WriteLine();
         }
 
