@@ -1,43 +1,69 @@
 {
-  "Name": "Custom Variables Test",
-  "Uri": "{{baseUrl}}/posts/{{postId}}",
-  "Method": "GET",
-  "Headers": {
-    "Accept": "{{acceptHeader}}",
-    "X-Test-Header": "{{customHeaderValue}}"
+  "name": "Custom Variables Test",
+  "description": "Tests to demonstrate custom variables at the request level",
+  "uri": "https://httpbin.org/get?customVar1={{customVar1}}&customVar2={{customVar2}}&nestedVar={{nestedObject.property}}",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json",
+    "X-Custom-Var": "{{customVar1}}"
   },
-  "PayloadType": 0,
-  "Tests": [
-    {
-      "Name": "Status code check",
-      "Description": "Status code should be {{expectedStatus}}",
-      "Assertion": "",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "{{expectedStatus}}"
-    },
-    {
-      "Name": "Response format check",
-      "Description": "Response contains Content-Type with {{contentType}}",
-      "Assertion": "",
-      "AssertType": "HeaderContains",
-      "Property": "Content-Type",
-      "ExpectedValue": "{{contentType}}"
-    },
-    {
-      "Name": "Response contains user ID",
-      "Description": "Response contains userId property",
-      "Assertion": "response.body.$.userId exists",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "userId"
+  "variables": {
+    "customVar1": "custom-value-1",
+    "customVar2": "custom-value-2",
+    "nestedObject": {
+      "property": "nested-property-value",
+      "anotherProperty": "another-value"
     }
-  ],
-  "Timeout": 15000,
-  "Variables": {
-    "postId": "1",
-    "acceptHeader": "application/json",
-    "customHeaderValue": "custom-header-test-value",
-    "expectedStatus": "200",
-    "contentType": "application/json",
-    "timeout": "15000"
-  }
+  },
+  "tests": [
+    {
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "name": "Custom variable 1 is accessible",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.customVar1",
+          "value": "custom-value-1"
+        }
+      ]
+    },
+    {
+      "name": "Custom variable 2 is accessible",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.customVar2",
+          "value": "custom-value-2"
+        }
+      ]
+    },
+    {
+      "name": "Nested variable is accessible",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.nestedVar",
+          "value": "nested-property-value"
+        }
+      ]
+    },
+    {
+      "name": "Custom header is set",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "headers.X-Custom-Var",
+          "value": "custom-value-1"
+        }
+      ]
+    }
+  ]
 }

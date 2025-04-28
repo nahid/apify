@@ -1,27 +1,43 @@
 {
-  "Name": "Text Payload API Test",
-  "Description": "Tests sending a plain text payload",
-  "Uri": "{{baseUrl}}/text-endpoint",
-  "Method": "POST",
-  "Headers": {
-    "Accept": "text/plain",
-    "Content-Type": "text/plain"
+  "name": "Text Payload Test",
+  "description": "Example API for testing plain text payload functionality",
+  "uri": "https://httpbin.org/post",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "text/plain",
+    "Accept": "application/json"
   },
-  "Payload": "This is a plain text message being sent to the API.",
-  "PayloadType": "text",
-  "Tests": [
+  "payload": "This is a plain text payload for testing the API client's text handling capabilities.\nIt should be sent as-is without any JSON encoding.\nMultiple lines should be preserved.",
+  "payloadType": "Text",
+  "tests": [
     {
-      "Name": "Status code is successful",
-      "Description": "Status code is 200",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "200"
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
     },
     {
-      "Name": "Response contains echo of message",
-      "Description": "Response contains the original message",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "message"
+      "name": "Response contains data field",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "data",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Text was sent correctly",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "data",
+          "value": "This is a plain text payload for testing the API client's text handling capabilities.\nIt should be sent as-is without any JSON encoding.\nMultiple lines should be preserved."
+        }
+      ]
     }
-  ],
-  "Timeout": 30000
+  ]
 }

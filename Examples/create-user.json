@@ -1,33 +1,74 @@
 {
-  "name": "Create User API Test",
-  "description": "Tests the user creation endpoint",
+  "name": "Create User",
+  "description": "Test to create a new user",
   "uri": "https://jsonplaceholder.typicode.com/users",
   "method": "POST",
   "headers": {
     "Content-Type": "application/json",
     "Accept": "application/json"
   },
-  "payload": "{\"name\":\"John Doe\",\"username\":\"johndoe\",\"email\":\"john.doe@example.com\"}",
+  "payload": {
+    "name": "John Doe",
+    "username": "johndoe",
+    "email": "john.doe@example.com",
+    "address": {
+      "street": "123 Main St",
+      "suite": "Apt 4",
+      "city": "Anytown",
+      "zipcode": "12345",
+      "geo": {
+        "lat": "40.7128",
+        "lng": "-74.0060"
+      }
+    },
+    "phone": "555-123-4567",
+    "website": "johndoe.example.com",
+    "company": {
+      "name": "Example Co",
+      "catchPhrase": "Making examples since 2025",
+      "bs": "synergize scalable examples"
+    }
+  },
+  "payloadType": "Json",
   "tests": [
     {
-      "name": "Status code is 201 (Created)",
-      "assertion": "status == 201"
+      "name": "Status code is 201",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "201"
+        }
+      ]
     },
     {
-      "name": "Response contains created user ID",
-      "assertion": "response.body contains \"id\""
+      "name": "Response contains id",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "id",
+          "exists": true
+        }
+      ]
     },
     {
-      "name": "Created user has correct name",
-      "assertion": "response.body.$.name == \"John Doe\""
+      "name": "Name is correct",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "name",
+          "value": "John Doe"
+        }
+      ]
     },
     {
-      "name": "Created user has correct email",
-      "assertion": "response.body.$.email == \"john.doe@example.com\""
-    },
-    {
-      "name": "Response time is acceptable",
-      "assertion": "response.time < 2000"
+      "name": "Email is correct",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "email",
+          "value": "john.doe@example.com"
+        }
+      ]
     }
   ]
 }

@@ -1,34 +1,55 @@
 {
-  "Name": "File Upload API Test",
-  "Description": "Tests uploading a file with form data",
-  "Uri": "{{baseUrl}}/upload",
-  "Method": "POST",
-  "Headers": {
+  "name": "File Upload Test",
+  "description": "Example API for testing file upload functionality",
+  "uri": "https://httpbin.org/post",
+  "method": "POST",
+  "headers": {
     "Accept": "application/json"
   },
-  "Payload": "{ \"description\": \"Test file upload\", \"userId\": 1 }",
-  "PayloadType": "formData",
-  "Files": [
+  "payload": null,
+  "payloadType": "FormData",
+  "formData": {
+    "fields": {
+      "name": "test-file-upload",
+      "description": "This is a test file upload"
+    },
+    "files": [
+      {
+        "field": "file",
+        "path": "Examples/sample-image.txt",
+        "contentType": "text/plain"
+      }
+    ]
+  },
+  "tests": [
     {
-      "Name": "Sample File",
-      "FieldName": "file",
-      "FilePath": "Examples/sample-image.txt",
-      "ContentType": "text/plain"
-    }
-  ],
-  "Tests": [
-    {
-      "Name": "Status code is successful",
-      "Description": "Status code is 201",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "201"
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
     },
     {
-      "Name": "Response contains file information",
-      "Description": "Response contains filename",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "filename"
+      "name": "Response contains file field",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "form.name",
+          "value": "test-file-upload"
+        }
+      ]
+    },
+    {
+      "name": "File was uploaded",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "files.file",
+          "exists": true
+        }
+      ]
     }
-  ],
-  "Timeout": 60000
+  ]
 }

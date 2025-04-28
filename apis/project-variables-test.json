@@ -1,30 +1,63 @@
 {
-  "Name": "Project Variables Test",
-  "Uri": "{{baseUrl}}/posts/1",
-  "Method": "GET",
-  "Headers": {
+  "name": "Project Variables Test",
+  "description": "Tests to demonstrate the project variables system",
+  "uri": "https://httpbin.org/get?projectId={{projectId}}&version={{version}}&apiVersion={{apiVersion}}",
+  "method": "GET",
+  "headers": {
     "Accept": "application/json",
-    "X-API-Version": "{{apiVersion}}",
-    "X-Project-ID": "{{projectId}}",
+    "X-Project-Id": "{{projectId}}",
     "X-Version": "{{version}}",
-    "X-Custom-Header": "{{commonHeader}}"
+    "X-Api-Version": "{{apiVersion}}"
   },
-  "Tests": [
+  "tests": [
     {
-      "Name": "Status code should be 200",
-      "Description": "Checks if the status code is 200",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "200"
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
     },
     {
-      "Name": "Response contains userId property",
-      "Description": "Validates that the response has the userId property",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "userId"
+      "name": "Project ID is accessible",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.projectId",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Version is accessible",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.version",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "API Version is accessible",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.apiVersion",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Project ID header is set",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "headers.X-Project-Id",
+          "exists": true
+        }
+      ]
     }
-  ],
-  "Variables": {
-    "testId": "project-variables-test"
-  },
-  "Timeout": 15000
+  ]
 }

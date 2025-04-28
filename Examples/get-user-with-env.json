@@ -1,36 +1,41 @@
 {
-  "Name": "Get User API Test with Environment Variables",
-  "Uri": "{{baseUrl}}/users/{{userId}}",
-  "Method": "GET",
-  "Headers": {
-    "Accept": "application/json"
+  "name": "Get User with Environment Variables",
+  "description": "This test demonstrates using environment variables in API requests",
+  "uri": "{{baseUrl}}/users/{{userId}}",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json",
+    "x-api-key": "{{apiKey}}"
   },
-  "Tests": [
+  "payload": null,
+  "tests": [
     {
-      "Description": "Status code is 200",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "200"
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
     },
     {
-      "Description": "Response contains user information",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "id"
+      "name": "User id matches environment variable",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "id",
+          "value": "{{userId}}"
+        }
+      ]
     },
     {
-      "Description": "Content-Type header is application/json",
-      "AssertType": "HeaderContains",
-      "Property": "Content-Type",
-      "ExpectedValue": "application/json"
-    },
-    {
-      "Description": "User's name is present",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "name"
-    },
-    {
-      "Description": "Response time is acceptable",
-      "AssertType": "ResponseTimeBelow",
-      "ExpectedValue": "{{timeout}}"
+      "name": "Response time is acceptable",
+      "assertions": [
+        {
+          "type": "ResponseTimeBelow",
+          "value": "{{timeout}}"
+        }
+      ]
     }
   ]
 }

@@ -1,31 +1,51 @@
 {
-  "name": "Get User API Test",
-  "description": "Tests the user retrieval endpoint",
+  "name": "Get User",
+  "description": "Simple test to get a user by ID",
   "uri": "https://jsonplaceholder.typicode.com/users/1",
   "method": "GET",
   "headers": {
     "Accept": "application/json"
   },
+  "payload": null,
   "tests": [
     {
       "name": "Status code is 200",
-      "assertion": "status == 200"
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
     },
     {
-      "name": "Response contains user information",
-      "assertion": "response.body contains \"name\""
+      "name": "User id is correct",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "id",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "Response contains name",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "name",
+          "exists": true
+        }
+      ]
     },
     {
       "name": "Content-Type header is application/json",
-      "assertion": "response.headers.Content-Type contains \"application/json\""
-    },
-    {
-      "name": "User's name is correct",
-      "assertion": "response.body.$.name == \"Leanne Graham\""
-    },
-    {
-      "name": "Response time is acceptable",
-      "assertion": "response.time < 2000"
+      "assertions": [
+        {
+          "type": "HeaderContains",
+          "header": "Content-Type",
+          "value": "application/json"
+        }
+      ]
     }
   ]
 }
