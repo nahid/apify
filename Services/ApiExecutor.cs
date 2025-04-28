@@ -39,7 +39,6 @@ namespace Apify.Services
                     !uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
                     uri = "https://" + uri;
-                    Console.WriteLine($"Notice: Added 'https://' prefix to URI: {uri}");
                 }
                 
                 var request = new HttpRequestMessage(new HttpMethod(apiDefinition.Method), uri);
@@ -102,12 +101,8 @@ namespace Apify.Services
                 response.ErrorMessage = ex.Message;
                 response.ResponseTimeMs = stopwatch.ElapsedMilliseconds;
                 
-                // Log the full exception details for debugging
-                Console.WriteLine($"API Request Error: {ex.GetType().Name} - {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-                }
+                // The detailed error info is already included in the response object
+                // so we don't need to log anything here
                 
                 // Include the error message in the response body for test assertion context
                 response.Body = $"{{\"error\": \"{ex.Message.Replace("\"", "\\\"")}\", \"exception_type\": \"{ex.GetType().Name}\"}}";
@@ -167,9 +162,9 @@ namespace Apify.Services
                             content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
                         }
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        ConsoleHelper.WriteWarning($"Error processing form data: {ex.Message}");
+                        // Error is already handled by falling back to string content
                         content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
                     }
                     break;
@@ -207,9 +202,9 @@ namespace Apify.Services
                         }
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    ConsoleHelper.WriteWarning($"Error parsing form data payload: {ex.Message}");
+                    // Silently ignore parsing errors for form data
                 }
             }
 
@@ -235,9 +230,13 @@ namespace Apify.Services
                     string fileName = Path.GetFileName(file.FilePath);
                     multipartContent.Add(fileContent, file.FieldName, fileName);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    ConsoleHelper.WriteWarning($"Error adding file {file.FilePath}: {ex.Message}");
+                    // Only show file errors when they're critical to the request
+                    if (!File.Exists(file.FilePath))
+                    {
+                        ConsoleHelper.WriteWarning($"File not found: {file.FilePath}");
+                    }
                 }
             }
 

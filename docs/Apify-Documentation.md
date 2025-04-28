@@ -11,6 +11,7 @@ Apify is a robust command-line tool designed for API testing and validation. It 
 3. [Command Reference](#command-reference)
    - [Init Command](#init-command)
    - [Run Command](#run-command)
+   - [Tests Command](#tests-command)
    - [List Environment Command](#list-env-command)
    - [Create Request Command](#create-request-command)
 4. [API Test Definition](#api-test-definition)
@@ -111,6 +112,7 @@ dotnet run run apis/sample-api.json --verbose
 |---------|-------------|
 | `init` | Initialize a new API testing project |
 | `run` | Execute API tests from JSON definition files |
+| `tests` | Run all tests in the project with visual progress indicators |
 | `list-env` | List available environments |
 | `create request` | Create a new API request definition interactively |
 
@@ -149,6 +151,35 @@ dotnet run run apis/*.json --verbose
 
 # Run tests using a specific environment
 dotnet run run apis/payment-api.json --env Production
+```
+
+#### `tests` Command
+
+The tests command scans the project directory and runs all API tests found in the `.apify` directory and its subdirectories, providing a visual progress display during execution.
+
+| Option | Description | Required | Default |
+|--------|-------------|----------|---------|
+| `--verbose` or `-v` | Display detailed output including response body | No | false |
+| `--env` or `-e` | Environment to use from the profile | No | Profile's default |
+| `--tag` | Filter tests by tag | No | - |
+
+Features of the tests command:
+- Animated spinner showing active processing
+- Clear progress counter (e.g., "Processing 1/5: sample-api.json") 
+- Visual indication of currently executing test file with a highlighted box
+- Real-time test results showing both placeholder circles and pass/fail indicators
+- Comprehensive summary with statistics at the end
+
+Example:
+```bash
+# Run all tests in the project
+dotnet run tests
+
+# Run all tests with detailed output
+dotnet run tests --verbose
+
+# Run only tests with a specific tag
+dotnet run tests --tag payments
 ```
 
 #### `list-env` Command

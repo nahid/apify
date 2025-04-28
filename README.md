@@ -10,6 +10,7 @@ A powerful C# CLI application for comprehensive API testing, enabling developers
 - **Environment Variables**: Use different configurations for development, staging, production
 - **Test Assertions**: Validate response status, headers, body content
 - **Detailed Reports**: Comprehensive output with request and response details
+- **Visual Progress Indicators**: Animated progress display for running multiple tests
 - **Single File Deployment**: Simplified deployment as a single executable file
 - **.NET 9 Ready**: Automatic multi-targeting with .NET 9.0 when available
 
@@ -97,6 +98,12 @@ You can use Apify within your existing API projects:
    
    # Run with a specific environment
    apify run users.all --env Production
+   
+   # Run all tests in the project with visual progress indicators
+   apify tests
+   
+   # Run all tests with detailed output
+   apify tests --verbose
    ```
 
 5. **View Environment Configuration**
@@ -131,6 +138,22 @@ dotnet run run users.all --verbose
 
 # Run with a specific environment
 dotnet run run users.all --env Production
+```
+
+### Run All Tests
+
+```bash
+# Run all API tests in the project with visual progress indicators
+dotnet run tests
+
+# Run all tests with detailed output
+dotnet run tests --verbose
+
+# Run all tests in a specific environment
+dotnet run tests --env Production
+
+# Run only tests with a specific tag
+dotnet run tests --tag payments
 ```
 
 ### List Environments
@@ -286,6 +309,12 @@ Edit `apify-config.json` to add your environment variables:
 ```bash
 # From your Weather API project directory
 apify run weather.current --verbose
+
+# Run all tests in the project
+apify tests
+
+# Run all tests with detailed output and custom environment
+apify tests --verbose --env Production
 ```
 
 ## License

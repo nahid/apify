@@ -61,8 +61,6 @@ namespace Apify.Commands
                 return;
             }
             
-            ConsoleHelper.WriteInfo($"Found {apiFiles.Count} API definition files");
-            
             var environmentService = new EnvironmentService();
             await environmentService.LoadConfig();
             

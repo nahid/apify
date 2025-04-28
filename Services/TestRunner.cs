@@ -79,12 +79,12 @@ namespace Apify.Services
                 // Run the tests
                 var testResults = await RunTestsAsync(apiDefinition, response);
                 
-                // Always show progress indicators for each test
-                Console.WriteLine();
-                Console.WriteLine("Running Tests:");
-                
                 if (apiDefinition.Tests != null && apiDefinition.Tests.Count > 0)
                 {
+                    // Show progress indicators only if we have tests
+                    Console.WriteLine();
+                    Console.WriteLine("Running Tests:");
+                
                     // Show a progress of tests that will run
                     Console.Write("  ");
                     foreach (var test in apiDefinition.Tests)
