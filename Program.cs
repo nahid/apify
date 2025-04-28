@@ -24,6 +24,7 @@ namespace Apify
             rootCommand.AddCommand(new InitCommand());
             rootCommand.AddCommand(new CreateRequestCommand());
             rootCommand.AddCommand(new TestsCommand().Command);
+            rootCommand.AddCommand(MockServerCommand.CreateCommand());
 
             // Parse and execute
             return await rootCommand.InvokeAsync(args);

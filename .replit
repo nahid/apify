@@ -104,6 +104,10 @@ args = "TestDotNotationRun"
 task = "workflow.run"
 args = "RunTests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MockServer"
+
 [[workflows.workflow]]
 name = "APITester-ListEnv"
 author = "agent"
@@ -288,5 +292,18 @@ author = "agent"
 task = "shell.exec"
 args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run tests"
 
+[[workflows.workflow]]
+name = "MockServer"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run mock-server --port 5000 --verbose"
+waitForPort = 5000
+
 [deployment]
 run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80

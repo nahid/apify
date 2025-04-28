@@ -1,0 +1,22 @@
+{
+  "name": "Get User by ID",
+  "endpoint": "/api/users/{id}",
+  "method": "GET",
+  "statusCode": 200,
+  "contentType": "application/json",
+  "headers": {
+    "X-Powered-By": "Apify Mock Server",
+    "X-Response-Time": "5ms"
+  },
+  "response": {
+    "id": "{{id}}",
+    "name": "User {{id}}",
+    "email": "user{{id}}@example.com",
+    "role": "user",
+    "createdAt": "{{timestamp}}",
+    "metadata": {
+      "requestId": "{{random.id}}",
+      "source": "mock-server"
+    }
+  }
+}

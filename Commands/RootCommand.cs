@@ -35,12 +35,16 @@ namespace Apify.Commands
             // Add the tests command
             var testsCommand = new TestsCommand();
             
+            // Add the mock server command
+            var mockServerCommand = MockServerCommand.CreateCommand();
+            
             // Add commands to root command
             Command.AddCommand(listEnvCommand);
             Command.AddCommand(initCommand);
             Command.AddCommand(runCommand.Command);
             Command.AddCommand(createCommand);
             Command.AddCommand(testsCommand.Command);
+            Command.AddCommand(mockServerCommand);
         }
         
         private void ListEnvironments()

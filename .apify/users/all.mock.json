@@ -1,0 +1,36 @@
+{
+  "name": "Get All Users",
+  "endpoint": "/api/users",
+  "method": "GET",
+  "statusCode": 200,
+  "contentType": "application/json",
+  "headers": {
+    "X-Powered-By": "Apify Mock Server",
+    "X-Response-Time": "10ms"
+  },
+  "response": {
+    "users": [
+      {
+        "id": 1,
+        "name": "John Doe",
+        "email": "john.doe@example.com",
+        "role": "admin"
+      },
+      {
+        "id": 2,
+        "name": "Jane Smith",
+        "email": "jane.smith@example.com",
+        "role": "user"
+      },
+      {
+        "id": 3,
+        "name": "Bob Johnson",
+        "email": "bob.johnson@example.com",
+        "role": "user"
+      }
+    ],
+    "total": 3,
+    "page": 1,
+    "limit": 10
+  }
+}

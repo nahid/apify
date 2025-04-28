@@ -220,6 +220,7 @@ namespace Apify.Services
             return true;
         }
         
+        // Apply environment variables from the current environment only
         public string ApplyEnvironmentVariables(string input)
         {
             if (_currentEnvironment == null)
@@ -229,6 +230,46 @@ namespace Apify.Services
             {
                 var variableName = match.Groups[1].Value.Trim();
                 if (_currentEnvironment.Variables.TryGetValue(variableName, out var value))
+                {
+                    return value;
+                }
+                return match.Value; // Keep the original {{variable}} if not found
+            });
+        }
+        
+        // Apply variables from all sources - project, environment, and request-specific
+        public string ApplyVariablesToString(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+            
+            // Load config to access project-level variables
+            var config = LoadConfigurationProfile();
+            var mergedVariables = new Dictionary<string, string>();
+            
+            // Add project-level variables (lowest priority)
+            if (config.Variables != null)
+            {
+                foreach (var projectVar in config.Variables)
+                {
+                    mergedVariables[projectVar.Key] = projectVar.Value;
+                }
+            }
+            
+            // Add environment-specific variables (medium priority)
+            if (_currentEnvironment != null && _currentEnvironment.Variables != null)
+            {
+                foreach (var envVar in _currentEnvironment.Variables)
+                {
+                    mergedVariables[envVar.Key] = envVar.Value;
+                }
+            }
+            
+            // Apply all variables to the input string
+            return VariablePattern.Replace(input, match =>
+            {
+                var variableName = match.Groups[1].Value.Trim();
+                if (mergedVariables.TryGetValue(variableName, out var value))
                 {
                     return value;
                 }
