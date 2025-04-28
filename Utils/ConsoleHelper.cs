@@ -19,6 +19,8 @@ namespace Apify.Utils
         private static readonly ConsoleColor StatusWarningColor = ConsoleColor.Yellow;
         private static readonly ConsoleColor StatusErrorColor = ConsoleColor.Red;
         private static readonly ConsoleColor SectionColor = ConsoleColor.Cyan;
+        private static readonly ConsoleColor TipColor = ConsoleColor.DarkCyan;
+        private static readonly ConsoleColor PromptColor = ConsoleColor.Yellow;
         
         public static void WriteError(string message)
         {
@@ -127,6 +129,88 @@ namespace Apify.Utils
             Console.ForegroundColor = color;
             Console.WriteLine(message);
             Console.ResetColor();
+        }
+
+        public static void WritePrompt(string prompt)
+        {
+            Console.ForegroundColor = PromptColor;
+            Console.Write(prompt);
+            Console.ResetColor();
+        }
+
+        /// <summary>
+        /// Displays a tip to the user with prominent formatting
+        /// </summary>
+        public static void WriteTip(string tipText)
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = TipColor;
+            Console.WriteLine($"💡 Tip: {tipText}");
+            Console.ResetColor();
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Displays the quick start guide for users after project initialization
+        /// </summary>
+        public static void DisplayQuickStartGuide(string configFilePath, string apiDirectoryName, bool isCompiledExecutable)
+        {
+            Console.WriteLine();
+            WriteHeader("🚀 Quick Start Guide");
+            Console.WriteLine();
+            
+            string exeName = Path.GetFileName(Environment.ProcessPath ?? "apitester");
+            string exeCommand = isCompiledExecutable ? $"./{exeName}" : "dotnet run";
+            
+            WriteSuccess("Your API testing project is ready to use!");
+            Console.WriteLine();
+            
+            WriteInfo("Project Structure:");
+            WriteKeyValue("  Configuration", configFilePath);
+            WriteKeyValue("  API Definitions", apiDirectoryName);
+            Console.WriteLine();
+            
+            WriteInfo("Try these commands:");
+            WriteKeyValue($"  {exeCommand} run sample-api", "Run the sample GET API test");
+            WriteKeyValue($"  {exeCommand} run sample-post", "Run the sample POST API test");
+            WriteKeyValue($"  {exeCommand} list-env", "List all configured environments");
+            WriteKeyValue($"  {exeCommand} create request --file users.get", "Create a new API request file");
+            Console.WriteLine();
+            
+            WriteTip("You can use shortened paths like 'users.all' instead of '.apify/users/all.json'");
+            
+            WriteInfo("Next Steps:");
+            Console.WriteLine("1. Explore the sample API tests in the .apify directory");
+            Console.WriteLine("2. Create your own API tests using the 'create request' command");
+            Console.WriteLine("3. Configure additional environment variables in apify-config.json");
+            Console.WriteLine("4. Run your API tests using the 'run' command");
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Prompts the user with a highlighted message and returns their input.
+        /// Optionally adds a default value hint.
+        /// </summary>
+        public static string PromptInput(string message, string? defaultValue = null)
+        {
+            if (defaultValue != null)
+            {
+                WritePrompt($"{message} [{defaultValue}]: ");
+            }
+            else
+            {
+                WritePrompt($"{message}: ");
+            }
+            
+            string? input = Console.ReadLine();
+            
+            // Return default value if input is empty and there is a default
+            if (string.IsNullOrWhiteSpace(input) && defaultValue != null)
+            {
+                return defaultValue;
+            }
+            
+            return input ?? string.Empty;
         }
 
         // Format JSON with colorization
