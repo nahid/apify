@@ -782,23 +782,29 @@ namespace Apify.Services
             
             // Get Headers
             Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (string key in request.Headers.AllKeys)
+            if (request.Headers.AllKeys != null)
             {
-                if (!string.IsNullOrEmpty(key) && request.Headers[key] != null)
+                foreach (string? key in request.Headers.AllKeys)
                 {
-                    string headerValue = request.Headers[key] ?? string.Empty;
-                    headers[key] = headerValue;
+                    if (!string.IsNullOrEmpty(key) && request.Headers[key] != null)
+                    {
+                        string headerValue = request.Headers[key] ?? string.Empty;
+                        headers[key] = headerValue;
+                    }
                 }
             }
             
             // Get Query Parameters
             Dictionary<string, string> queryParams = new Dictionary<string, string>();
-            foreach (string key in request.QueryString.Keys)
+            if (request.QueryString.Keys != null)
             {
-                if (key != null && request.QueryString[key] != null)
+                foreach (string? key in request.QueryString.Keys)
                 {
-                    string queryValue = request.QueryString[key] ?? string.Empty;
-                    queryParams[key] = queryValue;
+                    if (key != null && request.QueryString[key] != null)
+                    {
+                        string queryValue = request.QueryString[key] ?? string.Empty;
+                        queryParams[key] = queryValue;
+                    }
                 }
             }
             
@@ -843,7 +849,7 @@ namespace Apify.Services
                     responseOption.Condition, 
                     headers, 
                     bodyContent ?? JToken.Parse("{}"), 
-                    queryParams, 
+                    queryParams,
                     pathParams);
                     
                 if (conditionMet)

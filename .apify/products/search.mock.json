@@ -99,7 +99,7 @@
       ]
     },
     {
-      "condition": "queryParams.maxPrice && int.Parse(queryParams.maxPrice) < 100",
+      "condition": "query.maxPrice && int.Parse(query.maxPrice) < 100",
       "statusCode": 200,
       "headers": {
         "Content-Type": "application/json"

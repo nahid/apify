@@ -25,14 +25,14 @@ namespace Apify.Services
         /// <param name="condition">The condition expression to evaluate</param>
         /// <param name="headers">The request headers</param>
         /// <param name="body">The request body (parsed from JSON if applicable)</param>
-        /// <param name="query">The query parameters</param>
+        /// <param name="queryParams">The query parameters</param>
         /// <param name="pathParams">Path parameters extracted from the URL</param>
         /// <returns>True if the condition is satisfied, false otherwise</returns>
         public bool EvaluateCondition(
             string condition,
             Dictionary<string, string> headers,
             JToken body,
-            Dictionary<string, string> query,
+            Dictionary<string, string> queryParams,
             Dictionary<string, string> pathParams)
         {
             // Special case for the default fallback
@@ -46,7 +46,7 @@ namespace Apify.Services
                 // Set up parameters for the expression
                 _interpreter.SetVariable("headers", new DynamicObject(headers));
                 _interpreter.SetVariable("body", new DynamicObject(body));
-                _interpreter.SetVariable("query", new DynamicObject(query));
+                _interpreter.SetVariable("query", new DynamicObject(queryParams));
                 _interpreter.SetVariable("params", new DynamicObject(pathParams));
 
                 // Evaluate the expression
