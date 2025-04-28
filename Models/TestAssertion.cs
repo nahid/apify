@@ -62,7 +62,7 @@ namespace Apify.Models
         // Helper properties to understand the assertion type
         public AssertionType GetAssertionType()
         {
-            // Support both formats
+            // Support all possible formats
             if (!string.IsNullOrEmpty(AssertType))
             {
                 // New format using AssertType property
@@ -81,6 +81,12 @@ namespace Apify.Models
                     default:
                         return AssertionType.Unknown;
                 }
+            }
+            
+            // Support property "type" from test files
+            if (!string.IsNullOrEmpty(Property) && Property == "type")
+            {
+                return AssertionType.Unknown;  // Will handle later
             }
             
             // Legacy format using Assertion string
