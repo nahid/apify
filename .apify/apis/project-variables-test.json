@@ -1,13 +1,12 @@
 {
   "name": "Project Variables Test",
-  "description": "Tests to demonstrate the project variables system",
-  "uri": "https://httpbin.org/get?projectId={{projectId}}&version={{version}}&apiVersion={{apiVersion}}",
+  "description": "Tests using project-level variables in requests",
+  "uri": "https://httpbin.org/get?projectId={{projectId}}&version={{version}}",
   "method": "GET",
   "headers": {
     "Accept": "application/json",
-    "X-Project-Id": "{{projectId}}",
-    "X-Version": "{{version}}",
-    "X-Api-Version": "{{apiVersion}}"
+    "Content-Type": "{{defaultHeaders}}",
+    "X-Timeout": "{{requestTimeout}}"
   },
   "tests": [
     {
@@ -20,42 +19,42 @@
       ]
     },
     {
-      "name": "Project ID is accessible",
+      "name": "Project ID query parameter is set",
       "assertions": [
         {
           "type": "ContainsProperty",
           "property": "args.projectId",
-          "exists": true
+          "value": "api-testing-project"
         }
       ]
     },
     {
-      "name": "Version is accessible",
+      "name": "Version query parameter is set",
       "assertions": [
         {
           "type": "ContainsProperty",
           "property": "args.version",
-          "exists": true
+          "value": "1.0.0"
         }
       ]
     },
     {
-      "name": "API Version is accessible",
+      "name": "Content-Type header is correctly set",
       "assertions": [
         {
           "type": "ContainsProperty",
-          "property": "args.apiVersion",
-          "exists": true
+          "property": "headers.Content-Type",
+          "value": "application/json"
         }
       ]
     },
     {
-      "name": "Project ID header is set",
+      "name": "Timeout header matches project configuration",
       "assertions": [
         {
           "type": "ContainsProperty",
-          "property": "headers.X-Project-Id",
-          "exists": true
+          "property": "headers.X-Timeout",
+          "value": "5000"
         }
       ]
     }

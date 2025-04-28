@@ -1,19 +1,15 @@
 {
   "name": "Custom Variables Test",
-  "description": "Tests to demonstrate custom variables at the request level",
-  "uri": "https://httpbin.org/get?customVar1={{customVar1}}&customVar2={{customVar2}}&nestedVar={{nestedObject.property}}",
+  "description": "Tests using custom variables in the request",
+  "uri": "https://httpbin.org/get?token={{authToken}}",
   "method": "GET",
   "headers": {
     "Accept": "application/json",
-    "X-Custom-Var": "{{customVar1}}"
+    "X-API-Version": "{{apiVersion}}",
+    "X-Project-Version": "{{version}}"
   },
   "variables": {
-    "customVar1": "custom-value-1",
-    "customVar2": "custom-value-2",
-    "nestedObject": {
-      "property": "nested-property-value",
-      "anotherProperty": "another-value"
-    }
+    "customVariable": "This is a custom variable defined at the request level"
   },
   "tests": [
     {
@@ -26,42 +22,32 @@
       ]
     },
     {
-      "name": "Custom variable 1 is accessible",
+      "name": "Authorization token is in the URL",
       "assertions": [
         {
           "type": "ContainsProperty",
-          "property": "args.customVar1",
-          "value": "custom-value-1"
+          "property": "args.token",
+          "exists": true
         }
       ]
     },
     {
-      "name": "Custom variable 2 is accessible",
+      "name": "API version header is set correctly",
       "assertions": [
         {
           "type": "ContainsProperty",
-          "property": "args.customVar2",
-          "value": "custom-value-2"
+          "property": "headers.X-Api-Version",
+          "value": "{{apiVersion}}"
         }
       ]
     },
     {
-      "name": "Nested variable is accessible",
+      "name": "Project version header is set correctly",
       "assertions": [
         {
           "type": "ContainsProperty",
-          "property": "args.nestedVar",
-          "value": "nested-property-value"
-        }
-      ]
-    },
-    {
-      "name": "Custom header is set",
-      "assertions": [
-        {
-          "type": "ContainsProperty",
-          "property": "headers.X-Custom-Var",
-          "value": "custom-value-1"
+          "property": "headers.X-Project-Version",
+          "value": "{{version}}"
         }
       ]
     }

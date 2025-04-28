@@ -1,18 +1,18 @@
 {
-  "name": "Sample POST API",
-  "description": "Sample API for testing POST requests",
+  "name": "Sample POST Request",
+  "description": "Example of POST request with JSON payload",
   "uri": "{{baseUrl}}/posts",
   "method": "POST",
   "headers": {
     "Content-Type": "application/json",
-    "Accept": "application/json"
+    "Accept": "application/json",
+    "X-API-Key": "{{apiKey}}"
   },
   "payload": {
-    "title": "Test Post",
-    "body": "This is a test post created by Apify",
+    "title": "Apify Test",
+    "body": "This is a test post created by Apify testing tool",
     "userId": "{{userId}}"
   },
-  "payloadType": "Json",
   "tests": [
     {
       "name": "Status code is 201",
@@ -24,7 +24,27 @@
       ]
     },
     {
-      "name": "Response contains id",
+      "name": "Response contains the correct user ID",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "userId",
+          "value": "{{userId}}"
+        }
+      ]
+    },
+    {
+      "name": "Response contains the title",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "title",
+          "value": "Apify Test"
+        }
+      ]
+    },
+    {
+      "name": "Response contains an ID",
       "assertions": [
         {
           "type": "ContainsProperty",
@@ -34,32 +54,11 @@
       ]
     },
     {
-      "name": "Title is correct",
+      "name": "Response time is acceptable",
       "assertions": [
         {
-          "type": "ContainsProperty",
-          "property": "title",
-          "value": "Test Post"
-        }
-      ]
-    },
-    {
-      "name": "Body is correct",
-      "assertions": [
-        {
-          "type": "ContainsProperty",
-          "property": "body",
-          "value": "This is a test post created by Apify"
-        }
-      ]
-    },
-    {
-      "name": "User ID is correct",
-      "assertions": [
-        {
-          "type": "ContainsProperty",
-          "property": "userId",
-          "value": "{{userId}}"
+          "type": "ResponseTimeBelow",
+          "value": "{{timeout}}"
         }
       ]
     }

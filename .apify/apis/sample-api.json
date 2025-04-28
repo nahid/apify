@@ -1,35 +1,70 @@
 {
-  "Name": "Sample API Test",
-  "Uri": "{{baseUrl}}/posts/1",
-  "Method": "GET",
-  "Headers": {
-    "Accept": "application/json"
+  "name": "Sample GET Request",
+  "description": "Example of GET request to JSONPlaceholder API",
+  "uri": "{{baseUrl}}/users/{{userId}}",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json",
+    "X-API-Key": "{{apiKey}}"
   },
-  "PayloadType": 0,
-  "Tests": [
+  "tests": [
     {
-      "Name": "Status code is successful",
-      "Description": "Status code is 200",
-      "Assertion": "",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "200"
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
     },
     {
-      "Name": "Response format is JSON",
-      "Description": "Content-Type header is application/json",
-      "Assertion": "",
-      "AssertType": "HeaderContains",
-      "Property": "Content-Type",
-      "ExpectedValue": "application/json"
+      "name": "Contains user ID",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "id",
+          "exists": true
+        }
+      ]
     },
     {
-      "Name": "Response contains id property",
-      "Description": "Response contains id property",
-      "Assertion": "",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "id"
+      "name": "Contains user name",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "name",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Contains email",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "email",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Response time is under timeout",
+      "assertions": [
+        {
+          "type": "ResponseTimeBelow",
+          "value": "{{timeout}}"
+        }
+      ]
+    },
+    {
+      "name": "Content-Type header is present",
+      "assertions": [
+        {
+          "type": "HeaderContains",
+          "header": "Content-Type",
+          "value": "application/json"
+        }
+      ]
     }
-  ],
-  "Timeout": 30000,
-  "Variables": {}
+  ]
 }

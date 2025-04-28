@@ -32,17 +32,52 @@
       "website": "bobjohnson.example.com"
     }
   ],
-  "conditions": [
+  "conditionalResponses": [
     {
-      "type": "HeaderExists",
-      "header": "Authorization",
+      "condition": {
+        "header": "Authorization",
+        "exists": false
+      },
       "response": {
         "statusCode": 401,
         "body": {
           "error": "Unauthorized",
-          "message": "Authentication token is missing"
+          "message": "Missing authentication token"
         }
       }
+    },
+    {
+      "condition": {
+        "queryParam": "limit",
+        "value": "1"
+      },
+      "response": [
+        {
+          "id": 1,
+          "name": "John Doe",
+          "email": "john.doe@example.com",
+          "username": "johndoe",
+          "phone": "555-123-4567",
+          "website": "johndoe.example.com"
+        }
+      ]
+    },
+    {
+      "condition": {
+        "queryParam": "filter",
+        "value": "admins"
+      },
+      "response": [
+        {
+          "id": 1,
+          "name": "John Doe",
+          "email": "john.doe@example.com",
+          "username": "johndoe",
+          "phone": "555-123-4567",
+          "website": "johndoe.example.com",
+          "role": "admin"
+        }
+      ]
     }
   ]
 }
