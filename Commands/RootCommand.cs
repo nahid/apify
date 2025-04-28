@@ -40,7 +40,7 @@ namespace Apify.Commands
             Command.AddCommand(initCommand);
             Command.AddCommand(runCommand.Command);
             Command.AddCommand(createCommand);
-            Command.AddCommand(testsCommand);
+            Command.AddCommand(testsCommand.Command);
         }
         
         private void ListEnvironments()

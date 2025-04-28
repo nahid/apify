@@ -31,7 +31,18 @@ namespace Apify.Services
             try
             {
                 // Create request message
-                var request = new HttpRequestMessage(new HttpMethod(apiDefinition.Method), apiDefinition.Uri);
+                // Check if URI has a valid scheme (http:// or https://)
+                var uri = apiDefinition.Uri;
+                
+                // If URI doesn't start with http:// or https://, add https:// prefix
+                if (!uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && 
+                    !uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    uri = "https://" + uri;
+                    Console.WriteLine($"Notice: Added 'https://' prefix to URI: {uri}");
+                }
+                
+                var request = new HttpRequestMessage(new HttpMethod(apiDefinition.Method), uri);
 
                 // Add headers
                 if (apiDefinition.Headers != null)

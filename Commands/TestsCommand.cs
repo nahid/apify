@@ -7,12 +7,15 @@ using Newtonsoft.Json;
 
 namespace Apify.Commands
 {
-    public class TestsCommand : Command
+    public class TestsCommand
     {
+        public Command Command { get; }
         private const string DefaultApiDirectoryName = ".apify";
         
-        public TestsCommand() : base("tests", "Run all tests in the .apify directory")
+        public TestsCommand()
         {
+            Command = new Command("tests", "Run all tests in the .apify directory");
+            
             var verboseOption = new Option<bool>(
                 "--verbose",
                 () => false,
@@ -30,17 +33,17 @@ namespace Apify.Commands
                 "Filter tests by tag"
             );
             
-            AddOption(verboseOption);
-            AddOption(dirOption);
-            AddOption(tagOption);
+            Command.AddOption(verboseOption);
+            Command.AddOption(dirOption);
+            Command.AddOption(tagOption);
             
-            this.SetHandler(
-                (verbose, dir, tag) => ExecuteAsync(verbose, dir, tag),
+            Command.SetHandler(
+                (verbose, dir, tag) => RunAllTestsAsync(verbose, dir, tag),
                 verboseOption, dirOption, tagOption
             );
         }
         
-        private async Task ExecuteAsync(bool verbose, string directory, string? tag)
+        private async Task RunAllTestsAsync(bool verbose, string directory, string? tag)
         {
             ConsoleHelper.DisplayTitle("Apify - Running All Tests");
             
@@ -102,6 +105,9 @@ namespace Apify.Commands
                     // Show current API being processed
                     Console.WriteLine();
                     ConsoleHelper.WriteInfo($"Running tests for: {apiDefinition.Name}");
+                    
+                    // Apply environment variables (this was missing!)
+                    apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
                     
                     var apiExecutor = new ApiExecutor();
                     apiExecutor.SetEnvironmentService(environmentService);
