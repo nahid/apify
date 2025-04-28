@@ -1,8 +1,1 @@
-This is a test file for upload testing.
-It's a simple text file that simulates an image or other file content.
-The mock server should be able to handle this file during upload tests.
-
-APIFY TEST FILE CONTENT
-Version: 1.0
-Created: 2025-04-28
-Purpose: API testing with file uploads
+This is a test file that would represent a sample image or other file to be uploaded using the Apify tool. In a real scenario, this would be replaced with an actual image or binary file.

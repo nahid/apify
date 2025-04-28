@@ -1,13 +1,14 @@
 {
   "name": "Get User with Environment Variables",
-  "description": "This test demonstrates using environment variables in API requests",
+  "description": "Test showing how to use environment variables in requests",
   "uri": "{{baseUrl}}/users/{{userId}}",
   "method": "GET",
   "headers": {
     "Accept": "application/json",
-    "x-api-key": "{{apiKey}}"
+    "Authorization": "Bearer {{apiKey}}"
   },
   "payload": null,
+  "timeout": "{{timeout}}",
   "tests": [
     {
       "name": "Status code is 200",
@@ -29,7 +30,7 @@
       ]
     },
     {
-      "name": "Response time is acceptable",
+      "name": "Response time is under timeout",
       "assertions": [
         {
           "type": "ResponseTimeBelow",

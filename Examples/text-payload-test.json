@@ -1,13 +1,13 @@
 {
   "name": "Text Payload Test",
-  "description": "Example API for testing plain text payload functionality",
+  "description": "Example of sending a plain text payload",
   "uri": "https://httpbin.org/post",
   "method": "POST",
   "headers": {
     "Content-Type": "text/plain",
     "Accept": "application/json"
   },
-  "payload": "This is a plain text payload for testing the API client's text handling capabilities.\nIt should be sent as-is without any JSON encoding.\nMultiple lines should be preserved.",
+  "payload": "This is a plain text payload sent by the Apify test tool.",
   "payloadType": "Text",
   "tests": [
     {
@@ -20,22 +20,32 @@
       ]
     },
     {
-      "name": "Response contains data field",
+      "name": "Content-Type header is JSON",
       "assertions": [
         {
-          "type": "ContainsProperty",
-          "property": "data",
-          "exists": true
+          "type": "HeaderContains",
+          "header": "Content-Type",
+          "value": "application/json"
         }
       ]
     },
     {
-      "name": "Text was sent correctly",
+      "name": "Data contains the text payload",
       "assertions": [
         {
           "type": "ContainsProperty",
           "property": "data",
-          "value": "This is a plain text payload for testing the API client's text handling capabilities.\nIt should be sent as-is without any JSON encoding.\nMultiple lines should be preserved."
+          "value": "This is a plain text payload sent by the Apify test tool."
+        }
+      ]
+    },
+    {
+      "name": "Content-Type in headers is correct",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "headers.Content-Type",
+          "value": "text/plain"
         }
       ]
     }

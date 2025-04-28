@@ -1,26 +1,22 @@
 {
   "name": "File Upload Test",
-  "description": "Example API for testing file upload functionality",
+  "description": "Example of uploading a file with multipart/form-data",
   "uri": "https://httpbin.org/post",
   "method": "POST",
   "headers": {
     "Accept": "application/json"
   },
-  "payload": null,
-  "payloadType": "FormData",
+  "files": [
+    {
+      "name": "file",
+      "path": "Examples/sample-image.txt"
+    }
+  ],
   "formData": {
-    "fields": {
-      "name": "test-file-upload",
-      "description": "This is a test file upload"
-    },
-    "files": [
-      {
-        "field": "file",
-        "path": "Examples/sample-image.txt",
-        "contentType": "text/plain"
-      }
-    ]
+    "description": "Sample file upload test",
+    "fileType": "text/plain"
   },
+  "payloadType": "FormData",
   "tests": [
     {
       "name": "Status code is 200",
@@ -32,22 +28,42 @@
       ]
     },
     {
-      "name": "Response contains file field",
+      "name": "Content-Type header is JSON",
       "assertions": [
         {
-          "type": "ContainsProperty",
-          "property": "form.name",
-          "value": "test-file-upload"
+          "type": "HeaderContains",
+          "header": "Content-Type",
+          "value": "application/json"
         }
       ]
     },
     {
-      "name": "File was uploaded",
+      "name": "Response contains the file",
       "assertions": [
         {
           "type": "ContainsProperty",
           "property": "files.file",
           "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Form data is included",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "form.description",
+          "value": "Sample file upload test"
+        }
+      ]
+    },
+    {
+      "name": "File type is included",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "form.fileType",
+          "value": "text/plain"
         }
       ]
     }

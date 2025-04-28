@@ -1,36 +1,48 @@
 {
-  "name": "Get All Users",
-  "endpoint": "/api/users",
   "method": "GET",
+  "path": "/api/users",
+  "name": "Get All Users",
   "statusCode": 200,
-  "contentType": "application/json",
   "headers": {
-    "X-Powered-By": "Apify Mock Server",
-    "X-Response-Time": "10ms"
+    "Content-Type": "application/json"
   },
-  "response": {
-    "users": [
-      {
-        "id": 1,
-        "name": "John Doe",
-        "email": "john.doe@example.com",
-        "role": "admin"
-      },
-      {
-        "id": 2,
-        "name": "Jane Smith",
-        "email": "jane.smith@example.com",
-        "role": "user"
-      },
-      {
-        "id": 3,
-        "name": "Bob Johnson",
-        "email": "bob.johnson@example.com",
-        "role": "user"
+  "response": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "username": "johndoe",
+      "phone": "555-123-4567",
+      "website": "johndoe.example.com"
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "email": "jane.smith@example.com",
+      "username": "janesmith",
+      "phone": "555-987-6543",
+      "website": "janesmith.example.com"
+    },
+    {
+      "id": 3,
+      "name": "Bob Johnson",
+      "email": "bob.johnson@example.com",
+      "username": "bobjohnson",
+      "phone": "555-456-7890",
+      "website": "bobjohnson.example.com"
+    }
+  ],
+  "conditions": [
+    {
+      "type": "HeaderExists",
+      "header": "Authorization",
+      "response": {
+        "statusCode": 401,
+        "body": {
+          "error": "Unauthorized",
+          "message": "Authentication token is missing"
+        }
       }
-    ],
-    "total": 3,
-    "page": 1,
-    "limit": 10
-  }
+    }
+  ]
 }
