@@ -409,7 +409,8 @@ namespace Apify.Services
                 Dictionary<string, string> extractedParams = new Dictionary<string, string>();
                 var mockDef = _mockDefinitions.FirstOrDefault(m => 
                     string.Equals(m.Method, request.HttpMethod, StringComparison.OrdinalIgnoreCase) &&
-                    PatternMatchesPath(m.Endpoint, requestPath, out extractedParams));
+                    PatternMatchesPath(m.Endpoint, requestPath, out var tempParams) && 
+                    (extractedParams = tempParams ?? new Dictionary<string, string>()) != null);
                     
                 if (mockDef != null && extractedParams.Count > 0)
                 {
@@ -481,7 +482,7 @@ namespace Apify.Services
         }
         
         // Method to apply template variables to a string
-        private string ApplyTemplateVariables(string input, Dictionary<string, string> pathParams = null)
+        private string ApplyTemplateVariables(string input, Dictionary<string, string>? pathParams = null)
         {
             if (string.IsNullOrEmpty(input))
                 return input;
