@@ -278,6 +278,111 @@ namespace Apify.Commands
                 string samplePostFilePath = Path.Combine(DefaultApiDirectoryName, "sample-post.json");
                 await File.WriteAllTextAsync(samplePostFilePath, JsonHelper.SerializeObject(samplePostTest));
                 ConsoleHelper.WriteSuccess($"Created sample POST API test: {samplePostFilePath}");
+                
+                // Ask if user wants to create mock API examples
+                if (PromptYesNo("Create sample mock API definitions?"))
+                {
+                    // Create users directory for mock examples if it doesn't exist
+                    string usersDirPath = Path.Combine(DefaultApiDirectoryName, "users");
+                    if (!Directory.Exists(usersDirPath))
+                    {
+                        Directory.CreateDirectory(usersDirPath);
+                    }
+                    
+                    // Create a sample Get All Users mock definition
+                    string getAllUsersMockJson = @"{
+  ""Name"": ""Get All Users"",
+  ""Description"": ""Returns a list of all users"",
+  ""Method"": ""GET"",
+  ""Path"": ""/users"",
+  ""ResponseStatus"": 200,
+  ""ResponseHeaders"": {
+    ""Content-Type"": ""application/json"",
+    ""Cache-Control"": ""max-age=3600""
+  },
+  ""ResponseBody"": [
+    {
+      ""id"": 1,
+      ""name"": ""John Doe"",
+      ""email"": ""john@example.com"",
+      ""isActive"": true,
+      ""createdAt"": ""{{$date}}""
+    },
+    {
+      ""id"": 2,
+      ""name"": ""Jane Smith"",
+      ""email"": ""jane@example.com"",
+      ""isActive"": true,
+      ""createdAt"": ""{{$date}}""
+    },
+    {
+      ""id"": ""{{$random:int:3:100}}"",
+      ""name"": ""Random User"",
+      ""email"": ""user{{$random:int:1:999}}@example.com"",
+      ""isActive"": false,
+      ""createdAt"": ""{{$date}}""
+    }
+  ],
+  ""Conditions"": [
+    {
+      ""Type"": ""HeaderContains"",
+      ""Field"": ""Authorization"",
+      ""Value"": ""Bearer invalid"",
+      ""ResponseStatus"": 401,
+      ""ResponseHeaders"": {
+        ""Content-Type"": ""application/json""
+      },
+      ""ResponseBody"": {
+        ""error"": ""Invalid authentication token""
+      }
+    }
+  ]
+}";
+                    
+                    // Create a sample Get User by ID mock definition
+                    string getUserByIdMockJson = @"{
+  ""Name"": ""Get User by ID"",
+  ""Description"": ""Returns a single user by ID"",
+  ""Method"": ""GET"",
+  ""Path"": ""/users/:id"",
+  ""ResponseStatus"": 200,
+  ""ResponseHeaders"": {
+    ""Content-Type"": ""application/json"",
+    ""Cache-Control"": ""max-age=3600""
+  },
+  ""ResponseBody"": {
+    ""id"": ""{{:id}}"",
+    ""name"": ""John Doe"",
+    ""email"": ""john@example.com"",
+    ""isActive"": true,
+    ""token"": ""{{$random:uuid}}"",
+    ""createdAt"": ""{{$date}}""
+  },
+  ""Conditions"": [
+    {
+      ""Type"": ""PathParameterEquals"",
+      ""Parameter"": ""id"",
+      ""Value"": ""999"",
+      ""ResponseStatus"": 404,
+      ""ResponseHeaders"": {
+        ""Content-Type"": ""application/json""
+      },
+      ""ResponseBody"": {
+        ""error"": ""User not found""
+      }
+    }
+  ]
+}";
+                    
+                    string getAllUsersPath = Path.Combine(usersDirPath, "all.mock.json");
+                    string getUserByIdPath = Path.Combine(usersDirPath, "user.mock.json");
+                    
+                    await File.WriteAllTextAsync(getAllUsersPath, getAllUsersMockJson);
+                    await File.WriteAllTextAsync(getUserByIdPath, getUserByIdMockJson);
+                    
+                    ConsoleHelper.WriteSuccess($"Created sample mock API definitions in {usersDirPath}");
+                    ConsoleHelper.WriteInfo("To start the mock server: dotnet run mock-server --port 8080 --verbose");
+                }
 
                 // Save the configuration file
                 try
@@ -416,7 +521,22 @@ namespace Apify.Commands
                 }
             }
             
-            sb.AppendLine("  ]");
+            sb.AppendLine("  ],");
+            
+            // Add MockServer configuration
+            sb.AppendLine("  \"MockServer\": {");
+            sb.AppendLine("    \"Port\": 8080,");
+            sb.AppendLine("    \"Directory\": \".apify\",");
+            sb.AppendLine("    \"EnableCORS\": true,");
+            sb.AppendLine("    \"LogRequests\": true,");
+            sb.AppendLine("    \"DefaultHeaders\": {");
+            sb.AppendLine("      \"Access-Control-Allow-Origin\": \"*\",");
+            sb.AppendLine("      \"Access-Control-Allow-Methods\": \"GET, POST, PUT, DELETE, OPTIONS\",");
+            sb.AppendLine("      \"Access-Control-Allow-Headers\": \"Content-Type, Authorization\"");
+            sb.AppendLine("    },");
+            sb.AppendLine("    \"FileStoragePath\": \".apify/uploads\"");
+            sb.AppendLine("  }");
+            
             sb.AppendLine("}");
             
             return sb.ToString();
