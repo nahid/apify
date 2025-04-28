@@ -12,7 +12,9 @@ namespace Apify.Services
     {
         private readonly string _mockDirectory;
         private readonly List<MockApiDefinition> _mockDefinitions = new();
+        private readonly List<AdvancedMockApiDefinition> _advancedMockDefinitions = new();
         private readonly EnvironmentService _environmentService;
+        private readonly ConditionEvaluator _conditionEvaluator = new();
         private bool _verbose;
         private HttpListener? _listener;
         private bool _isRunning;
