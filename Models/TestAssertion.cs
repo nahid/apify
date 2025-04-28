@@ -148,6 +148,77 @@ namespace Apify.Models
             {
                 Description = Name;
             }
+            
+            // Auto-detect assertion type based on test name/description
+            if (string.IsNullOrEmpty(AssertType))
+            {
+                var name = !string.IsNullOrEmpty(Name) ? Name : Description;
+                
+                // Status code assertions
+                if (name.Contains("status code", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("status is", StringComparison.OrdinalIgnoreCase))
+                {
+                    AssertType = "StatusCode";
+                    
+                    // Try to extract expected code
+                    string[] parts = name.Split(' ');
+                    foreach (var part in parts)
+                    {
+                        if (int.TryParse(part, out int code))
+                        {
+                            ExpectedValue = code.ToString();
+                            break;
+                        }
+                    }
+                }
+                
+                // Array response check
+                else if (name.Contains("is an array", StringComparison.OrdinalIgnoreCase) ||
+                         name.Contains("response is array", StringComparison.OrdinalIgnoreCase))
+                {
+                    AssertType = "IsArray";
+                }
+                
+                // Contains property assertions
+                else if (name.Contains("contains", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (name.Contains("header", StringComparison.OrdinalIgnoreCase))
+                    {
+                        AssertType = "HeaderContains";
+                    }
+                    else
+                    {
+                        AssertType = "ContainsProperty";
+                        
+                        // Try to extract property name from test name
+                        if (name.Contains("contains user", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Property = "user";
+                        }
+                        else if (name.Contains("contains id", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Property = "id";
+                        }
+                        else if (name.Contains("contains email", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Property = "email";
+                        }
+                        else if (name.Contains("contains name", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Property = "name";
+                        }
+                    }
+                }
+                
+                // Response time assertions
+                else if (name.Contains("response time", StringComparison.OrdinalIgnoreCase) ||
+                         name.Contains("time is under", StringComparison.OrdinalIgnoreCase) ||
+                         name.Contains("time is acceptable", StringComparison.OrdinalIgnoreCase))
+                {
+                    AssertType = "ResponseTimeBelow";
+                    ExpectedValue = "5000"; // Default to 5 seconds
+                }
+            }
         }
         
         [JsonPropertyName("name")]
@@ -197,6 +268,8 @@ namespace Apify.Models
                         return AssertionType.ResponseTime;
                     case "equal":
                         return AssertionType.ResponseBody;
+                    case "isarray":
+                        return AssertionType.ResponseBody;
                     default:
                         return AssertionType.Unknown;
                 }
@@ -245,6 +318,8 @@ namespace Apify.Models
                         return "lessThan";
                     case "equal":
                         return "equals";
+                    case "isarray":
+                        return "isArray";
                     default:
                         return "unknown";
                 }
