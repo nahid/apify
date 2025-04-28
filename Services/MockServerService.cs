@@ -186,9 +186,14 @@ namespace Apify.Services
             
             // Find matching mock definition
             var mockDef = FindMatchingMockDefinition(request);
+            Dictionary<string, string> pathParams = new Dictionary<string, string>();
             
             if (mockDef != null)
             {
+                // Extract path parameters for use in templates
+                string urlPath = request.Url?.AbsolutePath ?? string.Empty;
+                ExtractPathParameters(mockDef.Endpoint, urlPath, out pathParams);
+                
                 // Apply any delay specified in the mock
                 if (mockDef.Delay > 0)
                 {
@@ -244,8 +249,8 @@ namespace Apify.Services
                     responseContent = mockDef.GetResponseAsString();
                 }
                 
-                // Apply environment variables to the response content
-                responseContent = ApplyTemplateVariables(responseContent);
+                // Apply environment variables and path parameters to the response content
+                responseContent = ApplyTemplateVariables(responseContent, pathParams);
                 
                 byte[] buffer = Encoding.UTF8.GetBytes(responseContent);
                 response.ContentLength64 = buffer.Length;
@@ -476,19 +481,37 @@ namespace Apify.Services
         }
         
         // Method to apply template variables to a string
-        private string ApplyTemplateVariables(string input)
+        private string ApplyTemplateVariables(string input, Dictionary<string, string> pathParams = null)
         {
             if (string.IsNullOrEmpty(input))
                 return input;
             
-            // Load variables from environment service
-            var environmentVars = new Dictionary<string, string>();
+            // Create combined dictionary with path parameters and environment variables
+            var allVariables = new Dictionary<string, string>();
             
+            // Add path parameters (highest priority)
+            if (pathParams != null)
+            {
+                foreach (var param in pathParams)
+                {
+                    allVariables[param.Key] = param.Value;
+                }
+            }
+            
+            // Add random/built-in values
+            allVariables["random.id"] = Guid.NewGuid().ToString();
+            allVariables["random.number"] = new Random().Next(10000).ToString();
+            allVariables["timestamp"] = DateTimeOffset.Now.ToUnixTimeSeconds().ToString();
+            
+            // Add environment variables (lowest priority, won't override path params)
             if (_environmentService.CurrentEnvironment != null && _environmentService.CurrentEnvironment.Variables != null)
             {
                 foreach (var envVar in _environmentService.CurrentEnvironment.Variables)
                 {
-                    environmentVars[envVar.Key] = envVar.Value;
+                    if (!allVariables.ContainsKey(envVar.Key))
+                    {
+                        allVariables[envVar.Key] = envVar.Value;
+                    }
                 }
             }
             
@@ -498,12 +521,66 @@ namespace Apify.Services
             return variablePattern.Replace(input, match =>
             {
                 var variableName = match.Groups[1].Value.Trim();
-                if (environmentVars.TryGetValue(variableName, out var value))
+                if (allVariables.TryGetValue(variableName, out var value))
                 {
                     return value;
                 }
                 return match.Value; // Keep the original {{variable}} if not found
             });
+        }
+        
+        // Extract path parameters from a URL
+        private bool ExtractPathParameters(string pattern, string path, out Dictionary<string, string> pathParams)
+        {
+            pathParams = new Dictionary<string, string>();
+            
+            if (!pattern.Contains("{") || !pattern.Contains("}"))
+                return false;
+                
+            // Extract parameter names from pattern
+            var paramNames = new List<string>();
+            int paramIndex = 0;
+            while ((paramIndex = pattern.IndexOf('{', paramIndex)) != -1)
+            {
+                int endIndex = pattern.IndexOf('}', paramIndex);
+                if (endIndex == -1) break;
+                
+                string paramName = pattern.Substring(paramIndex + 1, endIndex - paramIndex - 1);
+                paramNames.Add(paramName);
+                paramIndex = endIndex + 1;
+            }
+            
+            if (paramNames.Count == 0)
+                return false;
+                
+            // Convert pattern to regex with named capture groups
+            string regexPattern = "^" + Regex.Escape(pattern)
+                .Replace("\\{", "{")
+                .Replace("\\}", "}");
+                
+            for (int i = 0; i < paramNames.Count; i++)
+            {
+                regexPattern = regexPattern.Replace("{" + paramNames[i] + "}", "([^/]+)");
+            }
+            
+            regexPattern += "$";
+            
+            // Match against path
+            var match = Regex.Match(path, regexPattern);
+            if (match.Success && match.Groups.Count > 1)
+            {
+                for (int i = 0; i < paramNames.Count; i++)
+                {
+                    if (i + 1 < match.Groups.Count)
+                    {
+                        pathParams[paramNames[i]] = match.Groups[i + 1].Value;
+                    }
+                }
+                
+                return pathParams.Count > 0;
+            }
+            
+            return false;
         }
         
         private bool PatternMatchesPath(string pattern, string path, out Dictionary<string, string>? pathParams)
