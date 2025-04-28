@@ -209,6 +209,14 @@ namespace Apify.Services
             if (_verbose)
             {
                 ConsoleHelper.WriteInfo($"Received request: {method} {requestUrl}");
+                
+                foreach (var headerKey in request.Headers.AllKeys)
+                {
+                    if (_verbose)
+                    {
+                        ConsoleHelper.WriteInfo($"  Header: {headerKey}: {request.Headers[headerKey]}");
+                    }
+                }
             }
             
             // Find matching mock definition
@@ -220,6 +228,127 @@ namespace Apify.Services
                 // Extract path parameters for use in templates
                 string urlPath = request.Url?.AbsolutePath ?? string.Empty;
                 ExtractPathParameters(mockDef.Endpoint, urlPath, out pathParams);
+                
+                // Check authentication if required
+                if (mockDef.RequireAuthentication)
+                {
+                    string? authHeader = request.Headers[mockDef.AuthHeaderName];
+                    bool isAuthenticated = false;
+                    
+                    if (!string.IsNullOrEmpty(authHeader))
+                    {
+                        if (string.IsNullOrEmpty(mockDef.AuthHeaderPrefix) || 
+                            authHeader.StartsWith(mockDef.AuthHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            string token = authHeader;
+                            
+                            // If prefix is specified, extract the token part
+                            if (!string.IsNullOrEmpty(mockDef.AuthHeaderPrefix) && 
+                                authHeader.StartsWith(mockDef.AuthHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+                            {
+                                token = authHeader.Substring(mockDef.AuthHeaderPrefix.Length).Trim();
+                            }
+                            
+                            // Validate token if tokens are specified
+                            if (mockDef.ValidTokens != null && mockDef.ValidTokens.Count > 0)
+                            {
+                                isAuthenticated = mockDef.ValidTokens.Contains(token);
+                            }
+                            else
+                            {
+                                // If no specific tokens are specified, any non-empty token is considered valid
+                                isAuthenticated = !string.IsNullOrEmpty(token);
+                            }
+                        }
+                    }
+                    
+                    // If authentication failed, return 401 Unauthorized
+                    if (!isAuthenticated)
+                    {
+                        response.StatusCode = 401;
+                        response.ContentType = "application/json";
+                        response.Headers.Add("WWW-Authenticate", $"{mockDef.AuthHeaderPrefix} realm=\"Mock API Server\"");
+                        
+                        string unauthorizedContent;
+                        if (mockDef.UnauthorizedResponse != null)
+                        {
+                            unauthorizedContent = mockDef.UnauthorizedResponse is string str 
+                                ? str 
+                                : JsonConvert.SerializeObject(mockDef.UnauthorizedResponse, Formatting.Indented);
+                        }
+                        else
+                        {
+                            unauthorizedContent = JsonConvert.SerializeObject(new { 
+                                error = "Unauthorized", 
+                                message = "Authentication required" 
+                            }, Formatting.Indented);
+                        }
+                        
+                        byte[] authBuffer = Encoding.UTF8.GetBytes(unauthorizedContent);
+                        response.ContentLength64 = authBuffer.Length;
+                        await response.OutputStream.WriteAsync(authBuffer);
+                        
+                        if (_verbose)
+                        {
+                            ConsoleHelper.WriteWarning($"Authentication failed for {method} {requestUrl}");
+                        }
+                        
+                        return;
+                    }
+                }
+                
+                // Handle file uploads if the endpoint accepts them
+                if (mockDef.AcceptsFileUpload && request.ContentType != null && request.ContentType.StartsWith("multipart/form-data"))
+                {
+                    try
+                    {
+                        if (_verbose)
+                        {
+                            ConsoleHelper.WriteInfo($"Processing file upload for {method} {requestUrl}");
+                        }
+                        
+                        Dictionary<string, string> formFields = new Dictionary<string, string>();
+                        Dictionary<string, (string FileName, byte[] Data)> files = new Dictionary<string, (string, byte[])>();
+                        
+                        await ProcessMultipartFormDataAsync(request, formFields, files);
+                        
+                        if (files.Count > 0)
+                        {
+                            string uploadDir = mockDef.SaveUploadedFilesTo ?? "uploads";
+                            
+                            // Create directory if it doesn't exist
+                            if (!Directory.Exists(uploadDir))
+                            {
+                                Directory.CreateDirectory(uploadDir);
+                            }
+                            
+                            List<string> savedFiles = new List<string>();
+                            
+                            foreach (var file in files)
+                            {
+                                string fileName = Path.GetFileName(file.Value.FileName);
+                                string filePath = Path.Combine(uploadDir, fileName);
+                                
+                                await File.WriteAllBytesAsync(filePath, file.Value.Data);
+                                savedFiles.Add(fileName);
+                                
+                                if (_verbose)
+                                {
+                                    ConsoleHelper.WriteSuccess($"Saved uploaded file: {fileName} ({file.Value.Data.Length} bytes)");
+                                }
+                            }
+                            
+                            // Add file info to path params for template substitution
+                            pathParams["fileName"] = files.Count == 1 ? Path.GetFileName(files.First().Value.FileName) : "";
+                            pathParams["fileCount"] = files.Count.ToString();
+                            pathParams["files"] = string.Join(",", savedFiles);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ConsoleHelper.WriteError($"Error processing file upload: {ex.Message}");
+                    }
+                }
                 
                 // Apply any delay specified in the mock
                 if (mockDef.Delay > 0)
@@ -399,7 +528,7 @@ namespace Apify.Services
                     if (!matches) continue;
                 }
                 
-                // Check headers
+                // Check for exact header matches
                 if (condition.Headers != null && condition.Headers.Count > 0)
                 {
                     foreach (var header in condition.Headers)
@@ -414,13 +543,311 @@ namespace Apify.Services
                     if (!matches) continue;
                 }
                 
-                // TODO: Add body matching if needed
+                // Check for header value contains 
+                if (condition.HeadersContain != null && condition.HeadersContain.Count > 0)
+                {
+                    foreach (var header in condition.HeadersContain)
+                    {
+                        string? headerValue = request.Headers[header.Key];
+                        if (string.IsNullOrEmpty(headerValue) || !headerValue.Contains(header.Value))
+                        {
+                            matches = false;
+                            break;
+                        }
+                    }
+                    
+                    if (!matches) continue;
+                }
+                
+                // Check if specified headers exist
+                if (condition.HeaderExists != null && condition.HeaderExists.Count > 0)
+                {
+                    foreach (var headerName in condition.HeaderExists)
+                    {
+                        if (string.IsNullOrEmpty(request.Headers[headerName]))
+                        {
+                            matches = false;
+                            break;
+                        }
+                    }
+                    
+                    if (!matches) continue;
+                }
+                
+                // Check for body content if applicable
+                if (condition.Body != null || condition.BodyContains != null || condition.BodyMatches != null)
+                {
+                    // Try to read request body (if it has one)
+                    string requestBody = string.Empty;
+                    
+                    try
+                    {
+                        if (request.ContentLength64 > 0 && request.HasEntityBody)
+                        {
+                            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                            {
+                                requestBody = reader.ReadToEnd();
+                            }
+                            
+                            // Reset the stream position for further reads
+                            request.InputStream.Position = 0;
+                        }
+                        
+                        // Check for exact body match
+                        if (condition.Body != null)
+                        {
+                            string expectedBody = condition.Body is string strBody 
+                                ? strBody 
+                                : JsonConvert.SerializeObject(condition.Body);
+                                
+                            if (!string.Equals(requestBody, expectedBody, StringComparison.OrdinalIgnoreCase))
+                            {
+                                matches = false;
+                            }
+                            
+                            if (!matches) continue;
+                        }
+                        
+                        // Check if body contains specific strings
+                        if (condition.BodyContains != null && condition.BodyContains.Count > 0)
+                        {
+                            foreach (var fragment in condition.BodyContains)
+                            {
+                                if (!requestBody.Contains(fragment))
+                                {
+                                    matches = false;
+                                    break;
+                                }
+                            }
+                            
+                            if (!matches) continue;
+                        }
+                        
+                        // Check if body matches specific patterns (property values in JSON)
+                        if (condition.BodyMatches != null && condition.BodyMatches.Count > 0 &&
+                            !string.IsNullOrEmpty(requestBody) && IsJsonObject(requestBody))
+                        {
+                            try
+                            {
+                                var bodyObject = JsonConvert.DeserializeObject<JObject>(requestBody);
+                                
+                                foreach (var match in condition.BodyMatches)
+                                {
+                                    // Use JPath-like expressions to find values
+                                    var token = bodyObject?.SelectToken(match.Key);
+                                    
+                                    if (token == null || !token.ToString().Equals(match.Value))
+                                    {
+                                        matches = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                if (_verbose)
+                                {
+                                    ConsoleHelper.WriteWarning($"Failed to parse JSON body for matching: {ex.Message}");
+                                }
+                                matches = false;
+                            }
+                            
+                            if (!matches) continue;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_verbose)
+                        {
+                            ConsoleHelper.WriteWarning($"Error reading request body: {ex.Message}");
+                        }
+                        matches = false;
+                        continue;
+                    }
+                }
                 
                 if (matches)
                     return condition;
             }
             
             return null;
+        }
+        
+        private bool IsJsonObject(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
+                
+            text = text.Trim();
+            return text.StartsWith("{") && text.EndsWith("}");
+        }
+        
+        private async Task ProcessMultipartFormDataAsync(HttpListenerRequest request, 
+            Dictionary<string, string> formFields, 
+            Dictionary<string, (string FileName, byte[] Data)> files)
+        {
+            // Get the boundary from the Content-Type header
+            string boundary = GetBoundaryFromContentType(request.ContentType ?? string.Empty);
+            if (string.IsNullOrEmpty(boundary))
+            {
+                throw new ArgumentException("Content-Type header does not contain boundary");
+            }
+            
+            using (var memoryStream = new MemoryStream())
+            {
+                // Copy the request stream to a memory stream so we can read it multiple times
+                byte[] fileBuffer = new byte[4096];
+                int bytesRead;
+                
+                while ((bytesRead = await request.InputStream.ReadAsync(fileBuffer, 0, fileBuffer.Length)) > 0)
+                {
+                    await memoryStream.WriteAsync(fileBuffer, 0, bytesRead);
+                }
+                
+                // Reset the stream position so we can read from the beginning
+                memoryStream.Position = 0;
+                
+                // Parse the multipart form data
+                try
+                {
+                    string boundaryMarker = "--" + boundary;
+                    string endBoundaryMarker = boundaryMarker + "--";
+                    
+                    using (var reader = new StreamReader(memoryStream, request.ContentEncoding))
+                    {
+                        string? line;
+                        bool isFirstBoundary = true;
+                        
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            if (isFirstBoundary && line.StartsWith(boundaryMarker))
+                            {
+                                isFirstBoundary = false;
+                                continue;
+                            }
+                            
+                            if (line.StartsWith(boundaryMarker))
+                            {
+                                if (line.Equals(endBoundaryMarker))
+                                {
+                                    // End of form data
+                                    break;
+                                }
+                                
+                                // Parse headers
+                                string? contentDisposition = null;
+                                string? contentType = null;
+                                
+                                while ((line = reader.ReadLine()) != null && !string.IsNullOrEmpty(line))
+                                {
+                                    if (line.StartsWith("Content-Disposition:", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        contentDisposition = line.Substring("Content-Disposition:".Length).Trim();
+                                    }
+                                    else if (line.StartsWith("Content-Type:", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        contentType = line.Substring("Content-Type:".Length).Trim();
+                                    }
+                                }
+                                
+                                // Parse content disposition to get name and filename
+                                string? name = null;
+                                string? filename = null;
+                                
+                                if (contentDisposition != null)
+                                {
+                                    var parts = contentDisposition.Split(';');
+                                    foreach (var part in parts)
+                                    {
+                                        var trimmedPart = part.Trim();
+                                        
+                                        if (trimmedPart.StartsWith("name=", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            name = trimmedPart.Substring(5).Trim('"');
+                                        }
+                                        else if (trimmedPart.StartsWith("filename=", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            filename = trimmedPart.Substring(9).Trim('"');
+                                        }
+                                    }
+                                }
+                                
+                                // Read content
+                                var contentBuilder = new StringBuilder();
+                                MemoryStream? fileData = null;
+                                
+                                if (!string.IsNullOrEmpty(filename))
+                                {
+                                    fileData = new MemoryStream();
+                                }
+                                
+                                while ((line = reader.ReadLine()) != null)
+                                {
+                                    if (line.StartsWith(boundaryMarker))
+                                    {
+                                        break;
+                                    }
+                                    
+                                    if (fileData != null)
+                                    {
+                                        byte[] lineBytes = request.ContentEncoding.GetBytes(line + "\r\n");
+                                        await fileData.WriteAsync(lineBytes, 0, lineBytes.Length);
+                                    }
+                                    else
+                                    {
+                                        contentBuilder.AppendLine(line);
+                                    }
+                                }
+                                
+                                // Add to collection
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    if (fileData != null && !string.IsNullOrEmpty(filename))
+                                    {
+                                        files[name] = (filename, fileData.ToArray());
+                                        fileData.Dispose();
+                                    }
+                                    else
+                                    {
+                                        formFields[name] = contentBuilder.ToString().Trim();
+                                    }
+                                }
+                                
+                                if (line?.Equals(endBoundaryMarker) == true)
+                                {
+                                    // End of form data
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (_verbose)
+                    {
+                        ConsoleHelper.WriteError($"Error parsing multipart form data: {ex.Message}");
+                    }
+                    throw;
+                }
+            }
+        }
+        
+        private string GetBoundaryFromContentType(string contentType)
+        {
+            if (string.IsNullOrEmpty(contentType))
+                return string.Empty;
+                
+            int index = contentType.IndexOf("boundary=");
+            if (index == -1)
+                return string.Empty;
+                
+            string boundary = contentType.Substring(index + 9); // 9 is the length of "boundary="
+            
+            if (boundary.StartsWith("\"") && boundary.EndsWith("\""))
+                boundary = boundary.Substring(1, boundary.Length - 2);
+                
+            return boundary;
         }
         
         private string ProcessDynamicTemplate(string template, HttpListenerRequest request)

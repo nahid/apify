@@ -49,6 +49,13 @@ namespace Apify.Utils
             Console.WriteLine(message);
             Console.ResetColor();
         }
+        
+        public static void WriteDebug(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine($"[DEBUG] {message}");
+            Console.ResetColor();
+        }
 
         public static void WriteHeader(string header)
         {

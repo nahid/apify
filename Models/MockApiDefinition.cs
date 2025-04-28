@@ -44,6 +44,40 @@ namespace Apify.Models
         [JsonProperty("matchHeaders")]
         public Dictionary<string, string>? MatchHeaders { get; set; }
         
+        [JsonProperty("acceptsFileUpload")]
+        public bool AcceptsFileUpload { get; set; } = false;
+        
+        [JsonProperty("fileFieldName")]
+        public string FileFieldName { get; set; } = "file";
+        
+        [JsonProperty("saveUploadedFilesTo")]
+        public string? SaveUploadedFilesTo { get; set; }
+        
+        [JsonProperty("requireAuthentication")]
+        public bool RequireAuthentication { get; set; } = false;
+        
+        [JsonProperty("authHeaderName")]
+        public string AuthHeaderName { get; set; } = "Authorization";
+        
+        [JsonProperty("authHeaderPrefix")]
+        public string AuthHeaderPrefix { get; set; } = "Bearer";
+        
+        [JsonProperty("validTokens")]
+        public List<string>? ValidTokens { get; set; }
+        
+        [JsonProperty("unauthorizedResponse")]
+        public object? UnauthorizedResponse { get; set; }
+        
+        // Dynamic data generation options
+        [JsonProperty("generateDynamicData")]
+        public bool GenerateDynamicData { get; set; } = false;
+        
+        [JsonProperty("dynamicDataCount")]
+        public int DynamicDataCount { get; set; } = 10;
+        
+        [JsonProperty("dynamicDataTemplate")]
+        public object? DynamicDataTemplate { get; set; }
+        
         // Allow conditions to match request parameters to different responses
         [JsonProperty("conditions")]
         public List<MockCondition>? Conditions { get; set; }
@@ -72,8 +106,20 @@ namespace Apify.Models
         [JsonProperty("headers")]
         public Dictionary<string, string>? Headers { get; set; }
         
+        [JsonProperty("headersContain")]
+        public Dictionary<string, string>? HeadersContain { get; set; }
+        
+        [JsonProperty("headerExists")]
+        public List<string>? HeaderExists { get; set; }
+        
         [JsonProperty("body")]
         public object? Body { get; set; }
+        
+        [JsonProperty("bodyContains")]
+        public List<string>? BodyContains { get; set; }
+        
+        [JsonProperty("bodyMatches")]
+        public Dictionary<string, string>? BodyMatches { get; set; }
         
         [JsonProperty("response")]
         public object? Response { get; set; }
@@ -83,5 +129,8 @@ namespace Apify.Models
         
         [JsonProperty("responseFile")]
         public string? ResponseFile { get; set; }
+        
+        [JsonProperty("dynamicTemplate")]
+        public string? DynamicTemplate { get; set; }
     }
 }
