@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Apify.Utils;
 
 namespace Apify.Models
 {
@@ -65,9 +66,10 @@ namespace Apify.Models
         public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
         
         /// <summary>
-        /// Response body template
+        /// Response body template - can be an object or array
         /// </summary>
         [JsonProperty("responseTemplate")]
+        [JsonConverter(typeof(ObjectArrayJsonConverter))]
         public object ResponseTemplate { get; set; } = new { };
     }
 }

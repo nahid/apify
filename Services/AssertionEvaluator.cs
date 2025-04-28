@@ -65,7 +65,31 @@ namespace Apify.Services
                 return TestResult.Failure(name, "Missing expected status code value");
             }
             
-            if (int.TryParse(assertion.ExpectedValue, out int expectedStatusCode))
+            // Check for status code range (e.g. "200-299" for 2xx success codes)
+            if (assertion.ExpectedValue.Contains("-"))
+            {
+                var rangeParts = assertion.ExpectedValue.Split('-');
+                if (rangeParts.Length == 2 && 
+                    int.TryParse(rangeParts[0], out int minCode) &&
+                    int.TryParse(rangeParts[1], out int maxCode))
+                {
+                    if (response.StatusCode >= minCode && response.StatusCode <= maxCode)
+                    {
+                        return TestResult.CreateSuccess(name);
+                    }
+                    else
+                    {
+                        return TestResult.Failure(
+                            name,
+                            $"Status code {response.StatusCode} is not in expected range {minCode}-{maxCode}",
+                            response.StatusCode.ToString(),
+                            $"{minCode}-{maxCode}"
+                        );
+                    }
+                }
+            }
+            // For single-value status codes
+            else if (int.TryParse(assertion.ExpectedValue, out int expectedStatusCode))
             {
                 if (response.StatusCode == expectedStatusCode)
                 {
@@ -81,10 +105,9 @@ namespace Apify.Services
                     );
                 }
             }
-            else
-            {
-                return TestResult.Failure(name, $"Invalid status code value: {assertion.ExpectedValue}");
-            }
+            
+            // If we get here, the status code value is invalid
+            return TestResult.Failure(name, $"Invalid status code value: {assertion.ExpectedValue}");
         }
         
         private TestResult EvaluateContainsPropertyNewFormat(TestAssertion assertion, ApiResponse response)

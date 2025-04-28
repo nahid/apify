@@ -171,6 +171,15 @@ namespace Apify.Models
                     }
                 }
             }
+            
+            // Convert legacy format assertions to new format
+            if (Tests != null)
+            {
+                foreach (var test in Tests)
+                {
+                    test.ConvertLegacyFormat();
+                }
+            }
         }
 
         [JsonPropertyName("timeout")]

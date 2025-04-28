@@ -64,6 +64,9 @@ namespace Apify.Services
         {
             try
             {
+                // Process any legacy test formats before execution
+                apiDefinition.ProcessTestFormats();
+                
                 // Execute the API request
                 var response = await _apiExecutor.ExecuteRequestAsync(apiDefinition);
                 

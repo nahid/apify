@@ -155,7 +155,7 @@ namespace Apify.Services
                     AdvancedMockApiDefinition advancedMockDef;
                     try
                     {
-                        advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json);
+                        advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json) ?? new AdvancedMockApiDefinition();
                         if (_verbose)
                         {
                             ConsoleHelper.WriteInfo($"Successfully parsed {file} as AdvancedMockApiDefinition");

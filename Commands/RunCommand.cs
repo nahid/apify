@@ -129,6 +129,9 @@ namespace Apify.Commands
                         continue;
                     }
                     
+                    // Process any legacy test format
+                    apiDefinition.ProcessTestFormats();
+                    
                     // Apply extracted property paths to the test assertions if available
                     if (propertyPaths.Count > 0 && apiDefinition.Tests != null)
                     {
