@@ -5,7 +5,7 @@
   "endpoint": "/products/search",
   "responses": [
     {
-      "condition": "queryParams.minPrice && queryParams.maxPrice && int.Parse(queryParams.minPrice) > int.Parse(queryParams.maxPrice)",
+      "condition": "query.minPrice && query.maxPrice && int.Parse(query.minPrice) > int.Parse(query.maxPrice)",
       "statusCode": 400,
       "headers": {
         "Content-Type": "application/json"
@@ -16,7 +16,7 @@
       }
     },
     {
-      "condition": "queryParams.category && (queryParams.category.ToLower() == \"electronics\" || queryParams.category.ToLower() == \"computers\")",
+      "condition": "query.category && (query.category.ToLower() == \"electronics\" || query.category.ToLower() == \"computers\")",
       "statusCode": 200,
       "headers": {
         "Content-Type": "application/json"
@@ -46,7 +46,7 @@
       ]
     },
     {
-      "condition": "queryParams.category && queryParams.category.ToLower() == \"books\"",
+      "condition": "query.category && query.category.ToLower() == \"books\"",
       "statusCode": 200,
       "headers": {
         "Content-Type": "application/json"
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "condition": "queryParams.inStock && queryParams.inStock.ToLower() == \"true\"",
+      "condition": "query.inStock && query.inStock.ToLower() == \"true\"",
       "statusCode": 200,
       "headers": {
         "Content-Type": "application/json"
