@@ -118,6 +118,7 @@ dotnet run run apis/sample-api.json --verbose
 | `tests` | Run all tests in the project with visual progress indicators |
 | `list-env` | List available environments |
 | `create request` | Create a new API request definition interactively |
+| `mock-server` | Start an API mock server using mock definition files |
 
 ### Command Options
 
@@ -222,6 +223,37 @@ dotnet run create request --file auth.login
 
 # The .json extension is automatically added
 ```
+
+#### `mock-server` Command
+
+Starts a local API mock server using mock definition files placed in the `.apify` directory.
+
+| Option | Description | Required | Default |
+|--------|-------------|----------|---------|
+| `--port` or `-p` | Port number to run the mock server on | No | 8080 |
+| `--verbose` or `-v` | Enable verbose logging for debugging | No | false |
+| `--directory` or `-d` | Directory containing mock definitions | No | ".apify" |
+
+The mock server provides a convenient way to test API interactions without requiring access to a real API. This is particularly useful for:
+
+- Developing frontend applications that need API responses
+- Testing edge cases and error scenarios
+- Working offline without internet access
+- Testing integration points before real APIs are available
+
+Example:
+```bash
+# Start the mock server on the default port
+dotnet run mock-server
+
+# Start the mock server on a custom port with verbose logging
+dotnet run mock-server --port 3000 --verbose
+
+# Start the mock server using a specific directory
+dotnet run mock-server --directory ./my-mocks
+```
+
+When running, the mock server listens for incoming HTTP requests and responds based on the mock definitions found in the specified directory. It displays a list of available endpoints on startup and logs requests it receives.
 
 ## API Test Definition
 
