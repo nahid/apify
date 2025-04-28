@@ -14,14 +14,17 @@ Apify is a robust command-line tool designed for API testing and validation. It 
    - [Tests Command](#tests-command)
    - [List Environment Command](#list-env-command)
    - [Create Request Command](#create-request-command)
+   - [Mock Server Command](#mock-server-command)
 4. [API Test Definition](#api-test-definition)
 5. [Payload Types](#payload-types)
 6. [File Uploads](#file-uploads)
 7. [Test Assertions](#test-assertions)
-8. [Environment Variables](#environment-variables)
-9. [Custom Variables](#custom-variables)
-10. [Examples](#examples)
-11. [Troubleshooting](#troubleshooting)
+8. [Configuration Properties](#configuration-properties)
+9. [Variable System](#variable-system)
+10. [Custom Variables](#custom-variables)
+11. [Mock Server](#mock-server)
+12. [Examples](#examples)
+13. [Troubleshooting](#troubleshooting)
 
 ## Installation
 
