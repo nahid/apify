@@ -31,7 +31,8 @@
       "assertions": [
         {
           "type": "ArrayNotEmpty",
-          "value": "true"
+          "value": "true",
+          "expectedValue": "true"
         }
       ]
     }

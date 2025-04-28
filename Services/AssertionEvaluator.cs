@@ -40,6 +40,8 @@ namespace Apify.Services
                             return EvaluateEqualNewFormat(assertion, response);
                         case "isarray":
                             return EvaluateIsArrayAssertion(assertion, response);
+                        case "arraynotempty":
+                            return EvaluateArrayNotEmptyAssertion(assertion, response);
                         default:
                             // If assertion string is available and AssertType is invalid,
                             // try to infer from Assertion string
@@ -81,6 +83,13 @@ namespace Apify.Services
                             assertion.AssertType = "IsArray";
                             return EvaluateIsArrayAssertion(assertion, response);
                         }
+                        else if (name.Contains("not empty", StringComparison.OrdinalIgnoreCase) ||
+                                name.Contains("at least one", StringComparison.OrdinalIgnoreCase) ||
+                                name.Contains("array has items", StringComparison.OrdinalIgnoreCase))
+                        {
+                            assertion.AssertType = "ArrayNotEmpty";
+                            return EvaluateArrayNotEmptyAssertion(assertion, response);
+                        }
                         else if (name.Contains("time", StringComparison.OrdinalIgnoreCase) || 
                                 name.Contains("timeout", StringComparison.OrdinalIgnoreCase))
                         {
@@ -119,6 +128,20 @@ namespace Apify.Services
                                 propertyToCheck = "name";
                             }
                             
+                            // Try to determine if we're checking an array
+                            bool isArrayCheck = false;
+                            try
+                            {
+                                JToken jsonToken = JToken.Parse(response.Body);
+                                isArrayCheck = jsonToken is JArray;
+                            }
+                            catch 
+                            {
+                                // If we can't parse, assume it's not an array check
+                                isArrayCheck = false;
+                            }
+                            
+                            // Use the right property name based on array or object check
                             assertion.AssertType = "ContainsProperty";
                             assertion.ExpectedValue = propertyToCheck;
                             return EvaluateContainsPropertyNewFormat(assertion, response);
@@ -1024,6 +1047,72 @@ namespace Apify.Services
                     $"Error evaluating IsArray assertion: {ex.Message}",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
                     "JSON array"
+                );
+            }
+        }
+        
+        private TestResult EvaluateArrayNotEmptyAssertion(TestAssertion assertion, ApiResponse response)
+        {
+            var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
+            
+            try
+            {
+                // If response body is empty, handle that case
+                if (string.IsNullOrWhiteSpace(response.Body))
+                {
+                    return TestResult.Failure(
+                        name,
+                        "Cannot check if array is not empty: Response body is empty",
+                        "(empty)",
+                        "Non-empty JSON response"
+                    );
+                }
+                
+                // Try parsing the response
+                JToken jsonToken = JToken.Parse(response.Body);
+                
+                // First check if it's an array
+                if (!(jsonToken is JArray jArray))
+                {
+                    return TestResult.Failure(
+                        name,
+                        "Response is not an array",
+                        jsonToken.Type.ToString(),
+                        "JArray"
+                    );
+                }
+                
+                // Now check if the array has items
+                if (jArray.Count > 0)
+                {
+                    return TestResult.CreateSuccess(name);
+                }
+                else
+                {
+                    return TestResult.Failure(
+                        name,
+                        "Array is empty",
+                        "0 items",
+                        "At least 1 item"
+                    );
+                }
+            }
+            catch (JsonException ex)
+            {
+                return TestResult.Failure(
+                    name,
+                    $"Invalid JSON in response: {ex.Message}",
+                    response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
+                    "Valid JSON array expected"
+                );
+            }
+            catch (Exception ex)
+            {
+                return TestResult.Failure(
+                    name,
+                    $"Error evaluating ArrayNotEmpty assertion: {ex.Message}",
+                    response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
+                    "Non-empty JSON array"
                 );
             }
         }

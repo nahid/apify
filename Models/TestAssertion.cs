@@ -270,6 +270,8 @@ namespace Apify.Models
                         return AssertionType.ResponseBody;
                     case "isarray":
                         return AssertionType.ResponseBody;
+                    case "arraynotempty":
+                        return AssertionType.ResponseBody;
                     default:
                         return AssertionType.Unknown;
                 }
@@ -320,6 +322,8 @@ namespace Apify.Models
                         return "equals";
                     case "isarray":
                         return "isArray";
+                    case "arraynotempty":
+                        return "arrayNotEmpty";
                     default:
                         return "unknown";
                 }
