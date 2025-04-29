@@ -75,13 +75,18 @@ namespace Apify.Services
                 }
             }
             
-            // Required for property-like access in expressions
+            // Property getters for common headers and query parameters
+            // These allow dot notation access in expressions (q.category, h.SortBy)
             public string category => this["category"];
             public string inStock => this["inStock"];
             public string maxPrice => this["maxPrice"];
             public string minPrice => this["minPrice"];
-            public string SortBy => this["SortBy"];
             public string ContentType => this["Content-Type"];
+            public string Accept => this["Accept"];
+            public string Authorization => this["Authorization"];
+            public string SortBy => this["SortBy"];
+            public string API_Key => this["API-Key"];
+            public string X_API_Key => this["X-API-Key"];
             
             // For proper nullability checks in expressions
             public bool HasKey(string key) => _dictionary.ContainsKey(key);
