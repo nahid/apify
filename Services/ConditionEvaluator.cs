@@ -136,10 +136,10 @@ namespace Apify.Services
                 
                 // Add special accessor objects for query parameters and headers
                 // For accessing query parameters in a more natural way (q.parameter)
-                _interpreter.SetVariable("q", new DynamicDictionary(queryParams));
+                _interpreter.SetVariable("q", new DynamicDictionary(queryParams ?? new Dictionary<string, string>()));
                 
                 // For accessing headers in a more natural way (h.header)
-                _interpreter.SetVariable("h", new DynamicDictionary(headers));
+                _interpreter.SetVariable("h", new DynamicDictionary(headers ?? new Dictionary<string, string>()));
 
                 // Evaluate the expression
                 var result = _interpreter.Eval<bool>(condition);
