@@ -87,26 +87,40 @@ namespace Apify.Services
                 _interpreter.SetVariable("query", new DynamicObject(queryParams));
                 _interpreter.SetVariable("params", new DynamicObject(pathParams));
                 
-                // Register direct query parameter access for common query parameters
+                // Add individual query parameters directly to the interpreter
                 if (queryParams != null)
                 {
-                    // Directly register individual query parameters for simpler access
                     foreach (var param in queryParams)
                     {
-                        string variableName = $"query.{param.Key}";
-                        _interpreter.SetVariable(variableName, param.Value);
+                        // Individual parameters
+                        _interpreter.SetVariable(param.Key, param.Value);
                     }
                 }
                 
-                // Register direct header access for common headers
-                if (headers != null)
+                // Add special accessor functions for query parameters and headers
+                // The string parameter needs to be a regular string, not in quotes inside the condition
+                _interpreter.SetFunction("q", new Func<string, string>(key => 
                 {
-                    foreach (var header in headers)
+                    if (queryParams != null && queryParams.TryGetValue(key, out var val))
                     {
-                        string variableName = $"headers.{header.Key}";
-                        _interpreter.SetVariable(variableName, header.Value);
+                        Console.WriteLine($"q function accessed parameter '{key}' with value '{val}'");
+                        return val;
                     }
-                }
+                    Console.WriteLine($"q function accessed parameter '{key}' but it was not found");
+                    return string.Empty;
+                }));
+                
+                // Add special accessor for header values
+                _interpreter.SetFunction("h", new Func<string, string>(key => 
+                {
+                    if (headers != null && headers.TryGetValue(key, out var val))
+                    {
+                        Console.WriteLine($"h function accessed header '{key}' with value '{val}'");
+                        return val;
+                    }
+                    Console.WriteLine($"h function accessed header '{key}' but it was not found");
+                    return string.Empty;
+                }));
 
                 // Evaluate the expression
                 var result = _interpreter.Eval<bool>(condition);
@@ -205,7 +219,7 @@ namespace Apify.Services
                 get
                 {
                     var value = GetValue(key);
-                    return value ?? new DynamicObject(null); // Return empty DynamicObject instead of null
+                    return value ?? new DynamicObject(new object()); // Return DynamicObject with empty object instead of null
                 }
             }
 
