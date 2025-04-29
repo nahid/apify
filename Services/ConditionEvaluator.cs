@@ -98,7 +98,7 @@ namespace Apify.Services
                 }
                 
                 // Add special accessor functions for query parameters and headers
-                // The string parameter needs to be a regular string, not in quotes inside the condition
+                // For accessing query parameters in a more natural way
                 _interpreter.SetFunction("q", new Func<string, string>(key => 
                 {
                     if (queryParams != null && queryParams.TryGetValue(key, out var val))
@@ -106,11 +106,10 @@ namespace Apify.Services
                         Console.WriteLine($"q function accessed parameter '{key}' with value '{val}'");
                         return val;
                     }
-                    Console.WriteLine($"q function accessed parameter '{key}' but it was not found");
-                    return string.Empty;
+                    return null;
                 }));
                 
-                // Add special accessor for header values
+                // For accessing headers in a more natural way
                 _interpreter.SetFunction("h", new Func<string, string>(key => 
                 {
                     if (headers != null && headers.TryGetValue(key, out var val))
@@ -118,8 +117,7 @@ namespace Apify.Services
                         Console.WriteLine($"h function accessed header '{key}' with value '{val}'");
                         return val;
                     }
-                    Console.WriteLine($"h function accessed header '{key}' but it was not found");
-                    return string.Empty;
+                    return null;
                 }));
 
                 // Evaluate the expression
