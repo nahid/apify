@@ -49,6 +49,43 @@ namespace Apify.Services
                 return string.Empty;
             }
         }
+        
+        /// <summary>
+        /// Dynamic dictionary that allows dot notation in expressions
+        /// </summary>
+        private class DynamicDictionary
+        {
+            private readonly Dictionary<string, string> _dictionary;
+            
+            public DynamicDictionary(Dictionary<string, string> dictionary)
+            {
+                _dictionary = dictionary ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+            
+            public string this[string key]
+            {
+                get
+                {
+                    if (_dictionary.TryGetValue(key, out var value))
+                    {
+                        Console.WriteLine($"Accessed dictionary key '{key}' with value '{value}'");
+                        return value;
+                    }
+                    return string.Empty;
+                }
+            }
+            
+            // Required for property-like access in expressions
+            public string category => this["category"];
+            public string inStock => this["inStock"];
+            public string maxPrice => this["maxPrice"];
+            public string minPrice => this["minPrice"];
+            public string SortBy => this["SortBy"];
+            public string ContentType => this["Content-Type"];
+            
+            // For proper nullability checks in expressions
+            public bool HasKey(string key) => _dictionary.ContainsKey(key);
+        }
 
         /// <summary>
         /// Evaluates a condition expression against the provided context
@@ -97,28 +134,12 @@ namespace Apify.Services
                     }
                 }
                 
-                // Add special accessor functions for query parameters and headers
-                // For accessing query parameters in a more natural way
-                _interpreter.SetFunction("q", new Func<string, string>(key => 
-                {
-                    if (queryParams != null && queryParams.TryGetValue(key, out var val))
-                    {
-                        Console.WriteLine($"q function accessed parameter '{key}' with value '{val}'");
-                        return val;
-                    }
-                    return null;
-                }));
+                // Add special accessor objects for query parameters and headers
+                // For accessing query parameters in a more natural way (q.parameter)
+                _interpreter.SetVariable("q", new DynamicDictionary(queryParams));
                 
-                // For accessing headers in a more natural way
-                _interpreter.SetFunction("h", new Func<string, string>(key => 
-                {
-                    if (headers != null && headers.TryGetValue(key, out var val))
-                    {
-                        Console.WriteLine($"h function accessed header '{key}' with value '{val}'");
-                        return val;
-                    }
-                    return null;
-                }));
+                // For accessing headers in a more natural way (h.header)
+                _interpreter.SetVariable("h", new DynamicDictionary(headers));
 
                 // Evaluate the expression
                 var result = _interpreter.Eval<bool>(condition);

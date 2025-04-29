@@ -5,7 +5,7 @@
   "endpoint": "/products/search",
   "responses": [
     {
-      "condition": "q(\"minPrice\") != null && q(\"maxPrice\") != null && Parse(q(\"minPrice\")) > Parse(q(\"maxPrice\"))",
+      "condition": "q.minPrice != null && q.maxPrice != null && Parse(q.minPrice) > Parse(q.maxPrice)",
       "statusCode": 400,
       "headers": {
         "Content-Type": "application/json"
@@ -16,7 +16,7 @@
       }
     },
     {
-      "condition": "q(\"category\") != null && (ToLower(q(\"category\")) == \"electronics\" || ToLower(q(\"category\")) == \"computers\")",
+      "condition": "q.category != null && (ToLower(q.category) == \"electronics\" || ToLower(q.category) == \"computers\")",
       "statusCode": 200,
       "headers": {
         "Content-Type": "application/json"
@@ -46,7 +46,7 @@
       ]
     },
     {
-      "condition": "q(\"category\") != null && ToLower(q(\"category\")) == \"books\"",
+      "condition": "q.category != null && ToLower(q.category) == \"books\"",
       "statusCode": 200,
       "headers": {
         "Content-Type": "application/json"
