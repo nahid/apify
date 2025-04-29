@@ -28,6 +28,29 @@ namespace Apify.Services
         }
 
         /// <summary>
+        /// Helper class for direct access to dictionary parameters
+        /// </summary>
+        private class QueryAccessor
+        {
+            private readonly Dictionary<string, string> _parameters;
+            
+            public QueryAccessor(Dictionary<string, string> parameters)
+            {
+                _parameters = parameters ?? new Dictionary<string, string>();
+            }
+            
+            public string Get(string key)
+            {
+                if (_parameters.TryGetValue(key, out var value))
+                {
+                    return value;
+                }
+                
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
         /// Evaluates a condition expression against the provided context
         /// </summary>
         /// <param name="condition">The condition expression to evaluate</param>
@@ -64,10 +87,25 @@ namespace Apify.Services
                 _interpreter.SetVariable("query", new DynamicObject(queryParams));
                 _interpreter.SetVariable("params", new DynamicObject(pathParams));
                 
-                // Add direct access to individual query parameters for easier condition evaluation
-                foreach (var param in queryParams)
+                // Register direct query parameter access for common query parameters
+                if (queryParams != null)
                 {
-                    _interpreter.SetVariable(param.Key, param.Value);
+                    // Directly register individual query parameters for simpler access
+                    foreach (var param in queryParams)
+                    {
+                        string variableName = $"query.{param.Key}";
+                        _interpreter.SetVariable(variableName, param.Value);
+                    }
+                }
+                
+                // Register direct header access for common headers
+                if (headers != null)
+                {
+                    foreach (var header in headers)
+                    {
+                        string variableName = $"headers.{header.Key}";
+                        _interpreter.SetVariable(variableName, header.Value);
+                    }
                 }
 
                 // Evaluate the expression
