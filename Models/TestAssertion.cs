@@ -26,6 +26,9 @@ namespace Apify.Models
             // If AssertType is already set, no need to convert
             if (!string.IsNullOrEmpty(AssertType))
                 return;
+            
+            // If Property is set explicitly, preserve it
+            string? originalProperty = Property;
                 
             // Convert legacy format assertions to the new format
             if (!string.IsNullOrEmpty(Assertion))
@@ -190,22 +193,25 @@ namespace Apify.Models
                     {
                         AssertType = "ContainsProperty";
                         
-                        // Try to extract property name from test name
-                        if (name.Contains("contains user", StringComparison.OrdinalIgnoreCase))
+                        // Only try to extract property name from test name if it's not already set explicitly
+                        if (string.IsNullOrEmpty(Property))
                         {
-                            Property = "user";
-                        }
-                        else if (name.Contains("contains id", StringComparison.OrdinalIgnoreCase))
-                        {
-                            Property = "id";
-                        }
-                        else if (name.Contains("contains email", StringComparison.OrdinalIgnoreCase))
-                        {
-                            Property = "email";
-                        }
-                        else if (name.Contains("contains name", StringComparison.OrdinalIgnoreCase))
-                        {
-                            Property = "name";
+                            if (name.Contains("contains user", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Property = "user";
+                            }
+                            else if (name.Contains("contains id", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Property = "id";
+                            }
+                            else if (name.Contains("contains email", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Property = "email";
+                            }
+                            else if (name.Contains("contains name", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Property = "name";
+                            }
                         }
                     }
                 }
@@ -245,6 +251,14 @@ namespace Apify.Models
 
         [JsonPropertyName("expected")]
         public object? Expected { get; set; }
+        
+        [JsonPropertyName("exists")]
+        [Newtonsoft.Json.JsonProperty("exists")]
+        public bool Exists { get; set; } = true;
+        
+        [JsonPropertyName("value")]
+        [Newtonsoft.Json.JsonProperty("value")]
+        public string? Value { get; set; }
 
         // Helper properties to understand the assertion type
         public AssertionType GetAssertionType()

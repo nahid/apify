@@ -215,12 +215,39 @@ namespace Apify.Services
         {
             var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
             
-            if (string.IsNullOrEmpty(assertion.ExpectedValue))
+            // Get property name from either Property or ExpectedValue field
+            string? propertyName = null;
+            bool exists = assertion.Exists; // Use the property directly now
+            string? expectedValue = null;
+            
+            // Get property name from Property field
+            if (!string.IsNullOrEmpty(assertion.Property))
             {
-                return TestResult.Failure(name, "Missing expected property name");
+                propertyName = assertion.Property;
+                
+                // Check if we have an expected value for comparison (either in ExpectedValue or Value)
+                if (!string.IsNullOrEmpty(assertion.ExpectedValue))
+                {
+                    expectedValue = assertion.ExpectedValue;
+                }
+                else if (!string.IsNullOrEmpty(assertion.Value))
+                {
+                    expectedValue = assertion.Value;
+                }
+            }
+            // Fallback to ExpectedValue if Property is not set
+            else if (!string.IsNullOrEmpty(assertion.ExpectedValue))
+            {
+                propertyName = assertion.ExpectedValue;
+            }
+            else
+            {
+                return TestResult.Failure(name, "Missing property name - add 'property' field to assertion");
             }
             
-            string propertyName = assertion.ExpectedValue;
+            // Debug information
+            Console.WriteLine($"DEBUG - ContainsProperty: Checking for '{propertyName}', exists={exists}, expectedValue={expectedValue ?? "null"}");
+            
             
             try
             {
