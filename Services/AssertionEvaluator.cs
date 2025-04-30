@@ -114,18 +114,25 @@ namespace Apify.Services
                         else if (name.Contains("contains", StringComparison.OrdinalIgnoreCase) || 
                                 name.Contains("has", StringComparison.OrdinalIgnoreCase))
                         {
-                            string propertyToCheck = "id";
-                            if (name.Contains("user", StringComparison.OrdinalIgnoreCase))
+                            // Only set these values if Property is not already set
+                            if (string.IsNullOrEmpty(assertion.Property))
                             {
-                                propertyToCheck = "id";
-                            }
-                            else if (name.Contains("email", StringComparison.OrdinalIgnoreCase))
-                            {
-                                propertyToCheck = "email";
-                            }
-                            else if (name.Contains("name", StringComparison.OrdinalIgnoreCase))
-                            {
-                                propertyToCheck = "name";
+                                string propertyToCheck = "id";
+                                if (name.Contains("user", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    propertyToCheck = "id";
+                                }
+                                else if (name.Contains("email", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    propertyToCheck = "email";
+                                }
+                                else if (name.Contains("name", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    propertyToCheck = "name";
+                                }
+                                
+                                // Only set the property if it's not already set
+                                assertion.Property = propertyToCheck;
                             }
                             
                             // Try to determine if we're checking an array
@@ -141,9 +148,8 @@ namespace Apify.Services
                                 isArrayCheck = false;
                             }
                             
-                            // Use the right property name based on array or object check
+                            // Set the assertion type but don't override the property or expected value if already set
                             assertion.AssertType = "ContainsProperty";
-                            assertion.ExpectedValue = propertyToCheck;
                             return EvaluateContainsPropertyNewFormat(assertion, response);
                         }
                         
