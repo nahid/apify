@@ -120,7 +120,19 @@ namespace Apify.Services
                                 string propertyToCheck = "id";
                                 if (name.Contains("user", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    propertyToCheck = "id";
+                                    if (name.Contains("id", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        propertyToCheck = "id";
+                                    }
+                                    else if (name.Contains("name", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        propertyToCheck = "name";
+                                    }
+                                    else
+                                    {
+                                        // Default for "user" tests
+                                        propertyToCheck = "id";
+                                    }
                                 }
                                 else if (name.Contains("email", StringComparison.OrdinalIgnoreCase))
                                 {
@@ -133,6 +145,12 @@ namespace Apify.Services
                                 
                                 // Only set the property if it's not already set
                                 assertion.Property = propertyToCheck;
+                                
+                                Console.WriteLine($"DEBUG - Auto-detected property '{propertyToCheck}' for test '{name}'");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"DEBUG - Using explicit property '{assertion.Property}' for test '{name}'");
                             }
                             
                             // Try to determine if we're checking an array
@@ -150,6 +168,9 @@ namespace Apify.Services
                             
                             // Set the assertion type but don't override the property or expected value if already set
                             assertion.AssertType = "ContainsProperty";
+                            
+                            // Add debug log to see what we're checking for
+                            Console.WriteLine($"DEBUG - Setting ContainsProperty assertion for test '{name}': Property='{assertion.Property}'");
                             return EvaluateContainsPropertyNewFormat(assertion, response);
                         }
                         

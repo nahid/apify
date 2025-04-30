@@ -161,9 +161,10 @@ namespace Apify.Models
                             var testAssertion = new TestAssertion
                             {
                                 Name = group.Name,
-                                Description = group.Name,
+                                // Combine group name with assertion type for better debugging
+                                Description = $"{group.Name}: {assertion.Type ?? "check"} {assertion.Property ?? ""}",
                                 AssertType = assertion.Type,
-                                Property = assertion.Property,
+                                Property = assertion.Property, // Preserve the original property
                                 ExpectedValue = assertion.Value
                             };
                             Tests.Add(testAssertion);

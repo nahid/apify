@@ -201,7 +201,25 @@ namespace Apify.Models
                                 // Don't set property if already explicitly defined in JSON
                                 if (string.IsNullOrEmpty(Property))
                                 {
-                                    Property = "user";
+                                    // For more specific property handling
+                                    if (name.Contains("user id", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        Property = "id";
+                                    }
+                                    else if (name.Contains("user name", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        Property = "name";
+                                    }
+                                    else if (name.Contains("user email", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        Property = "email";
+                                    }
+                                    else
+                                    {
+                                        // Default to id for general "contains user" tests
+                                        Property = "id";
+                                    }
+                                    Console.WriteLine($"DEBUG - Auto-set user property to '{Property}' for test '{name}'");
                                 }
                             }
                             else if (name.Contains("contains id", StringComparison.OrdinalIgnoreCase))
