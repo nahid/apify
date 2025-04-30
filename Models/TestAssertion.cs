@@ -198,7 +198,11 @@ namespace Apify.Models
                         {
                             if (name.Contains("contains user", StringComparison.OrdinalIgnoreCase))
                             {
-                                Property = "user";
+                                // Don't set property if already explicitly defined in JSON
+                                if (string.IsNullOrEmpty(Property))
+                                {
+                                    Property = "user";
+                                }
                             }
                             else if (name.Contains("contains id", StringComparison.OrdinalIgnoreCase))
                             {
