@@ -144,9 +144,12 @@ namespace Apify.Services
                                 }
                                 
                                 // Only set the property if it's not already set
-                                assertion.Property = propertyToCheck;
-                                
-                                Console.WriteLine($"DEBUG - Auto-detected property '{propertyToCheck}' for test '{name}'");
+                                if (string.IsNullOrEmpty(assertion.Property)) {
+                                    assertion.Property = propertyToCheck;
+                                    Console.WriteLine($"DEBUG - Auto-detected property '{propertyToCheck}' for test '{name}'");
+                                } else {
+                                    Console.WriteLine($"DEBUG - Using explicitly set property '{assertion.Property}' for test '{name}'");
+                                }
                             }
                             else
                             {
@@ -247,6 +250,9 @@ namespace Apify.Services
             bool exists = assertion.Exists; // Use the property directly now
             string? expectedValue = null;
             
+            // Debug raw properties
+            Console.WriteLine($"DEBUG - RAW Assertion: Property='{assertion.Property}', Value='{assertion.Value}', ExpectedValue='{assertion.ExpectedValue}'");
+            
             // Get property name from Property field
             if (!string.IsNullOrEmpty(assertion.Property))
             {
@@ -260,6 +266,8 @@ namespace Apify.Services
                 else if (!string.IsNullOrEmpty(assertion.Value))
                 {
                     expectedValue = assertion.Value;
+                    // Copy Value to ExpectedValue for consistency
+                    assertion.ExpectedValue = assertion.Value;
                 }
             }
             // Fallback to ExpectedValue if Property is not set
@@ -269,6 +277,7 @@ namespace Apify.Services
             }
             else
             {
+                Console.WriteLine($"DEBUG - Missing property error. JSON format expected: {{ \"type\": \"ContainsProperty\", \"property\": \"name_of_property\" }}");
                 return TestResult.Failure(name, "Missing property name - add 'property' field to assertion");
             }
             
@@ -364,7 +373,71 @@ namespace Apify.Services
                         return TestResult.CreateSuccess(name);
                     }
                     
-                    // Check for specific properties in nested structure for httpbin responses
+                    // Handle nested properties specified with dot notation (e.g., "args.userId")
+                    if (propertyName.Contains('.'))
+                    {
+                        string[] parts = propertyName.Split('.');
+                        if (parts.Length >= 2)
+                        {
+                            try 
+                            {
+                                // Look for the nested property
+                                JToken? current = jsonObj;
+                                foreach (var part in parts)
+                                {
+                                    if (current is JObject obj)
+                                    {
+                                        current = obj[part];
+                                        if (current == null)
+                                        {
+                                            // Property path doesn't exist
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Invalid path segment
+                                        current = null;
+                                        break;
+                                    }
+                                }
+
+                                if (current != null)
+                                {
+                                    // We found the nested property
+                                    Console.WriteLine($"DEBUG - Found nested property '{propertyName}' in response: {current}");
+                                    
+                                    // If there's an expected value, compare it
+                                    if (!string.IsNullOrEmpty(expectedValue))
+                                    {
+                                        string actualValue = current.ToString();
+                                        if (actualValue == expectedValue)
+                                        {
+                                            return TestResult.CreateSuccess(name);
+                                        }
+                                        else
+                                        {
+                                            return TestResult.Failure(
+                                                name,
+                                                $"Property '{propertyName}' value '{actualValue}' does not match expected '{expectedValue}'",
+                                                actualValue,
+                                                expectedValue
+                                            );
+                                        }
+                                    }
+                                    
+                                    // Just checking that the property exists
+                                    return TestResult.CreateSuccess(name);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"DEBUG - Error accessing nested property: {ex.Message}");
+                            }
+                        }
+                    }
+                    
+                    // Check for specific properties in nested structure for httpbin responses (legacy fallback)
                     if (propertyName.Contains("userId", StringComparison.OrdinalIgnoreCase) && 
                         jsonObj["args"] is JObject args1 && args1["userId"] != null)
                     {
@@ -439,6 +512,34 @@ namespace Apify.Services
         {
             if (found) return;
             
+            // Check for dot notation in property name for nested properties (e.g., "args.userId")
+            if (propertyName.Contains('.'))
+            {
+                string[] parts = propertyName.Split('.');
+                string rootProperty = parts[0];
+                string remainingPath = string.Join(".", parts.Skip(1));
+                
+                if (token is JObject rootObj && rootObj[rootProperty] != null)
+                {
+                    if (parts.Length == 2) // Simple one-level nesting
+                    {
+                        // Check if the second-level property exists
+                        if (rootObj[rootProperty] is JObject nestedObj && nestedObj[parts[1]] != null)
+                        {
+                            found = true;
+                            return;
+                        }
+                    }
+                    else // Multi-level nesting
+                    {
+                        // Recursively search through the nested path
+                        SearchForProperty(rootObj[rootProperty], remainingPath, ref found);
+                        if (found) return;
+                    }
+                }
+            }
+            
+            // Regular property search (no dot notation)
             if (token is JObject obj)
             {
                 if (obj[propertyName] != null)
@@ -680,13 +781,15 @@ namespace Apify.Services
                 }
                 else
                 {
-                    // Try to use JPath for complex paths
+                    // Try to use JPath for complex paths with dot notation
                     try
                     {
                         token = jsonObj.SelectToken($"$.{propertyPath}");
+                        Console.WriteLine($"DEBUG - Found token using SelectToken for '{propertyPath}': {token != null}");
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Console.WriteLine($"DEBUG - Error using SelectToken: {ex.Message}");
                         // If JPath fails, try simple property access
                         token = jsonObj[propertyPath];
                     }

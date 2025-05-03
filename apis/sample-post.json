@@ -24,7 +24,16 @@
       ]
     },
     {
-      "name": "Response contains id",
+      "name": "Response time is acceptable",
+      "assertions": [
+        {
+          "type": "ResponseTimeBelow",
+          "value": "5000"
+        }
+      ]
+    },
+    {
+      "name": "Response contains ID property",
       "assertions": [
         {
           "type": "ContainsProperty",
@@ -34,17 +43,17 @@
       ]
     },
     {
-      "name": "Title is correct",
+      "name": "Response contains title property",
       "assertions": [
         {
           "type": "ContainsProperty",
           "property": "title",
-          "value": "Test Post"
+          "value": "Test Post" 
         }
       ]
     },
     {
-      "name": "Body is correct",
+      "name": "Response contains body property",
       "assertions": [
         {
           "type": "ContainsProperty",
@@ -54,7 +63,7 @@
       ]
     },
     {
-      "name": "User ID is correct",
+      "name": "Response contains userId property",
       "assertions": [
         {
           "type": "ContainsProperty",
