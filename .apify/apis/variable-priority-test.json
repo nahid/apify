@@ -27,9 +27,9 @@
       "name": "Request-level user ID has highest priority",
       "assertions": [
         {
-          "type": "ContainsProperty",
+          "type": "Equal",
           "property": "args.userId",
-          "value": "request-level-user-id"
+          "expectedValue": "request-level-user-id"
         }
       ]
     },
@@ -37,9 +37,9 @@
       "name": "Request-level project ID has higher priority than environment",
       "assertions": [
         {
-          "type": "ContainsProperty",
+          "type": "Equal",
           "property": "args.projectId",
-          "value": "request-level-project-id"
+          "expectedValue": "request-level-project-id"
         }
       ]
     },
@@ -47,9 +47,9 @@
       "name": "API key from environment is accessible",
       "assertions": [
         {
-          "type": "ContainsProperty",
+          "type": "Equal",
           "property": "args.apiKey",
-          "value": "dev-api-key-123"
+          "expectedValue": "dev-api-key-123"
         }
       ]
     },
@@ -57,9 +57,9 @@
       "name": "Headers contain the correct values",
       "assertions": [
         {
-          "type": "ContainsProperty",
+          "type": "Equal",
           "property": "headers.X-Userid",
-          "value": "request-level-user-id"
+          "expectedValue": "request-level-user-id"
         }
       ]
     }
