@@ -905,10 +905,32 @@ namespace Apify.Services
                 bodyContent = JToken.Parse("{}");
             }
             
-            // Find the matching response based on conditions
+            // First process the responses in two groups: defaults and non-defaults
+            var defaultResponses = new List<ConditionalResponse>();
+            var regularResponses = new List<ConditionalResponse>();
+            
+            // Sort the responses into appropriate lists
+            foreach (var respOption in mockDef.Responses)
+            {
+                if (_conditionEvaluator.IsDefaultCondition(respOption.Condition))
+                {
+                    defaultResponses.Add(respOption);
+                }
+                else
+                {
+                    regularResponses.Add(respOption);
+                }
+            }
+            
+            if (_verbose)
+            {
+                Console.WriteLine($"DEBUG: Found {regularResponses.Count} regular condition responses and {defaultResponses.Count} default responses.");
+            }
+            
+            // First try to match any regular (non-default) condition
             ConditionalResponse? matchedResponse = null;
             
-            foreach (var responseOption in mockDef.Responses)
+            foreach (var responseOption in regularResponses)
             {
                 bool conditionMet = _conditionEvaluator.EvaluateCondition(
                     responseOption.Condition, 
@@ -920,51 +942,41 @@ namespace Apify.Services
                 if (conditionMet)
                 {
                     matchedResponse = responseOption;
+                    if (_verbose)
+                    {
+                        Console.WriteLine($"DEBUG: Matched condition: '{responseOption.Condition}'");
+                    }
                     break;
                 }
             }
             
-            // Use fallback response if none of the conditions matched
+            // If no regular condition matched, use the first default response if available
             if (matchedResponse == null)
             {
                 // Debug - log all available conditions
                 if (_verbose)
                 {
-                    Console.WriteLine($"DEBUG: Looking for default response. Available conditions:");
-                    foreach (var r in mockDef.Responses)
-                    {
-                        Console.WriteLine($"  - Condition: '{r.Condition ?? "null"}'");
-                    }
+                    Console.WriteLine($"DEBUG: No regular conditions matched. Looking for default response.");
                 }
 
-                // Try to find a default response with more flexible matching
-                var defaultConditions = mockDef.Responses.Where(r => 
-                    string.IsNullOrEmpty(r.Condition) || 
-                    string.Equals(r.Condition, "default", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(r.Condition, "true", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(r.Condition, "1", StringComparison.OrdinalIgnoreCase)).ToList();
-                
-                if (defaultConditions.Count > 0)
+                if (defaultResponses.Count > 0)
                 {
-                    matchedResponse = defaultConditions[0]; // Take the first default response
+                    matchedResponse = defaultResponses[0]; // Take the first default response
                     
                     // Write additional debug info
-                    Console.WriteLine($"DEBUG: Found {defaultConditions.Count} default responses. Using the first one with condition '{matchedResponse.Condition ?? "null"}'");
+                    if (_verbose)
+                    {
+                        Console.WriteLine($"DEBUG: Using default response with condition '{matchedResponse.Condition ?? "null"}'");
+                    }
                 }
                 else
                 {
                     // If no explicit default, use the last response as fallback
                     matchedResponse = mockDef.Responses.LastOrDefault();
-                    if (matchedResponse != null)
+                    if (matchedResponse != null && _verbose)
                     {
                         Console.WriteLine($"DEBUG: No explicit default found, using last response with condition '{matchedResponse.Condition ?? "null"}' as fallback");
                     }
-                }
-                
-                // Log which default response was found
-                if (_verbose && matchedResponse != null)
-                {
-                    Console.WriteLine($"DEBUG: Found default response with condition: '{matchedResponse.Condition ?? "null"}'");
                 }
             }
             
