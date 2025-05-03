@@ -36,8 +36,9 @@
       "name": "Response contains ID property",
       "assertions": [
         {
-          "AssertType": "ContainsProperty",
-          "Property": "id"
+          "type": "ContainsProperty",
+          "property": "id",
+          "exists": true
         }
       ]
     },
@@ -45,9 +46,9 @@
       "name": "Response contains title property",
       "assertions": [
         {
-          "AssertType": "ContainsProperty",
-          "Property": "title",
-          "ExpectedValue": "Test Post" 
+          "type": "ContainsProperty",
+          "property": "title",
+          "value": "Test Post" 
         }
       ]
     },
@@ -55,9 +56,9 @@
       "name": "Response contains body property",
       "assertions": [
         {
-          "AssertType": "ContainsProperty",
-          "Property": "body",
-          "ExpectedValue": "This is a test post created by Apify"
+          "type": "ContainsProperty",
+          "property": "body",
+          "value": "This is a test post created by Apify"
         }
       ]
     },
@@ -65,9 +66,9 @@
       "name": "Response contains userId property",
       "assertions": [
         {
-          "AssertType": "ContainsProperty",
-          "Property": "userId",
-          "ExpectedValue": "{{userId}}"
+          "type": "ContainsProperty",
+          "property": "userId",
+          "value": "{{userId}}"
         }
       ]
     }
