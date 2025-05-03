@@ -24,42 +24,50 @@
       ]
     },
     {
-      "name": "Response contains id",
+      "name": "Response time is acceptable",
       "assertions": [
         {
-          "type": "ContainsProperty",
-          "property": "id",
-          "exists": true
+          "type": "ResponseTimeBelow",
+          "value": "5000"
         }
       ]
     },
     {
-      "name": "Title is correct",
+      "name": "Response contains ID property",
       "assertions": [
         {
-          "type": "ContainsProperty",
-          "property": "title",
-          "value": "Test Post"
+          "AssertType": "ContainsProperty",
+          "Property": "id"
         }
       ]
     },
     {
-      "name": "Body is correct",
+      "name": "Response contains title property",
       "assertions": [
         {
-          "type": "ContainsProperty",
-          "property": "body",
-          "value": "This is a test post created by Apify"
+          "AssertType": "ContainsProperty",
+          "Property": "title",
+          "ExpectedValue": "Test Post" 
         }
       ]
     },
     {
-      "name": "User ID is correct",
+      "name": "Response contains body property",
       "assertions": [
         {
-          "type": "ContainsProperty",
-          "property": "userId",
-          "value": "{{userId}}"
+          "AssertType": "ContainsProperty",
+          "Property": "body",
+          "ExpectedValue": "This is a test post created by Apify"
+        }
+      ]
+    },
+    {
+      "name": "Response contains userId property",
+      "assertions": [
+        {
+          "AssertType": "ContainsProperty",
+          "Property": "userId",
+          "ExpectedValue": "{{userId}}"
         }
       ]
     }
