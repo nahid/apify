@@ -871,6 +871,88 @@ Example of conditional responses:
 ]
 ```
 
+### Advanced Mock API Definitions
+
+Apify supports more advanced mock API definitions that allow for greater flexibility and control over mock responses. These are also JSON files with the `.mock.json` extension but follow a more sophisticated structure.
+
+```json
+{
+  "Name": "Search Products",
+  "Description": "Advanced search endpoint with multiple complex conditions",
+  "Method": "GET",
+  "Endpoint": "/products/search",
+  "Responses": [
+    {
+      "Condition": "q.category == 'electronics' && q.price == 'high'",
+      "StatusCode": 200,
+      "Headers": {
+        "Content-Type": "application/json",
+        "X-Result-Count": "2"
+      },
+      "ResponseTemplate": [
+        {
+          "id": "1234",
+          "name": "Premium Headphones",
+          "category": "Electronics",
+          "price": 299.99,
+          "inStock": true
+        },
+        {
+          "id": "5678",
+          "name": "Wireless Speaker",
+          "category": "Electronics",
+          "price": 199.99,
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "Condition": "default",
+      "StatusCode": 200,
+      "Headers": {
+        "Content-Type": "application/json"
+      },
+      "ResponseTemplate": [
+        {
+          "id": "4840",
+          "name": "Programming Guide",
+          "category": "Books",
+          "price": 49.99,
+          "inStock": true
+        },
+        {
+          "id": "5007",
+          "name": "Science Fiction Anthology",
+          "category": "Books",
+          "price": 29.99,
+          "inStock": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Advanced Condition Evaluation
+
+Advanced mock APIs use a powerful expression engine that supports:
+
+1. **Dot notation access** to query parameters, headers, body, and path parameters:
+   - `q.parameter` - Access query parameters
+   - `h.headerName` - Access headers
+   - `body.property` - Access JSON properties in the request body
+
+2. **Default condition handling**:
+   - The condition `"default"`, `"true"`, `"1"`, or an empty string (`""`) is considered a default fallback
+   - If no conditions match, the system will use the first response with a default condition
+   - If no default condition is found, the last response is used as a fallback
+
+3. **Logical operators**:
+   - `&&` (AND), `||` (OR), `!` (NOT)
+   - `==`, `!=`, `<`, `>`, `<=`, `>=`
+   - `contains()`, `startsWith()`, `endsWith()`
+```
+
 ### Dynamic Response Templates
 
 The mock server supports dynamic content generation in responses using template variables:
@@ -1108,6 +1190,11 @@ This configuration is automatically generated during project initialization but 
    - For request-specific variables, check they are properly defined in the test file's "Variables" section
    - Remember the priority order: request-specific > environment > project-level variables
    - Ensure variable names match exactly (they are case-sensitive)
+
+5. **Mock Server issues:**
+   - **Default response not working**: Ensure at least one response in the advanced mock definition has a condition set to "default", "true", "1", or empty string ("") to serve as a fallback
+   - **Condition expressions not evaluating**: Use the --verbose flag to see detailed evaluation of condition expressions and debugging information
+   - **Port already in use**: If you get "Address already in use" errors, ensure no other instance of the mock server is running, or specify a different port
 
 ### Debug Options
 
