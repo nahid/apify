@@ -144,9 +144,12 @@ namespace Apify.Services
                                 }
                                 
                                 // Only set the property if it's not already set
-                                assertion.Property = propertyToCheck;
-                                
-                                Console.WriteLine($"DEBUG - Auto-detected property '{propertyToCheck}' for test '{name}'");
+                                if (string.IsNullOrEmpty(assertion.Property)) {
+                                    assertion.Property = propertyToCheck;
+                                    Console.WriteLine($"DEBUG - Auto-detected property '{propertyToCheck}' for test '{name}'");
+                                } else {
+                                    Console.WriteLine($"DEBUG - Using explicitly set property '{assertion.Property}' for test '{name}'");
+                                }
                             }
                             else
                             {
@@ -370,7 +373,71 @@ namespace Apify.Services
                         return TestResult.CreateSuccess(name);
                     }
                     
-                    // Check for specific properties in nested structure for httpbin responses
+                    // Handle nested properties specified with dot notation (e.g., "args.userId")
+                    if (propertyName.Contains('.'))
+                    {
+                        string[] parts = propertyName.Split('.');
+                        if (parts.Length >= 2)
+                        {
+                            try 
+                            {
+                                // Look for the nested property
+                                JToken? current = jsonObj;
+                                foreach (var part in parts)
+                                {
+                                    if (current is JObject obj)
+                                    {
+                                        current = obj[part];
+                                        if (current == null)
+                                        {
+                                            // Property path doesn't exist
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Invalid path segment
+                                        current = null;
+                                        break;
+                                    }
+                                }
+
+                                if (current != null)
+                                {
+                                    // We found the nested property
+                                    Console.WriteLine($"DEBUG - Found nested property '{propertyName}' in response: {current}");
+                                    
+                                    // If there's an expected value, compare it
+                                    if (!string.IsNullOrEmpty(expectedValue))
+                                    {
+                                        string actualValue = current.ToString();
+                                        if (actualValue == expectedValue)
+                                        {
+                                            return TestResult.CreateSuccess(name);
+                                        }
+                                        else
+                                        {
+                                            return TestResult.Failure(
+                                                name,
+                                                $"Property '{propertyName}' value '{actualValue}' does not match expected '{expectedValue}'",
+                                                actualValue,
+                                                expectedValue
+                                            );
+                                        }
+                                    }
+                                    
+                                    // Just checking that the property exists
+                                    return TestResult.CreateSuccess(name);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"DEBUG - Error accessing nested property: {ex.Message}");
+                            }
+                        }
+                    }
+                    
+                    // Check for specific properties in nested structure for httpbin responses (legacy fallback)
                     if (propertyName.Contains("userId", StringComparison.OrdinalIgnoreCase) && 
                         jsonObj["args"] is JObject args1 && args1["userId"] != null)
                     {
@@ -714,13 +781,15 @@ namespace Apify.Services
                 }
                 else
                 {
-                    // Try to use JPath for complex paths
+                    // Try to use JPath for complex paths with dot notation
                     try
                     {
                         token = jsonObj.SelectToken($"$.{propertyPath}");
+                        Console.WriteLine($"DEBUG - Found token using SelectToken for '{propertyPath}': {token != null}");
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Console.WriteLine($"DEBUG - Error using SelectToken: {ex.Message}");
                         // If JPath fails, try simple property access
                         token = jsonObj[propertyPath];
                     }
