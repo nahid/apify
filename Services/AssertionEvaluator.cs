@@ -247,6 +247,9 @@ namespace Apify.Services
             bool exists = assertion.Exists; // Use the property directly now
             string? expectedValue = null;
             
+            // Debug raw properties
+            Console.WriteLine($"DEBUG - RAW Assertion: Property='{assertion.Property}', Value='{assertion.Value}', ExpectedValue='{assertion.ExpectedValue}'");
+            
             // Get property name from Property field
             if (!string.IsNullOrEmpty(assertion.Property))
             {
@@ -260,6 +263,8 @@ namespace Apify.Services
                 else if (!string.IsNullOrEmpty(assertion.Value))
                 {
                     expectedValue = assertion.Value;
+                    // Copy Value to ExpectedValue for consistency
+                    assertion.ExpectedValue = assertion.Value;
                 }
             }
             // Fallback to ExpectedValue if Property is not set
@@ -269,6 +274,7 @@ namespace Apify.Services
             }
             else
             {
+                Console.WriteLine($"DEBUG - Missing property error. JSON format expected: {{ \"type\": \"ContainsProperty\", \"property\": \"name_of_property\" }}");
                 return TestResult.Failure(name, "Missing property name - add 'property' field to assertion");
             }
             
