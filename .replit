@@ -2,7 +2,7 @@ modules = ["dotnet", "dotnet-8.0", "python-3.11", "nodejs-20", "dotnet-sdk-8.0.3
 
 [nix]
 channel = "stable-24_05"
-packages = ["dotnet-sdk", "dotnet-sdk_8"]
+packages = ["dotnet-sdk", "dotnet-sdk_8", "jq"]
 
 [workflows]
 runButton = "Project"
