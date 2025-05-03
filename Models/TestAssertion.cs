@@ -258,17 +258,20 @@ namespace Apify.Models
         [JsonPropertyName("assertion")]
         public string Assertion { get; set; } = string.Empty;
         
-        [JsonPropertyName("AssertType")]
+        [JsonPropertyName("type")]
+        [Newtonsoft.Json.JsonProperty("type")]
         public string AssertType { get; set; } = string.Empty;
         
-        [JsonPropertyName("Property")]
+        [JsonPropertyName("property")]
+        [Newtonsoft.Json.JsonProperty("property")]
         public string? Property { get; set; }
         
         [JsonPropertyName("propertyPath")]
         [Newtonsoft.Json.JsonProperty("propertyPath")]
         public string? PropertyPath { get; set; }
         
-        [JsonPropertyName("ExpectedValue")]
+        [JsonPropertyName("expectedValue")]
+        [Newtonsoft.Json.JsonProperty("expectedValue", NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string? ExpectedValue { get; set; }
 
         [JsonPropertyName("expected")]
