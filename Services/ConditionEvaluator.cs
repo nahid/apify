@@ -28,6 +28,71 @@ namespace Apify.Services
         }
 
         /// <summary>
+        /// Helper class for direct access to dictionary parameters
+        /// </summary>
+        private class QueryAccessor
+        {
+            private readonly Dictionary<string, string> _parameters;
+            
+            public QueryAccessor(Dictionary<string, string> parameters)
+            {
+                _parameters = parameters ?? new Dictionary<string, string>();
+            }
+            
+            public string Get(string key)
+            {
+                if (_parameters.TryGetValue(key, out var value))
+                {
+                    return value;
+                }
+                
+                return string.Empty;
+            }
+        }
+        
+        /// <summary>
+        /// Dynamic dictionary that allows dot notation in expressions
+        /// </summary>
+        private class DynamicDictionary
+        {
+            private readonly Dictionary<string, string> _dictionary;
+            
+            public DynamicDictionary(Dictionary<string, string> dictionary)
+            {
+                _dictionary = dictionary ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+            
+            public string this[string key]
+            {
+                get
+                {
+                    if (_dictionary.TryGetValue(key, out var value))
+                    {
+                        Console.WriteLine($"Accessed dictionary key '{key}' with value '{value}'");
+                        return value;
+                    }
+                    return string.Empty;
+                }
+            }
+            
+            // Property getters for common headers and query parameters
+            // These allow dot notation access in expressions (q.category, h.SortBy)
+            public string category => this["category"];
+            public string inStock => this["inStock"];
+            public string maxPrice => this["maxPrice"];
+            public string minPrice => this["minPrice"];
+            public string ContentType => this["Content-Type"];
+            public string Accept => this["Accept"];
+            public string Authorization => this["Authorization"];
+            public string SortBy => this["SortBy"];
+            public string API_Key => this["API-Key"];
+            public string X_API_Key => this["X-API-Key"];
+            
+            // For proper nullability checks in expressions
+            public bool HasKey(string key) => _dictionary.ContainsKey(key);
+        }
+
+        /// <summary>
         /// Evaluates a condition expression against the provided context
         /// </summary>
         /// <param name="condition">The condition expression to evaluate</param>
@@ -64,11 +129,22 @@ namespace Apify.Services
                 _interpreter.SetVariable("query", new DynamicObject(queryParams));
                 _interpreter.SetVariable("params", new DynamicObject(pathParams));
                 
-                // Add direct access to individual query parameters for easier condition evaluation
-                foreach (var param in queryParams)
+                // Add individual query parameters directly to the interpreter
+                if (queryParams != null)
                 {
-                    _interpreter.SetVariable(param.Key, param.Value);
+                    foreach (var param in queryParams)
+                    {
+                        // Individual parameters
+                        _interpreter.SetVariable(param.Key, param.Value);
+                    }
                 }
+                
+                // Add special accessor objects for query parameters and headers
+                // For accessing query parameters in a more natural way (q.parameter)
+                _interpreter.SetVariable("q", new DynamicDictionary(queryParams ?? new Dictionary<string, string>()));
+                
+                // For accessing headers in a more natural way (h.header)
+                _interpreter.SetVariable("h", new DynamicDictionary(headers ?? new Dictionary<string, string>()));
 
                 // Evaluate the expression
                 var result = _interpreter.Eval<bool>(condition);
@@ -167,7 +243,7 @@ namespace Apify.Services
                 get
                 {
                     var value = GetValue(key);
-                    return value ?? new DynamicObject(null); // Return empty DynamicObject instead of null
+                    return value ?? new DynamicObject(new object()); // Return DynamicObject with empty object instead of null
                 }
             }
 

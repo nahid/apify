@@ -112,6 +112,14 @@ args = "MockServer"
 task = "workflow.run"
 args = "TestRunFixedSample"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestSingleBuild"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestMockServer"
+
 [[workflows.workflow]]
 name = "APITester-ListEnv"
 author = "agent"
@@ -312,6 +320,23 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run apis/sample-api.json --verbose"
+
+[[workflows.workflow]]
+name = "TestSingleBuild"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet build -c Release -f net8.0 /p:DebugType=None /p:DebugSymbols=false"
+
+[[workflows.workflow]]
+name = "TestMockServer"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run mock-server --port 5000 --verbose"
+waitForPort = 5000
 
 [deployment]
 run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]
