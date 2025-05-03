@@ -445,6 +445,34 @@ namespace Apify.Services
         {
             if (found) return;
             
+            // Check for dot notation in property name for nested properties (e.g., "args.userId")
+            if (propertyName.Contains('.'))
+            {
+                string[] parts = propertyName.Split('.');
+                string rootProperty = parts[0];
+                string remainingPath = string.Join(".", parts.Skip(1));
+                
+                if (token is JObject rootObj && rootObj[rootProperty] != null)
+                {
+                    if (parts.Length == 2) // Simple one-level nesting
+                    {
+                        // Check if the second-level property exists
+                        if (rootObj[rootProperty] is JObject nestedObj && nestedObj[parts[1]] != null)
+                        {
+                            found = true;
+                            return;
+                        }
+                    }
+                    else // Multi-level nesting
+                    {
+                        // Recursively search through the nested path
+                        SearchForProperty(rootObj[rootProperty], remainingPath, ref found);
+                        if (found) return;
+                    }
+                }
+            }
+            
+            // Regular property search (no dot notation)
             if (token is JObject obj)
             {
                 if (obj[propertyName] != null)
