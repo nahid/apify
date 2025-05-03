@@ -19,10 +19,33 @@ namespace Apify.Models
             Assertion = string.Empty;
             AssertType = string.Empty;
         }
+
+        // Support for nested assertions format (new style)
+        [JsonPropertyName("assertions")]
+        [Newtonsoft.Json.JsonProperty("assertions")]
+        public List<NestedAssertion>? Assertions { get; set; }
         
         // This method should be called after deserialization to convert old format to new format
         public void ConvertLegacyFormat()
         {
+            // Check if we have nested assertions and need to convert them to the flat format
+            if (Assertions != null && Assertions.Count > 0)
+            {
+                var firstAssertion = Assertions[0];
+                if (firstAssertion != null)
+                {
+                    // Copy the first assertion's properties to this assertion
+                    AssertType = firstAssertion.Type;
+                    Property = firstAssertion.Property;
+                    ExpectedValue = firstAssertion.Value ?? firstAssertion.ExpectedValue;
+                    Exists = firstAssertion.Exists ?? true;
+                    
+                    // Add debug logging
+                    Console.WriteLine($"Converted nested assertion: Type={AssertType}, Property={Property}, ExpectedValue={ExpectedValue}");
+                }
+                return;
+            }
+            
             // If AssertType is already set, no need to convert
             if (!string.IsNullOrEmpty(AssertType))
                 return;
@@ -407,4 +430,38 @@ namespace Apify.Models
         ResponseTime,
         Unknown
     }
+}
+
+// Class for handling nested assertion objects within a test
+[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties |
+                         DynamicallyAccessedMemberTypes.PublicFields |
+                         DynamicallyAccessedMemberTypes.PublicMethods |
+                         DynamicallyAccessedMemberTypes.PublicConstructors)]
+public class NestedAssertion
+{
+    [Newtonsoft.Json.JsonConstructor]
+    public NestedAssertion()
+    {
+        Type = string.Empty;
+    }
+    
+    [JsonPropertyName("type")]
+    [Newtonsoft.Json.JsonProperty("type")]
+    public string Type { get; set; }
+    
+    [JsonPropertyName("property")]
+    [Newtonsoft.Json.JsonProperty("property")]
+    public string? Property { get; set; }
+    
+    [JsonPropertyName("value")]
+    [Newtonsoft.Json.JsonProperty("value")]
+    public string? Value { get; set; }
+    
+    [JsonPropertyName("expectedValue")]
+    [Newtonsoft.Json.JsonProperty("expectedValue")]
+    public string? ExpectedValue { get; set; }
+    
+    [JsonPropertyName("exists")]
+    [Newtonsoft.Json.JsonProperty("exists")]
+    public bool? Exists { get; set; }
 }

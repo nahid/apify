@@ -938,11 +938,28 @@ namespace Apify.Services
                 }
 
                 // Try to find a default response with more flexible matching
-                matchedResponse = mockDef.Responses.FirstOrDefault(r => 
+                var defaultConditions = mockDef.Responses.Where(r => 
                     string.IsNullOrEmpty(r.Condition) || 
                     string.Equals(r.Condition, "default", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(r.Condition, "true", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(r.Condition, "1", StringComparison.OrdinalIgnoreCase));
+                    string.Equals(r.Condition, "1", StringComparison.OrdinalIgnoreCase)).ToList();
+                
+                if (defaultConditions.Count > 0)
+                {
+                    matchedResponse = defaultConditions[0]; // Take the first default response
+                    
+                    // Write additional debug info
+                    Console.WriteLine($"DEBUG: Found {defaultConditions.Count} default responses. Using the first one with condition '{matchedResponse.Condition ?? "null"}'");
+                }
+                else
+                {
+                    // If no explicit default, use the last response as fallback
+                    matchedResponse = mockDef.Responses.LastOrDefault();
+                    if (matchedResponse != null)
+                    {
+                        Console.WriteLine($"DEBUG: No explicit default found, using last response with condition '{matchedResponse.Condition ?? "null"}' as fallback");
+                    }
+                }
                 
                 // Log which default response was found
                 if (_verbose && matchedResponse != null)

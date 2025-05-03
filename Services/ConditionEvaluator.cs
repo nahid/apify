@@ -108,9 +108,13 @@ namespace Apify.Services
             Dictionary<string, string> queryParams,
             Dictionary<string, string> pathParams)
         {
-            // Special case for the default fallback
-            if (string.Equals(condition, "default", StringComparison.OrdinalIgnoreCase))
+            // Special cases for default fallback conditions
+            if (string.IsNullOrEmpty(condition) || 
+                string.Equals(condition, "default", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(condition, "true", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(condition, "1", StringComparison.OrdinalIgnoreCase))
             {
+                Console.WriteLine($"Default condition matched: '{condition}'");
                 return true;
             }
             
