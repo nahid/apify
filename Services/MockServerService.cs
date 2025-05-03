@@ -927,16 +927,33 @@ namespace Apify.Services
             // Use fallback response if none of the conditions matched
             if (matchedResponse == null)
             {
+                // Debug - log all available conditions
+                if (_verbose)
+                {
+                    Console.WriteLine($"DEBUG: Looking for default response. Available conditions:");
+                    foreach (var r in mockDef.Responses)
+                    {
+                        Console.WriteLine($"  - Condition: '{r.Condition ?? "null"}'");
+                    }
+                }
+
+                // Try to find a default response with more flexible matching
                 matchedResponse = mockDef.Responses.FirstOrDefault(r => 
-                    string.Equals(r.Condition, "default", StringComparison.OrdinalIgnoreCase));
+                    string.IsNullOrEmpty(r.Condition) || 
+                    string.Equals(r.Condition, "default", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(r.Condition, "true", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(r.Condition, "1", StringComparison.OrdinalIgnoreCase));
+                
+                // Log which default response was found
+                if (_verbose && matchedResponse != null)
+                {
+                    Console.WriteLine($"DEBUG: Found default response with condition: '{matchedResponse.Condition ?? "null"}'");
+                }
             }
             
             if (matchedResponse == null)
             {
-                if (_verbose)
-                {
-                    ConsoleHelper.WriteWarning($"No matching response found for {method} {requestUrl} and no default response.");
-                }
+                ConsoleHelper.WriteWarning($"No matching response found for {method} {requestUrl} and no default response.");
                 
                 // Return 500 error if no matching response
                 response.StatusCode = 500;
