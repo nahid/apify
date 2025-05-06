@@ -66,7 +66,7 @@ namespace Apify.Services
             {
                 get
                 {
-                    if (_dictionary.TryGetValue(key, out var value))
+                    if (_dictionary.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))
                     {
                         Console.WriteLine($"Accessed dictionary key '{key}' with value '{value}'");
                         return value;
@@ -77,19 +77,19 @@ namespace Apify.Services
             
             // Property getters for common headers and query parameters
             // These allow dot notation access in expressions (q.category, h.SortBy)
-            public string category => this["category"];
-            public string inStock => this["inStock"];
-            public string maxPrice => this["maxPrice"];
-            public string minPrice => this["minPrice"];
-            public string ContentType => this["Content-Type"];
-            public string Accept => this["Accept"];
-            public string Authorization => this["Authorization"];
-            public string SortBy => this["SortBy"];
-            public string API_Key => this["API-Key"];
-            public string X_API_Key => this["X-API-Key"];
+            public string? category => HasKey("category") ? this["category"] : null;
+            public string? inStock => HasKey("inStock") ? this["inStock"] : null;
+            public string? maxPrice => HasKey("maxPrice") ? this["maxPrice"] : null;
+            public string? minPrice => HasKey("minPrice") ? this["minPrice"] : null;
+            public string? ContentType => HasKey("Content-Type") ? this["Content-Type"] : null;
+            public string? Accept => HasKey("Accept") ? this["Accept"] : null;
+            public string? Authorization => HasKey("Authorization") ? this["Authorization"] : null;
+            public string? SortBy => HasKey("SortBy") ? this["SortBy"] : null;
+            public string? API_Key => HasKey("API-Key") ? this["API-Key"] : null;
+            public string? X_API_Key => HasKey("X-API-Key") ? this["X-API-Key"] : null;
             
             // For proper nullability checks in expressions
-            public bool HasKey(string key) => _dictionary.ContainsKey(key);
+            public bool HasKey(string key) => _dictionary.ContainsKey(key) && !string.IsNullOrEmpty(_dictionary[key]);
         }
 
         /// <summary>
@@ -213,7 +213,7 @@ namespace Apify.Services
                 switch (_value)
                 {
                     case Dictionary<string, string> dict:
-                        return dict.TryGetValue(key, out var value) ? value : null;
+                        return dict.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value) ? value : null;
                     case JObject jObj:
                         var prop = jObj[key];
                         return prop?.Type == JTokenType.Object || prop?.Type == JTokenType.Array
