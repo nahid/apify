@@ -425,7 +425,7 @@ namespace Apify.Services
                                     return TestResult.CreateSuccess(name);
                                 }
                             }
-                            catch (Exception ex)
+                            catch (Exception)
                             {
                                 // Error accessing nested property - will continue with fallback checks
                             }
@@ -528,8 +528,12 @@ namespace Apify.Services
                     else // Multi-level nesting
                     {
                         // Recursively search through the nested path
-                        SearchForProperty(rootObj[rootProperty], remainingPath, ref found);
-                        if (found) return;
+                        var nestedToken = rootObj[rootProperty];
+                        if (nestedToken != null)
+                        {
+                            SearchForProperty(nestedToken, remainingPath, ref found);
+                            if (found) return;
+                        }
                     }
                 }
             }
@@ -782,10 +786,9 @@ namespace Apify.Services
                         token = jsonObj.SelectToken($"$.{propertyPath}");
                         // Successfully found token using SelectToken
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // Error using SelectToken, will try simple property access
-                        // If JPath fails, try simple property access
                         token = jsonObj[propertyPath];
                     }
                 }

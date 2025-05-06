@@ -162,7 +162,7 @@ namespace Apify.Models
                             {
                                 Name = group.Name,
                                 // Combine group name with assertion type for better debugging
-                                Description = $"{group.Name}: {assertion.Type ?? "check"} {assertion.Property ?? ""}",
+                                Description = $"{group.Name}: {assertion.Type ?? "check"} {assertion.Property ?? string.Empty}",
                                 AssertType = assertion.Type,
                                 Property = assertion.Property, // Preserve the original property
                                 ExpectedValue = assertion.Value
