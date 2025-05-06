@@ -141,7 +141,7 @@ namespace Apify.Commands
                                 string.IsNullOrEmpty(test.PropertyPath))
                             {
                                 test.PropertyPath = propertyPath;
-                                Console.WriteLine($"Applied propertyPath '{propertyPath}' to test '{test.Name}'");
+                                // Property path applied successfully
                             }
                         }
                     }

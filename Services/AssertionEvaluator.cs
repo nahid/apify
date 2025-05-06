@@ -427,7 +427,7 @@ namespace Apify.Services
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine($"DEBUG - Error accessing nested property: {ex.Message}");
+                                // Error accessing nested property - will continue with fallback checks
                             }
                         }
                     }
@@ -780,11 +780,11 @@ namespace Apify.Services
                     try
                     {
                         token = jsonObj.SelectToken($"$.{propertyPath}");
-                        Console.WriteLine($"DEBUG - Found token using SelectToken for '{propertyPath}': {token != null}");
+                        // Successfully found token using SelectToken
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"DEBUG - Error using SelectToken: {ex.Message}");
+                        // Error using SelectToken, will try simple property access
                         // If JPath fails, try simple property access
                         token = jsonObj[propertyPath];
                     }
