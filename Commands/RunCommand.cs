@@ -43,17 +43,17 @@ namespace Apify.Commands
             Command.AddOption(environmentOption);
 
             // Set the handler
-            Command.SetHandler(async (files, verbose, profile, environment) =>
+            Command.SetHandler(async (files, verbose, profile, environment, debug) =>
             {
-                await ExecuteRunCommand(files, verbose, profile, environment);
-            }, fileArgument, verboseOption, profileOption, environmentOption);
+                await ExecuteRunCommand(files, verbose, profile, environment, debug);
+            }, fileArgument, verboseOption, profileOption, environmentOption, RootCommand.DebugOption);
         }
 
-        private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? profileName, string? environmentName)
+        private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? profileName, string? environmentName, bool debug)
         {
             ConsoleHelper.DisplayTitle("Apify - Running Tests");
 
-            var environmentService = new EnvironmentService();
+            var environmentService = new EnvironmentService(debug);
             
             // Load the profile from the current directory
             var profile = environmentService.LoadConfigurationProfile();
