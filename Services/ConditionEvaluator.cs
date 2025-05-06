@@ -100,19 +100,30 @@ namespace Apify.Services
         /// <param name="body">The request body (parsed from JSON if applicable)</param>
         /// <param name="queryParams">The query parameters</param>
         /// <param name="pathParams">Path parameters extracted from the URL</param>
+        /// <param name="isDefaultCheck">If true, only check if this is a default condition without evaluating</param>
         /// <returns>True if the condition is satisfied, false otherwise</returns>
         public bool EvaluateCondition(
             string condition,
             Dictionary<string, string> headers,
             JToken body,
             Dictionary<string, string> queryParams,
-            Dictionary<string, string> pathParams)
+            Dictionary<string, string> pathParams,
+            bool isDefaultCheck = false)
         {
             // Special cases for default fallback conditions
-            if (string.IsNullOrEmpty(condition) || 
+            bool isDefaultCondition = string.IsNullOrEmpty(condition) || 
                 string.Equals(condition, "default", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(condition, "true", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(condition, "1", StringComparison.OrdinalIgnoreCase))
+                string.Equals(condition, "1", StringComparison.OrdinalIgnoreCase);
+                
+            // If we're just checking if this is a default condition
+            if (isDefaultCheck)
+            {
+                return isDefaultCondition;
+            }
+            
+            // Handle default conditions for normal evaluation
+            if (isDefaultCondition)
             {
                 Console.WriteLine($"Default condition matched: '{condition}'");
                 return true;
@@ -159,6 +170,17 @@ namespace Apify.Services
                 Console.WriteLine($"Error evaluating condition '{condition}': {ex.Message}");
                 return false;
             }
+        }
+        
+        /// <summary>
+        /// Checks if a condition is a default condition without evaluating it
+        /// </summary>
+        public bool IsDefaultCondition(string condition)
+        {
+            return string.IsNullOrEmpty(condition) || 
+                string.Equals(condition, "default", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(condition, "true", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(condition, "1", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
