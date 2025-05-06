@@ -250,8 +250,7 @@ namespace Apify.Services
             bool exists = assertion.Exists; // Use the property directly now
             string? expectedValue = null;
             
-            // Debug raw properties
-            Console.WriteLine($"DEBUG - RAW Assertion: Property='{assertion.Property}', Value='{assertion.Value}', ExpectedValue='{assertion.ExpectedValue}'");
+            // Process assertion properties
             
             // Get property name from Property field
             if (!string.IsNullOrEmpty(assertion.Property))
@@ -277,12 +276,8 @@ namespace Apify.Services
             }
             else
             {
-                Console.WriteLine($"DEBUG - Missing property error. JSON format expected: {{ \"type\": \"ContainsProperty\", \"property\": \"name_of_property\" }}");
                 return TestResult.Failure(name, "Missing property name - add 'property' field to assertion");
             }
-            
-            // Debug information
-            Console.WriteLine($"DEBUG - ContainsProperty: Checking for '{propertyName}', exists={exists}, expectedValue={expectedValue ?? "null"}");
             
             
             try
@@ -405,7 +400,7 @@ namespace Apify.Services
                                 if (current != null)
                                 {
                                     // We found the nested property
-                                    Console.WriteLine($"DEBUG - Found nested property '{propertyName}' in response: {current}");
+                                    // Found the nested property
                                     
                                     // If there's an expected value, compare it
                                     if (!string.IsNullOrEmpty(expectedValue))
