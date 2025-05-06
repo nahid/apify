@@ -1,0 +1,53 @@
+{
+  "name": "Text Payload Test",
+  "description": "Example of sending a plain text payload",
+  "uri": "https://httpbin.org/post",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "text/plain",
+    "Accept": "application/json"
+  },
+  "payload": "This is a plain text payload sent by the Apify test tool.",
+  "payloadType": "Text",
+  "tests": [
+    {
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "name": "Content-Type header is JSON",
+      "assertions": [
+        {
+          "type": "HeaderContains",
+          "header": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "name": "Data contains the text payload",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "data",
+          "value": "This is a plain text payload sent by the Apify test tool."
+        }
+      ]
+    },
+    {
+      "name": "Content-Type in headers is correct",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "headers.Content-Type",
+          "value": "text/plain"
+        }
+      ]
+    }
+  ]
+}

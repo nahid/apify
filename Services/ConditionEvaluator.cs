@@ -68,7 +68,6 @@ namespace Apify.Services
                 {
                     if (_dictionary.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))
                     {
-                        Console.WriteLine($"Accessed dictionary key '{key}' with value '{value}'");
                         return value;
                     }
                     return string.Empty;
@@ -125,15 +124,7 @@ namespace Apify.Services
             // Handle default conditions for normal evaluation
             if (isDefaultCondition)
             {
-                Console.WriteLine($"Default condition matched: '{condition}'");
                 return true;
-            }
-            
-            // Log the query parameters for debugging
-            Console.WriteLine($"Query parameters count: {queryParams.Count}");
-            foreach (var param in queryParams)
-            {
-                Console.WriteLine($"Query parameter: {param.Key} = {param.Value}");
             }
 
             try
@@ -165,9 +156,8 @@ namespace Apify.Services
                 var result = _interpreter.Eval<bool>(condition);
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Error evaluating condition '{condition}': {ex.Message}");
                 return false;
             }
         }

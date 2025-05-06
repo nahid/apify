@@ -140,15 +140,9 @@ namespace Apify.Services
                 {
                     var json = File.ReadAllText(file);
                     
-                    // Always log this file regardless of verbose setting
-                    bool isProductSearchMock = file.Contains("search.mock.json");
-                    if (isProductSearchMock || _verbose)
+                    if (_verbose)
                     {
                         ConsoleHelper.WriteInfo($"Attempting to load mock from: {file}");
-                        if (isProductSearchMock)
-                        {
-                            Console.WriteLine($"Search mock JSON content: {json.Substring(0, Math.Min(100, json.Length))}...");
-                        }
                     }
                     
                     // First try to parse as advanced mock definition
@@ -163,17 +157,13 @@ namespace Apify.Services
                     }
                     catch (Exception ex)
                     {
-                        bool isProductSearchMockError = file.Contains("search.mock.json");
                         ConsoleHelper.WriteError($"Error parsing {file} as AdvancedMockApiDefinition: {ex.Message}");
-                        if (isProductSearchMockError || _verbose)
+                        if (_verbose)
                         {
-                            Console.WriteLine($"Error details for {file}:");
-                            Console.WriteLine(ex.Message);
                             Console.WriteLine(ex.StackTrace);
                             if (ex.InnerException != null)
                             {
                                 Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                                Console.WriteLine(ex.InnerException.StackTrace);
                             }
                         }
                         continue;
@@ -835,8 +825,7 @@ namespace Apify.Services
             Dictionary<string, string> queryParams = new Dictionary<string, string>();
             if (request.Url?.Query != null && request.Url.Query.Length > 0)
             {
-                // Debug log the full query string
-                Console.WriteLine($"Debug: Full query string: {request.Url.Query}");
+                // Process the query string
                 
                 // Process query string manually to ensure correct handling
                 string query = request.Url.Query.TrimStart('?');
@@ -850,7 +839,7 @@ namespace Apify.Services
                         string key = keyValue[0];
                         string value = keyValue[1];
                         queryParams[key] = Uri.UnescapeDataString(value);
-                        Console.WriteLine($"Debug: Added query parameter: {key}={queryParams[key]}");
+
                     }
                 }
             }
@@ -858,20 +847,15 @@ namespace Apify.Services
             // Also try the traditional way as a backup
             if (request.QueryString.Keys != null && queryParams.Count == 0)
             {
-                Console.WriteLine("Debug: Using traditional query string extraction");
                 foreach (string? key in request.QueryString.Keys)
                 {
                     if (key != null && request.QueryString[key] != null)
                     {
                         string queryValue = request.QueryString[key] ?? string.Empty;
                         queryParams[key] = queryValue;
-                        Console.WriteLine($"Debug: Added query parameter via QueryString: {key}={queryValue}");
                     }
                 }
             }
-            
-            // Log the final query parameters count
-            Console.WriteLine($"Debug: Total query parameters: {queryParams.Count}");
             
             // Get Body as JToken (null if not a valid JSON)
             JToken? bodyContent = null;
