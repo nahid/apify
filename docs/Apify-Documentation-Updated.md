@@ -15,6 +15,7 @@ Apify is a robust command-line tool designed for API testing and validation. It 
    - [Tests Command](#tests-command)
    - [List Environment Command](#list-env-command)
    - [Create Request Command](#create-request-command)
+   - [Create Mock Command](#create-mock-command)
    - [Mock Server Command](#mock-server-command)
 4. [API Test Definition](#api-test-definition)
 5. [Payload Types](#payload-types)
@@ -129,6 +130,7 @@ dotnet run run apis/sample-api.json --debug
 | `tests` | Run all tests in the project with visual progress indicators |
 | `list-env` | List available environments |
 | `create request` | Create a new API request definition interactively |
+| `create mock` | Create a new mock API response definition interactively |
 | `mock-server` | Start an API mock server using mock definition files |
 
 ### Global Options
@@ -262,6 +264,40 @@ dotnet run create request --file users.all
 dotnet run create request --file auth.login
 
 # The .json extension is automatically added
+```
+
+#### `create mock` Command
+
+Creates a new mock API response definition interactively.
+
+| Option | Description | Required | Default |
+|--------|-------------|----------|---------|
+| `--file` | The file path for the new mock API response definition | Yes | - |
+| `--force` or `-f` | Overwrite existing file if it exists | No | false |
+| `--debug` | Show detailed debug output | No | false |
+
+The file path supports dot notation for creating nested directories:
+- `users.get` will create a file at `.apify/users/get.mock.json`
+- `products.search` will create a file at `.apify/products/search.mock.json`
+
+The command will interactively prompt for:
+1. Mock API name
+2. Endpoint path
+3. HTTP method (GET, POST, PUT, DELETE, etc.)
+4. Response status code
+5. Content type
+6. Response body (JSON or plain text)
+7. Optional: Custom response headers
+8. Optional: Response delay (to simulate latency)
+9. Optional: Conditional responses based on request parameters
+
+Example:
+```bash
+# Create a new mock API response
+dotnet run create mock --file users.get
+
+# Create a new mock API response, overwriting if exists
+dotnet run create mock --file products.search --force
 ```
 
 #### `mock-server` Command
