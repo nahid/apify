@@ -16,18 +16,21 @@ namespace Apify.Services
         private readonly EnvironmentService _environmentService;
         private readonly ConditionEvaluator _conditionEvaluator = new();
         private bool _verbose;
+        private bool _debug;
         private HttpListener? _listener;
         private bool _isRunning;
         
-        public MockServerService(string mockDirectory)
+        public MockServerService(string mockDirectory, bool debug = false)
         {
             _mockDirectory = mockDirectory;
-            _environmentService = new EnvironmentService();
+            _debug = debug;
+            _environmentService = new EnvironmentService(debug);
         }
         
         public async Task StartAsync(int port, bool verbose)
         {
             _verbose = verbose;
+            // Debug flag is already set in the constructor
             await _environmentService.LoadConfig(); // Load env variables for templates
             
             // Load all mock definitions
@@ -95,7 +98,7 @@ namespace Apify.Services
                     Console.WriteLine();
                 }
                 
-                if (_verbose)
+                if (_debug)
                 {
                     Console.WriteLine(ex.StackTrace);
                 }
@@ -103,7 +106,7 @@ namespace Apify.Services
             catch (Exception ex)
             {
                 ConsoleHelper.WriteError($"Error starting mock server: {ex.Message}");
-                if (_verbose)
+                if (_debug)
                 {
                     Console.WriteLine(ex.StackTrace);
                 }
@@ -129,10 +132,8 @@ namespace Apify.Services
             // Find all .mock.json files in the directory and subdirectories
             var mockFiles = Directory.GetFiles(_mockDirectory, "*.mock.json", SearchOption.AllDirectories);
             
-            if (_verbose)
-            {
-                ConsoleHelper.WriteInfo($"Found {mockFiles.Length} mock API definition files");
-            }
+            // Use debug flag for detailed logs, but show count regardless
+            Console.WriteLine($"Found {mockFiles.Length} mock API definition files");
             
             foreach (var file in mockFiles)
             {
@@ -140,7 +141,7 @@ namespace Apify.Services
                 {
                     var json = File.ReadAllText(file);
                     
-                    if (_verbose)
+                    if (_debug)
                     {
                         ConsoleHelper.WriteInfo($"Attempting to load mock from: {file}");
                     }
@@ -150,7 +151,7 @@ namespace Apify.Services
                     try
                     {
                         advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json) ?? new AdvancedMockApiDefinition();
-                        if (_verbose)
+                        if (_debug)
                         {
                             ConsoleHelper.WriteInfo($"Successfully parsed {file} as AdvancedMockApiDefinition");
                         }
@@ -158,7 +159,7 @@ namespace Apify.Services
                     catch (Exception ex)
                     {
                         ConsoleHelper.WriteError($"Error parsing {file} as AdvancedMockApiDefinition: {ex.Message}");
-                        if (_verbose)
+                        if (_debug)
                         {
                             Console.WriteLine(ex.StackTrace);
                             if (ex.InnerException != null)
@@ -172,10 +173,8 @@ namespace Apify.Services
                     if (advancedMockDef != null && advancedMockDef.Responses != null && advancedMockDef.Responses.Count > 0)
                     {
                         _advancedMockDefinitions.Add(advancedMockDef);
-                        if (_verbose)
-                        {
-                            ConsoleHelper.WriteInfo($"Loaded advanced mock API: {advancedMockDef.Name} [{advancedMockDef.Method}] {advancedMockDef.Endpoint}");
-                        }
+                        // Always show loaded API info
+                        ConsoleHelper.WriteInfo($"Loaded advanced mock API: {advancedMockDef.Name} [{advancedMockDef.Method}] {advancedMockDef.Endpoint}");
                         continue; // Skip legacy mock format if advanced format was detected
                     }
                     
@@ -234,16 +233,14 @@ namespace Apify.Services
                         }
                         
                         _mockDefinitions.Add(mockDef);
-                        if (_verbose)
-                        {
-                            ConsoleHelper.WriteInfo($"Loaded mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
-                        }
+                        // Always show loaded API info
+                        ConsoleHelper.WriteInfo($"Loaded mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
                     }
                 }
                 catch (Exception ex)
                 {
                     ConsoleHelper.WriteError($"Error loading mock definition from {file}: {ex.Message}");
-                    if (_verbose)
+                    if (_debug)
                     {
                         Console.WriteLine(ex.StackTrace);
                     }
@@ -259,16 +256,13 @@ namespace Apify.Services
             string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
             string method = request.HttpMethod;
             
-            if (_verbose)
-            {
-                ConsoleHelper.WriteInfo($"Received request: {method} {requestUrl}");
+            Console.WriteLine($"Received request: {method} {requestUrl}");
                 
+            if (_debug)
+            {
                 foreach (var headerKey in request.Headers.AllKeys)
                 {
-                    if (_verbose)
-                    {
-                        ConsoleHelper.WriteInfo($"  Header: {headerKey}: {request.Headers[headerKey]}");
-                    }
+                    ConsoleHelper.WriteInfo($"  Header: {headerKey}: {request.Headers[headerKey]}");
                 }
             }
             
@@ -349,7 +343,7 @@ namespace Apify.Services
                         response.ContentLength64 = authBuffer.Length;
                         await response.OutputStream.WriteAsync(authBuffer);
                         
-                        if (_verbose)
+                        if (_debug)
                         {
                             ConsoleHelper.WriteWarning($"Authentication failed for {method} {requestUrl}");
                         }
@@ -363,7 +357,7 @@ namespace Apify.Services
                 {
                     try
                     {
-                        if (_verbose)
+                        if (_debug)
                         {
                             ConsoleHelper.WriteInfo($"Processing file upload for {method} {requestUrl}");
                         }
@@ -393,7 +387,7 @@ namespace Apify.Services
                                 await File.WriteAllBytesAsync(filePath, file.Value.Data);
                                 savedFiles.Add(fileName);
                                 
-                                if (_verbose)
+                                if (_debug)
                                 {
                                     ConsoleHelper.WriteSuccess($"Saved uploaded file: {fileName} ({file.Value.Data.Length} bytes)");
                                 }
@@ -476,20 +470,24 @@ namespace Apify.Services
                 {
                     await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
                     
-                    if (_verbose)
+                    // Always show basic response info
+                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode}");
+                    
+                    // Show more detailed info only in debug mode
+                    if (_debug)
                     {
                         ConsoleHelper.WriteSuccess($"Responded to {method} {requestUrl} with status {response.StatusCode}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    if (_verbose)
+                    // Always show basic error info
+                    ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                    
+                    // Show more detailed info only in debug mode
+                    if (_debug)
                     {
-                        ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                        Console.WriteLine(ex.StackTrace);
                     }
                 }
                 finally
@@ -719,7 +717,7 @@ namespace Apify.Services
                             }
                             catch (Exception ex)
                             {
-                                if (_verbose)
+                                if (_debug)
                                 {
                                     ConsoleHelper.WriteWarning($"Failed to parse JSON body for matching: {ex.Message}");
                                 }
@@ -731,7 +729,7 @@ namespace Apify.Services
                     }
                     catch (Exception ex)
                     {
-                        if (_verbose)
+                        if (_debug)
                         {
                             ConsoleHelper.WriteWarning($"Error reading request body: {ex.Message}");
                         }
@@ -906,7 +904,7 @@ namespace Apify.Services
                 }
             }
             
-            if (_verbose)
+            if (_debug)
             {
                 Console.WriteLine($"DEBUG: Found {regularResponses.Count} regular condition responses and {defaultResponses.Count} default responses.");
             }
@@ -926,7 +924,7 @@ namespace Apify.Services
                 if (conditionMet)
                 {
                     matchedResponse = responseOption;
-                    if (_verbose)
+                    if (_debug)
                     {
                         Console.WriteLine($"DEBUG: Matched condition: '{responseOption.Condition}'");
                     }
@@ -938,7 +936,7 @@ namespace Apify.Services
             if (matchedResponse == null)
             {
                 // Debug - log all available conditions
-                if (_verbose)
+                if (_debug)
                 {
                     Console.WriteLine($"DEBUG: No regular conditions matched. Looking for default response.");
                 }
@@ -948,7 +946,7 @@ namespace Apify.Services
                     matchedResponse = defaultResponses[0]; // Take the first default response
                     
                     // Write additional debug info
-                    if (_verbose)
+                    if (_debug)
                     {
                         Console.WriteLine($"DEBUG: Using default response with condition '{matchedResponse.Condition ?? "null"}'");
                     }
@@ -957,7 +955,7 @@ namespace Apify.Services
                 {
                     // If no explicit default, use the last response as fallback
                     matchedResponse = mockDef.Responses.LastOrDefault();
-                    if (matchedResponse != null && _verbose)
+                    if (matchedResponse != null && _debug)
                     {
                         Console.WriteLine($"DEBUG: No explicit default found, using last response with condition '{matchedResponse.Condition ?? "null"}' as fallback");
                     }
@@ -1053,21 +1051,25 @@ namespace Apify.Services
             {
                 await response.OutputStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                 
-                if (_verbose)
+                // Always show basic response info
+                Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode} (Advanced)");
+                
+                // Show detailed info only in debug mode
+                if (_debug)
                 {
                     ConsoleHelper.WriteSuccess($"Responded to {method} {requestUrl} with status {response.StatusCode} (Advanced Mock)");
                     ConsoleHelper.WriteInfo($"Response body: {responseContent}");
                 }
-                else
-                {
-                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode} (Advanced)");
-                }
             }
             catch (Exception ex)
             {
-                if (_verbose)
+                // Always show basic error
+                ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                
+                // Show detailed stack trace only in debug mode
+                if (_debug)
                 {
-                    ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
                 }
             }
             finally
@@ -1218,9 +1220,13 @@ namespace Apify.Services
                 }
                 catch (Exception ex)
                 {
-                    if (_verbose)
+                    // Always show basic error
+                    ConsoleHelper.WriteError($"Error parsing multipart form data: {ex.Message}");
+                    
+                    // Show detailed stack trace only in debug mode
+                    if (_debug)
                     {
-                        ConsoleHelper.WriteError($"Error parsing multipart form data: {ex.Message}");
+                        Console.WriteLine(ex.StackTrace);
                     }
                     throw;
                 }

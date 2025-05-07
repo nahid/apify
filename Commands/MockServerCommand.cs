@@ -28,17 +28,17 @@ namespace Apify.Commands
             command.AddOption(directoryOption);
             command.AddOption(verboseOption);
             
-            command.SetHandler(async (port, directory, verbose) =>
+            command.SetHandler(async (port, directory, verbose, debug) =>
             {
-                await RunMockServerAsync(port, directory, verbose);
-            }, portOption, directoryOption, verboseOption);
+                await RunMockServerAsync(port, directory, verbose, debug);
+            }, portOption, directoryOption, verboseOption, RootCommand.DebugOption);
             
             return command;
         }
         
-        private static async Task RunMockServerAsync(int port, string directory, bool verbose)
+        private static async Task RunMockServerAsync(int port, string directory, bool verbose, bool debug)
         {
-            var mockServer = new MockServerService(directory);
+            var mockServer = new MockServerService(directory, debug);
             await mockServer.StartAsync(port, verbose);
         }
     }

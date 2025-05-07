@@ -7,6 +7,11 @@ namespace Apify.Commands
     public class RootCommand
     {
         public System.CommandLine.RootCommand Command { get; }
+        
+        // Added global debug flag that can be accessed by all commands
+        public static Option<bool> DebugOption { get; } = new Option<bool>(
+            name: "--debug",
+            description: "Show detailed debug output and logging information");
 
         public RootCommand()
         {
@@ -15,13 +20,16 @@ namespace Apify.Commands
                 Description = "Apify - A CLI tool for testing APIs similar to Postman"
             };
             
+            // Add the global debug option
+            Command.AddGlobalOption(DebugOption);
+            
             // Add the list-env command
             var listEnvCommand = new Command("list-env", "List available environments");
             
-            listEnvCommand.SetHandler(() => 
+            listEnvCommand.SetHandler((debug) => 
             {
-                ListEnvironments();
-            });
+                ListEnvironments(debug);
+            }, DebugOption);
             
             // Add the init command
             var initCommand = new InitCommand();
@@ -47,11 +55,11 @@ namespace Apify.Commands
             Command.AddCommand(mockServerCommand);
         }
         
-        private void ListEnvironments()
+        private void ListEnvironments(bool debug)
         {
             ConsoleHelper.DisplayTitle("Apify - Available Environments");
             
-            var environmentService = new EnvironmentService();
+            var environmentService = new EnvironmentService(debug);
             var profile = environmentService.LoadConfigurationProfile();
             
             if (profile == null)

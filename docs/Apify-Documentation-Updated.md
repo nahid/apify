@@ -15,6 +15,7 @@ Apify is a robust command-line tool designed for API testing and validation. It 
    - [Tests Command](#tests-command)
    - [List Environment Command](#list-env-command)
    - [Create Request Command](#create-request-command)
+   - [Create Mock Command](#create-mock-command)
    - [Mock Server Command](#mock-server-command)
 4. [API Test Definition](#api-test-definition)
 5. [Payload Types](#payload-types)
@@ -129,6 +130,7 @@ dotnet run run apis/sample-api.json --debug
 | `tests` | Run all tests in the project with visual progress indicators |
 | `list-env` | List available environments |
 | `create request` | Create a new API request definition interactively |
+| `create mock` | Create a new mock API response definition interactively |
 | `mock-server` | Start an API mock server using mock definition files |
 
 ### Global Options
@@ -149,54 +151,34 @@ The debug option enables detailed logging across all commands, showing:
 
 #### `init` Command
 
-Initializes a new API testing project by creating necessary configuration files and directory structure. The command runs interactively, prompting for required information.
-
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
+| `--name` | The name of the API testing project | Yes | - |
+| `--base-url` | The base URL for API endpoints | Yes | - |
+| `--environment` | The default environment | No | "Development" |
 | `--force` | Force overwrite of existing files | No | false |
-| `--debug` | Show detailed debug output and stack traces | No | false |
-
-The command will interactively prompt for:
-1. Project name (e.g., "Payment API Tests")
-2. Base URL for API endpoints (e.g., "https://api.example.com")
-3. Default environment (defaults to "Development")
 
 Example:
 ```bash
-# Run the initialization interactively
-dotnet run init
-
-# Use the executable directly
-./apify init
-
-# Force overwrite of existing configuration
-dotnet run init --force
+dotnet run init --name "Payment API Tests" --base-url "https://payment.api.example.com" --environment "Staging" --force
 ```
-
-After running the command, you'll be guided through the setup process with prompts for each required piece of information.
 
 #### `run` Command
 
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
 | `files` | API definition files to test (supports wildcards) | Yes | - |
+| `--verbose` or `-v` | Display detailed output | No | false |
 | `--profile` or `-p` | Configuration profile to use | No | "Default" |
 | `--env` or `-e` | Environment to use from the profile | No | Profile's default |
-| `--debug` | Show detailed debug output and stack traces | No | false |
 
 Examples:
 ```bash
-# Run a single test (full path)
+# Run a single test
 dotnet run run apis/user-api.json
 
-# Using dot notation (simplified): will run .apify/users/post.json
-dotnet run run users.post
-
-# Using dot notation with executable
-./apify run users.post
-
 # Run all tests in the apis directory
-dotnet run run apis/*.json --debug
+dotnet run run apis/*.json --verbose
 
 # Run tests using a specific environment
 dotnet run run apis/payment-api.json --env Production
@@ -206,11 +188,10 @@ dotnet run run apis/payment-api.json --debug
 ```
 
 The `run` command supports simplified paths using dot notation:
-- `users.post` will run `.apify/users/post.json`
+- `users.all` will run `.apify/users/all.json`
 - `auth.login` will run `.apify/auth/login.json`
-- `products.search` will run `.apify/products/search.json`
 
-The `.json` extension is optional when using the `run` command. You can use the executable directly (`./apify run`) or with dotnet (`dotnet run run`).
+The `.json` extension is optional when using the `run` command.
 
 #### `tests` Command
 
@@ -218,9 +199,9 @@ The tests command scans the project directory and runs all API tests found in th
 
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
+| `--verbose` or `-v` | Display detailed output including response body | No | false |
 | `--env` or `-e` | Environment to use from the profile | No | Profile's default |
 | `--tag` | Filter tests by tag | No | - |
-| `--debug` | Show detailed debug output and stack traces | No | false |
 
 Features of the tests command:
 - Animated spinner showing active processing
@@ -235,7 +216,7 @@ Example:
 dotnet run tests
 
 # Run all tests with detailed output
-dotnet run tests --debug
+dotnet run tests --verbose
 
 # Run only tests with a specific tag
 dotnet run tests --tag payments
@@ -262,8 +243,6 @@ Creates a new API request definition interactively.
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
 | `--file` | The file path for the new API request definition | Yes | - |
-| `--force` | Force overwrite if the file already exists | No | false |
-| `--debug` | Show detailed debug output and stack traces | No | false |
 
 The file path supports dot notation for creating nested directories:
 - `users.all` will create a file at `.apify/users/all.json`
@@ -275,8 +254,6 @@ The command will interactively prompt for:
 3. Endpoint URI
 4. Optional: JSON payload for POST/PUT methods
 5. Optional: HTTP headers
-6. Optional: File uploads for multi-part form data
-7. Optional: Test assertions
 
 Example:
 ```bash
@@ -286,25 +263,22 @@ dotnet run create request --file users.all
 # Create a request in a nested directory structure
 dotnet run create request --file auth.login
 
-# Force overwrite of an existing file
-dotnet run create request --file users.all --force
-
 # The .json extension is automatically added
 ```
 
 #### `create mock` Command
 
-Creates a new mock API response interactively.
+Creates a new mock API response definition interactively.
 
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
-| `--file` | The file path for the new mock API definition | Yes | - |
-| `--force` | Force overwrite if the file already exists | No | false |
-| `--debug` | Show detailed debug output and stack traces | No | false |
+| `--file` | The file path for the new mock API response definition | Yes | - |
+| `--force` or `-f` | Overwrite existing file if it exists | No | false |
+| `--debug` | Show detailed debug output | No | false |
 
 The file path supports dot notation for creating nested directories:
 - `users.get` will create a file at `.apify/users/get.mock.json`
-- `auth.login` will create a file at `.apify/auth/login.mock.json`
+- `products.search` will create a file at `.apify/products/search.mock.json`
 
 The command will interactively prompt for:
 1. Mock API name
@@ -312,9 +286,9 @@ The command will interactively prompt for:
 3. HTTP method (GET, POST, PUT, DELETE, etc.)
 4. Response status code
 5. Content type
-6. Response body
+6. Response body (JSON or plain text)
 7. Optional: Custom response headers
-8. Optional: Response delay (simulated latency)
+8. Optional: Response delay (to simulate latency)
 9. Optional: Conditional responses based on request parameters
 
 Example:
@@ -322,13 +296,8 @@ Example:
 # Create a new mock API response
 dotnet run create mock --file users.get
 
-# Create a mock in a nested directory structure
-dotnet run create mock --file auth.login
-
-# Force overwrite of an existing file
-dotnet run create mock --file users.get --force
-
-# The .mock.json extension is automatically added
+# Create a new mock API response, overwriting if exists
+dotnet run create mock --file products.search --force
 ```
 
 #### `mock-server` Command
@@ -338,6 +307,7 @@ Starts a local API mock server using mock definition files placed in the `.apify
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
 | `--port` or `-p` | Port number to run the mock server on | No | 8080 |
+| `--verbose` or `-v` | Enable verbose logging | No | false |
 | `--debug` | Show detailed debug output and stack traces | No | false |
 | `--directory` or `-d` | Directory containing mock definitions | No | ".apify" |
 
@@ -353,8 +323,8 @@ Example:
 # Start the mock server on the default port
 dotnet run mock-server
 
-# Start the mock server on a custom port
-dotnet run mock-server --port 3000
+# Start the mock server on a custom port with verbose logging
+dotnet run mock-server --port 3000 --verbose
 
 # Start the mock server with debug information
 dotnet run mock-server --port 3000 --debug
@@ -365,7 +335,7 @@ dotnet run mock-server --directory ./my-mocks
 
 When running, the mock server listens for incoming HTTP requests and responds based on the mock definitions found in the specified directory. It displays a list of available endpoints on startup and logs requests it receives.
 
-**Note**: The `--debug` flag provides detailed information including stack traces, request parsing details, and condition evaluation logic.
+**Note**: The `--verbose` flag shows basic operational information, while the `--debug` flag provides more detailed information including stack traces, request parsing details, and condition evaluation logic.
 
 ## API Test Definition
 

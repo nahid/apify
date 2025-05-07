@@ -120,6 +120,10 @@ args = "TestSingleBuild"
 task = "workflow.run"
 args = "TestMockServer"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestCreateMock"
+
 [[workflows.workflow]]
 name = "APITester-ListEnv"
 author = "agent"
@@ -337,6 +341,14 @@ author = "agent"
 task = "shell.exec"
 args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run mock-server --port 5000 --verbose"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "TestCreateMock"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run create mock --file test.get --force"
 
 [deployment]
 run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]
