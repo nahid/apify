@@ -939,7 +939,7 @@ namespace Apify.Services
             if (matchedResponse == null)
             {
                 // Debug - log all available conditions
-                if (_verbose)
+                if (_debug)
                 {
                     Console.WriteLine($"DEBUG: No regular conditions matched. Looking for default response.");
                 }
@@ -949,7 +949,7 @@ namespace Apify.Services
                     matchedResponse = defaultResponses[0]; // Take the first default response
                     
                     // Write additional debug info
-                    if (_verbose)
+                    if (_debug)
                     {
                         Console.WriteLine($"DEBUG: Using default response with condition '{matchedResponse.Condition ?? "null"}'");
                     }
@@ -958,7 +958,7 @@ namespace Apify.Services
                 {
                     // If no explicit default, use the last response as fallback
                     matchedResponse = mockDef.Responses.LastOrDefault();
-                    if (matchedResponse != null && _verbose)
+                    if (matchedResponse != null && _debug)
                     {
                         Console.WriteLine($"DEBUG: No explicit default found, using last response with condition '{matchedResponse.Condition ?? "null"}' as fallback");
                     }
@@ -1054,21 +1054,25 @@ namespace Apify.Services
             {
                 await response.OutputStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                 
-                if (_verbose)
+                // Always show basic response info
+                Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode} (Advanced)");
+                
+                // Show detailed info only in debug mode
+                if (_debug)
                 {
                     ConsoleHelper.WriteSuccess($"Responded to {method} {requestUrl} with status {response.StatusCode} (Advanced Mock)");
                     ConsoleHelper.WriteInfo($"Response body: {responseContent}");
                 }
-                else
-                {
-                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode} (Advanced)");
-                }
             }
             catch (Exception ex)
             {
-                if (_verbose)
+                // Always show basic error
+                ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                
+                // Show detailed stack trace only in debug mode
+                if (_debug)
                 {
-                    ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
                 }
             }
             finally
@@ -1219,9 +1223,13 @@ namespace Apify.Services
                 }
                 catch (Exception ex)
                 {
-                    if (_verbose)
+                    // Always show basic error
+                    ConsoleHelper.WriteError($"Error parsing multipart form data: {ex.Message}");
+                    
+                    // Show detailed stack trace only in debug mode
+                    if (_debug)
                     {
-                        ConsoleHelper.WriteError($"Error parsing multipart form data: {ex.Message}");
+                        Console.WriteLine(ex.StackTrace);
                     }
                     throw;
                 }
