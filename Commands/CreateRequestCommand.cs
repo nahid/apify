@@ -8,8 +8,9 @@ namespace Apify.Commands
     {
         private const string DefaultApiDirectory = ".apify";
 
-        public CreateRequestCommand() : base("create", "Create a new API request file")
+        public CreateRequestCommand() : base("create", "Create a new API request file or mock response")
         {
+            // Create a new API request command
             var requestCommand = new Command("request", "Create a new API request file");
 
             var fileOption = new Option<string>(
@@ -28,16 +29,26 @@ namespace Apify.Commands
             requestCommand.AddOption(forceOption);
             
             requestCommand.SetHandler(
-                (file, force) => ExecuteAsync(file, force),
-                fileOption, forceOption
+                (file, force, debug) => ExecuteAsync(file, force, debug),
+                fileOption, forceOption, RootCommand.DebugOption
             );
 
+            // Add mock command
+            var mockCommand = new CreateMockCommand();
+
+            // Add subcommands
             AddCommand(requestCommand);
+            AddCommand(mockCommand);
         }
 
-        private async Task ExecuteAsync(string filePath, bool force)
+        private async Task ExecuteAsync(string filePath, bool force, bool debug)
         {
             ConsoleHelper.WriteHeader("Creating New API Request");
+
+            if (debug)
+            {
+                ConsoleHelper.WriteDebug($"Creating API request in file: {filePath}");
+            }
 
             // Process file path to convert dot notation if needed
             string processedPath = ProcessFilePath(filePath);

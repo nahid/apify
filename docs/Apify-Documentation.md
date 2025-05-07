@@ -149,17 +149,31 @@ The debug option enables detailed logging across all commands, showing:
 
 #### `init` Command
 
+Initializes a new API testing project by creating necessary configuration files and directory structure. The command runs interactively, prompting for required information.
+
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
-| `--name` | The name of the API testing project | Yes | - |
-| `--base-url` | The base URL for API endpoints | Yes | - |
-| `--environment` | The default environment | No | "Development" |
 | `--force` | Force overwrite of existing files | No | false |
+| `--debug` | Show detailed debug output and stack traces | No | false |
+
+The command will interactively prompt for:
+1. Project name (e.g., "Payment API Tests")
+2. Base URL for API endpoints (e.g., "https://api.example.com")
+3. Default environment (defaults to "Development")
 
 Example:
 ```bash
-dotnet run init --name "Payment API Tests" --base-url "https://payment.api.example.com" --environment "Staging" --force
+# Run the initialization interactively
+dotnet run init
+
+# Use the executable directly
+./apify init
+
+# Force overwrite of existing configuration
+dotnet run init --force
 ```
+
+After running the command, you'll be guided through the setup process with prompts for each required piece of information.
 
 #### `run` Command
 
@@ -248,6 +262,8 @@ Creates a new API request definition interactively.
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
 | `--file` | The file path for the new API request definition | Yes | - |
+| `--force` | Force overwrite if the file already exists | No | false |
+| `--debug` | Show detailed debug output and stack traces | No | false |
 
 The file path supports dot notation for creating nested directories:
 - `users.all` will create a file at `.apify/users/all.json`
@@ -259,6 +275,8 @@ The command will interactively prompt for:
 3. Endpoint URI
 4. Optional: JSON payload for POST/PUT methods
 5. Optional: HTTP headers
+6. Optional: File uploads for multi-part form data
+7. Optional: Test assertions
 
 Example:
 ```bash
@@ -268,7 +286,49 @@ dotnet run create request --file users.all
 # Create a request in a nested directory structure
 dotnet run create request --file auth.login
 
+# Force overwrite of an existing file
+dotnet run create request --file users.all --force
+
 # The .json extension is automatically added
+```
+
+#### `create mock` Command
+
+Creates a new mock API response interactively.
+
+| Option | Description | Required | Default |
+|--------|-------------|----------|---------|
+| `--file` | The file path for the new mock API definition | Yes | - |
+| `--force` | Force overwrite if the file already exists | No | false |
+| `--debug` | Show detailed debug output and stack traces | No | false |
+
+The file path supports dot notation for creating nested directories:
+- `users.get` will create a file at `.apify/users/get.mock.json`
+- `auth.login` will create a file at `.apify/auth/login.mock.json`
+
+The command will interactively prompt for:
+1. Mock API name
+2. Endpoint path
+3. HTTP method (GET, POST, PUT, DELETE, etc.)
+4. Response status code
+5. Content type
+6. Response body
+7. Optional: Custom response headers
+8. Optional: Response delay (simulated latency)
+9. Optional: Conditional responses based on request parameters
+
+Example:
+```bash
+# Create a new mock API response
+dotnet run create mock --file users.get
+
+# Create a mock in a nested directory structure
+dotnet run create mock --file auth.login
+
+# Force overwrite of an existing file
+dotnet run create mock --file users.get --force
+
+# The .mock.json extension is automatically added
 ```
 
 #### `mock-server` Command
@@ -305,7 +365,7 @@ dotnet run mock-server --directory ./my-mocks
 
 When running, the mock server listens for incoming HTTP requests and responds based on the mock definitions found in the specified directory. It displays a list of available endpoints on startup and logs requests it receives.
 
-**Note**: The `--verbose` flag shows basic operational information, while the `--debug` flag provides more detailed information including stack traces, request parsing details, and condition evaluation logic.
+**Note**: The `--debug` flag provides detailed information including stack traces, request parsing details, and condition evaluation logic.
 
 ## API Test Definition
 
