@@ -548,8 +548,11 @@ namespace Apify.Services
                 var variableName = match.Groups[1].Value.Trim();
                 if (!mergedVariables.ContainsKey(variableName))
                 {
-                    // Show a warning for missing variables
-                    Console.WriteLine($"  Warning: Variable '{variableName}' is referenced but not defined in environment or custom variables.");
+                    // Show a warning for missing variables only when debug is enabled
+                    if (_debug)
+                    {
+                        Console.WriteLine($"  Warning: Variable '{variableName}' is referenced but not defined in environment or custom variables.");
+                    }
                 }
             }
         }

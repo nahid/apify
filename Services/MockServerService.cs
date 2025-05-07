@@ -16,13 +16,15 @@ namespace Apify.Services
         private readonly EnvironmentService _environmentService;
         private readonly ConditionEvaluator _conditionEvaluator = new();
         private bool _verbose;
+        private bool _debug;
         private HttpListener? _listener;
         private bool _isRunning;
         
-        public MockServerService(string mockDirectory)
+        public MockServerService(string mockDirectory, bool debug = false)
         {
             _mockDirectory = mockDirectory;
-            _environmentService = new EnvironmentService();
+            _debug = debug;
+            _environmentService = new EnvironmentService(debug);
         }
         
         public async Task StartAsync(int port, bool verbose)
@@ -129,10 +131,8 @@ namespace Apify.Services
             // Find all .mock.json files in the directory and subdirectories
             var mockFiles = Directory.GetFiles(_mockDirectory, "*.mock.json", SearchOption.AllDirectories);
             
-            if (_verbose)
-            {
-                ConsoleHelper.WriteInfo($"Found {mockFiles.Length} mock API definition files");
-            }
+            // Use debug flag for detailed logs, but show count regardless
+            Console.WriteLine($"Found {mockFiles.Length} mock API definition files");
             
             foreach (var file in mockFiles)
             {
@@ -140,7 +140,7 @@ namespace Apify.Services
                 {
                     var json = File.ReadAllText(file);
                     
-                    if (_verbose)
+                    if (_debug)
                     {
                         ConsoleHelper.WriteInfo($"Attempting to load mock from: {file}");
                     }
@@ -150,7 +150,7 @@ namespace Apify.Services
                     try
                     {
                         advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json) ?? new AdvancedMockApiDefinition();
-                        if (_verbose)
+                        if (_debug)
                         {
                             ConsoleHelper.WriteInfo($"Successfully parsed {file} as AdvancedMockApiDefinition");
                         }
@@ -158,7 +158,7 @@ namespace Apify.Services
                     catch (Exception ex)
                     {
                         ConsoleHelper.WriteError($"Error parsing {file} as AdvancedMockApiDefinition: {ex.Message}");
-                        if (_verbose)
+                        if (_debug)
                         {
                             Console.WriteLine(ex.StackTrace);
                             if (ex.InnerException != null)
@@ -259,16 +259,13 @@ namespace Apify.Services
             string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
             string method = request.HttpMethod;
             
-            if (_verbose)
-            {
-                ConsoleHelper.WriteInfo($"Received request: {method} {requestUrl}");
+            Console.WriteLine($"Received request: {method} {requestUrl}");
                 
+            if (_debug)
+            {
                 foreach (var headerKey in request.Headers.AllKeys)
                 {
-                    if (_verbose)
-                    {
-                        ConsoleHelper.WriteInfo($"  Header: {headerKey}: {request.Headers[headerKey]}");
-                    }
+                    ConsoleHelper.WriteInfo($"  Header: {headerKey}: {request.Headers[headerKey]}");
                 }
             }
             
