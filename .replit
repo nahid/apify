@@ -122,7 +122,7 @@ args = "TestMockServer"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "TestMockCommand"
+args = "TestCreateMock"
 
 [[workflows.workflow]]
 name = "APITester-ListEnv"
@@ -343,7 +343,7 @@ args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx
 waitForPort = 5000
 
 [[workflows.workflow]]
-name = "TestMockCommand"
+name = "TestCreateMock"
 author = "agent"
 
 [[workflows.workflow.tasks]]

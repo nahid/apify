@@ -92,7 +92,7 @@ namespace Apify.Commands
             }
         }
 
-        private async Task<MockApiDefinition> GatherMockApiInformation()
+        private Task<MockApiDefinition> GatherMockApiInformation()
         {
             // Basic mock API information
             string name = PromptForInput("Mock API name (e.g., Get User):");
@@ -222,7 +222,7 @@ namespace Apify.Commands
             }
             
             // Create the mock API definition
-            return new MockApiDefinition
+            return Task.FromResult(new MockApiDefinition
             {
                 Name = name,
                 Endpoint = endpoint,
@@ -233,7 +233,7 @@ namespace Apify.Commands
                 Headers = headers,
                 Delay = delay,
                 Conditions = conditions
-            };
+            });
         }
 
         private string ProcessFilePath(string filePath)
