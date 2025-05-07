@@ -30,6 +30,7 @@ namespace Apify.Services
         public async Task StartAsync(int port, bool verbose)
         {
             _verbose = verbose;
+            // Debug flag is already set in the constructor
             await _environmentService.LoadConfig(); // Load env variables for templates
             
             // Load all mock definitions
@@ -97,7 +98,7 @@ namespace Apify.Services
                     Console.WriteLine();
                 }
                 
-                if (_verbose)
+                if (_debug)
                 {
                     Console.WriteLine(ex.StackTrace);
                 }
@@ -105,7 +106,7 @@ namespace Apify.Services
             catch (Exception ex)
             {
                 ConsoleHelper.WriteError($"Error starting mock server: {ex.Message}");
-                if (_verbose)
+                if (_debug)
                 {
                     Console.WriteLine(ex.StackTrace);
                 }
@@ -172,10 +173,8 @@ namespace Apify.Services
                     if (advancedMockDef != null && advancedMockDef.Responses != null && advancedMockDef.Responses.Count > 0)
                     {
                         _advancedMockDefinitions.Add(advancedMockDef);
-                        if (_verbose)
-                        {
-                            ConsoleHelper.WriteInfo($"Loaded advanced mock API: {advancedMockDef.Name} [{advancedMockDef.Method}] {advancedMockDef.Endpoint}");
-                        }
+                        // Always show loaded API info
+                        ConsoleHelper.WriteInfo($"Loaded advanced mock API: {advancedMockDef.Name} [{advancedMockDef.Method}] {advancedMockDef.Endpoint}");
                         continue; // Skip legacy mock format if advanced format was detected
                     }
                     
@@ -234,10 +233,8 @@ namespace Apify.Services
                         }
                         
                         _mockDefinitions.Add(mockDef);
-                        if (_verbose)
-                        {
-                            ConsoleHelper.WriteInfo($"Loaded mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
-                        }
+                        // Always show loaded API info
+                        ConsoleHelper.WriteInfo($"Loaded mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
                     }
                 }
                 catch (Exception ex)
