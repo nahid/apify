@@ -243,7 +243,7 @@ namespace Apify.Services
                 catch (Exception ex)
                 {
                     ConsoleHelper.WriteError($"Error loading mock definition from {file}: {ex.Message}");
-                    if (_verbose)
+                    if (_debug)
                     {
                         Console.WriteLine(ex.StackTrace);
                     }
@@ -346,7 +346,7 @@ namespace Apify.Services
                         response.ContentLength64 = authBuffer.Length;
                         await response.OutputStream.WriteAsync(authBuffer);
                         
-                        if (_verbose)
+                        if (_debug)
                         {
                             ConsoleHelper.WriteWarning($"Authentication failed for {method} {requestUrl}");
                         }
@@ -360,7 +360,7 @@ namespace Apify.Services
                 {
                     try
                     {
-                        if (_verbose)
+                        if (_debug)
                         {
                             ConsoleHelper.WriteInfo($"Processing file upload for {method} {requestUrl}");
                         }
@@ -390,7 +390,7 @@ namespace Apify.Services
                                 await File.WriteAllBytesAsync(filePath, file.Value.Data);
                                 savedFiles.Add(fileName);
                                 
-                                if (_verbose)
+                                if (_debug)
                                 {
                                     ConsoleHelper.WriteSuccess($"Saved uploaded file: {fileName} ({file.Value.Data.Length} bytes)");
                                 }
@@ -473,20 +473,24 @@ namespace Apify.Services
                 {
                     await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
                     
-                    if (_verbose)
+                    // Always show basic response info
+                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode}");
+                    
+                    // Show more detailed info only in debug mode
+                    if (_debug)
                     {
                         ConsoleHelper.WriteSuccess($"Responded to {method} {requestUrl} with status {response.StatusCode}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    if (_verbose)
+                    // Always show basic error info
+                    ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                    
+                    // Show more detailed info only in debug mode
+                    if (_debug)
                     {
-                        ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
+                        Console.WriteLine(ex.StackTrace);
                     }
                 }
                 finally
@@ -716,7 +720,7 @@ namespace Apify.Services
                             }
                             catch (Exception ex)
                             {
-                                if (_verbose)
+                                if (_debug)
                                 {
                                     ConsoleHelper.WriteWarning($"Failed to parse JSON body for matching: {ex.Message}");
                                 }
@@ -728,7 +732,7 @@ namespace Apify.Services
                     }
                     catch (Exception ex)
                     {
-                        if (_verbose)
+                        if (_debug)
                         {
                             ConsoleHelper.WriteWarning($"Error reading request body: {ex.Message}");
                         }
@@ -903,7 +907,7 @@ namespace Apify.Services
                 }
             }
             
-            if (_verbose)
+            if (_debug)
             {
                 Console.WriteLine($"DEBUG: Found {regularResponses.Count} regular condition responses and {defaultResponses.Count} default responses.");
             }
@@ -923,7 +927,7 @@ namespace Apify.Services
                 if (conditionMet)
                 {
                     matchedResponse = responseOption;
-                    if (_verbose)
+                    if (_debug)
                     {
                         Console.WriteLine($"DEBUG: Matched condition: '{responseOption.Condition}'");
                     }
