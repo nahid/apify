@@ -166,23 +166,17 @@ dotnet run init --name "Payment API Tests" --base-url "https://payment.api.examp
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
 | `files` | API definition files to test (supports wildcards) | Yes | - |
+| `--verbose` or `-v` | Display detailed output | No | false |
 | `--profile` or `-p` | Configuration profile to use | No | "Default" |
 | `--env` or `-e` | Environment to use from the profile | No | Profile's default |
-| `--debug` | Show detailed debug output and stack traces | No | false |
 
 Examples:
 ```bash
-# Run a single test (full path)
+# Run a single test
 dotnet run run apis/user-api.json
 
-# Using dot notation (simplified): will run .apify/users/post.json
-dotnet run run users.post
-
-# Using dot notation with executable
-./apify run users.post
-
 # Run all tests in the apis directory
-dotnet run run apis/*.json --debug
+dotnet run run apis/*.json --verbose
 
 # Run tests using a specific environment
 dotnet run run apis/payment-api.json --env Production
@@ -192,11 +186,10 @@ dotnet run run apis/payment-api.json --debug
 ```
 
 The `run` command supports simplified paths using dot notation:
-- `users.post` will run `.apify/users/post.json`
+- `users.all` will run `.apify/users/all.json`
 - `auth.login` will run `.apify/auth/login.json`
-- `products.search` will run `.apify/products/search.json`
 
-The `.json` extension is optional when using the `run` command. You can use the executable directly (`./apify run`) or with dotnet (`dotnet run run`).
+The `.json` extension is optional when using the `run` command.
 
 #### `tests` Command
 
@@ -204,9 +197,9 @@ The tests command scans the project directory and runs all API tests found in th
 
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
+| `--verbose` or `-v` | Display detailed output including response body | No | false |
 | `--env` or `-e` | Environment to use from the profile | No | Profile's default |
 | `--tag` | Filter tests by tag | No | - |
-| `--debug` | Show detailed debug output and stack traces | No | false |
 
 Features of the tests command:
 - Animated spinner showing active processing
@@ -221,7 +214,7 @@ Example:
 dotnet run tests
 
 # Run all tests with detailed output
-dotnet run tests --debug
+dotnet run tests --verbose
 
 # Run only tests with a specific tag
 dotnet run tests --tag payments
@@ -278,6 +271,7 @@ Starts a local API mock server using mock definition files placed in the `.apify
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
 | `--port` or `-p` | Port number to run the mock server on | No | 8080 |
+| `--verbose` or `-v` | Enable verbose logging | No | false |
 | `--debug` | Show detailed debug output and stack traces | No | false |
 | `--directory` or `-d` | Directory containing mock definitions | No | ".apify" |
 
@@ -293,8 +287,8 @@ Example:
 # Start the mock server on the default port
 dotnet run mock-server
 
-# Start the mock server on a custom port
-dotnet run mock-server --port 3000
+# Start the mock server on a custom port with verbose logging
+dotnet run mock-server --port 3000 --verbose
 
 # Start the mock server with debug information
 dotnet run mock-server --port 3000 --debug
