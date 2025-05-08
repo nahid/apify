@@ -1,0 +1,166 @@
+{
+  "name": "Process Order",
+  "description": "Endpoint for processing an order with complex validation logic",
+  "method": "POST",
+  "endpoint": "/orders/process",
+  "responses": [
+    {
+      "condition": "!headers.Authorization || !headers.Authorization.StartsWith(\"Bearer \")",
+      "statusCode": 401,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "Unauthorized",
+        "message": "Valid Bearer token required."
+      }
+    },
+    {
+      "condition": "body.customer == null || body.customer.id == null",
+      "statusCode": 422,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "ValidationError",
+        "message": "Customer information is required."
+      }
+    },
+    {
+      "condition": "body.items == null || body.items.Count == 0",
+      "statusCode": 422,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "ValidationError",
+        "message": "Order must contain at least one item."
+      }
+    },
+    {
+      "condition": "body.paymentMethod == null || body.paymentMethod.type == null",
+      "statusCode": 422,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "ValidationError",
+        "message": "Payment method is required."
+      }
+    },
+    {
+      "condition": "body.paymentMethod != null && body.paymentMethod.type == \"creditCard\" && (body.paymentMethod.cardDetails == null || string.IsNullOrEmpty(body.paymentMethod.cardDetails.cardNumber))",
+      "statusCode": 422,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "ValidationError",
+        "message": "Credit card details are required when payment method is credit card."
+      }
+    },
+    {
+      "condition": "body.totalAmount < 10",
+      "statusCode": 422,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "ValidationError",
+        "message": "Minimum order amount is $10."
+      }
+    },
+    {
+      "condition": "body.shippingAddress != null && body.shippingAddress.country == \"US\" && string.IsNullOrEmpty(body.shippingAddress.zipCode)",
+      "statusCode": 422,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "ValidationError",
+        "message": "ZIP code is required for US shipping addresses."
+      }
+    },
+    {
+      "condition": "body.shippingMethod == \"express\" && DateTime.Now.Hour >= 16",
+      "statusCode": 422,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "ValidationError",
+        "message": "Express shipping orders must be placed before 4:00 PM."
+      }
+    },
+    {
+      "condition": "body.paymentMethod != null && body.paymentMethod.type == \"creditCard\" && body.totalAmount > 1000",
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "orderId": "{{$random:int:100000:999999}}",
+        "status": "pending_verification",
+        "message": "Order requires additional verification due to high amount.",
+        "estimatedDelivery": "{{$date:add:5:days}}",
+        "customer": {
+          "id": "{{body.customer.id}}",
+          "name": "{{body.customer.name}}"
+        },
+        "amount": "{{body.totalAmount}}",
+        "paymentStatus": "pending"
+      }
+    },
+    {
+      "condition": "body.couponCode != null && body.couponCode == \"INVALID\"",
+      "statusCode": 422,
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "responseTemplate": {
+        "error": "CouponError",
+        "message": "The coupon code is invalid or expired."
+      }
+    },
+    {
+      "condition": "body.paymentMethod != null && body.paymentMethod.type == \"paypal\"",
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Location": "https://api.example.com/payments/paypal/{{$random:int:10000:99999}}"
+      },
+      "responseTemplate": {
+        "orderId": "{{$random:int:100000:999999}}",
+        "status": "pending_payment",
+        "paymentUrl": "https://paypal.com/pay/{{$random:int:10000:99999}}",
+        "customer": {
+          "id": "{{body.customer.id}}",
+          "name": "{{body.customer.name}}"
+        },
+        "amount": "{{body.totalAmount}}",
+        "paymentStatus": "awaiting_confirmation"
+      }
+    },
+    {
+      "condition": "default",
+      "statusCode": 201,
+      "headers": {
+        "Content-Type": "application/json",
+        "Location": "/orders/{{$random:int:100000:999999}}"
+      },
+      "responseTemplate": {
+        "orderId": "{{$random:int:100000:999999}}",
+        "status": "confirmed",
+        "message": "Order has been received and is being processed.",
+        "estimatedDelivery": "{{$date:add:3:days}}",
+        "customer": {
+          "id": "{{body.customer.id}}",
+          "name": "{{body.customer.name}}"
+        },
+        "amount": "{{body.totalAmount}}",
+        "paymentStatus": "completed",
+        "createdAt": "{{$date}}"
+      }
+    }
+  ]
+}

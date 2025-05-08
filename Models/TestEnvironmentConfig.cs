@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace APITester.Models
+namespace Apify.Models
 {
     public class TestEnvironmentConfig
     {

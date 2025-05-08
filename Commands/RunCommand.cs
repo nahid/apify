@@ -1,10 +1,10 @@
-using APITester.Models;
-using APITester.Services;
-using APITester.Utils;
+using Apify.Models;
+using Apify.Services;
+using Apify.Utils;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 
-namespace APITester.Commands
+namespace Apify.Commands
 {
     public class RunCommand
     {
@@ -12,12 +12,12 @@ namespace APITester.Commands
 
         public RunCommand()
         {
-            Command = new Command("run", "Run API tests from JSON definition files");
+            Command = new Command("run", "Run API tests from the .apify directory (uses simplified path format)");
 
             // Add arguments
             var fileArgument = new Argument<string[]>(
                 name: "files",
-                description: "API definition files to test (supports wildcards)")
+                description: "API definition files to test (located in .apify directory by default, no need to specify file extension, supports dot notation for nested directories and wildcards)")
             {
                 Arity = ArgumentArity.OneOrMore
             };
@@ -43,17 +43,17 @@ namespace APITester.Commands
             Command.AddOption(environmentOption);
 
             // Set the handler
-            Command.SetHandler(async (files, verbose, profile, environment) =>
+            Command.SetHandler(async (files, verbose, profile, environment, debug) =>
             {
-                await ExecuteRunCommand(files, verbose, profile, environment);
-            }, fileArgument, verboseOption, profileOption, environmentOption);
+                await ExecuteRunCommand(files, verbose, profile, environment, debug);
+            }, fileArgument, verboseOption, profileOption, environmentOption, RootCommand.DebugOption);
         }
 
-        private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? profileName, string? environmentName)
+        private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? profileName, string? environmentName, bool debug)
         {
-            ConsoleHelper.DisplayTitle("API Tester - Running Tests");
+            ConsoleHelper.DisplayTitle("Apify - Running Tests");
 
-            var environmentService = new EnvironmentService();
+            var environmentService = new EnvironmentService(debug);
             
             // Load the profile from the current directory
             var profile = environmentService.LoadConfigurationProfile();
@@ -129,6 +129,9 @@ namespace APITester.Commands
                         continue;
                     }
                     
+                    // Process any legacy test format
+                    apiDefinition.ProcessTestFormats();
+                    
                     // Apply extracted property paths to the test assertions if available
                     if (propertyPaths.Count > 0 && apiDefinition.Tests != null)
                     {
@@ -138,7 +141,7 @@ namespace APITester.Commands
                                 string.IsNullOrEmpty(test.PropertyPath))
                             {
                                 test.PropertyPath = propertyPath;
-                                Console.WriteLine($"Applied propertyPath '{propertyPath}' to test '{test.Name}'");
+                                // Property path applied successfully
                             }
                         }
                     }
@@ -176,23 +179,79 @@ namespace APITester.Commands
             ConsoleHelper.WriteLineColored("==========================", ConsoleColor.Cyan);
         }
 
+        private const string DefaultApiDirectory = ".apify";
+
         private List<string> ExpandWildcards(string[] filePaths)
         {
             var expandedPaths = new List<string>();
             
-            foreach (var path in filePaths)
+            foreach (var originalPath in filePaths)
             {
-                if (path.Contains("*") || path.Contains("?"))
+                // Use the ProcessFilePath method to ensure consistent behavior with CreateRequestCommand
+                string finalPath = ProcessFilePath(originalPath);
+                
+                // STEP 5: Handle wildcards, or add the path if the file exists
+                if (finalPath.Contains("*") || finalPath.Contains("?"))
                 {
-                    var directory = Path.GetDirectoryName(path) ?? ".";
-                    var filePattern = Path.GetFileName(path);
-                    var matchingFiles = Directory.GetFiles(directory, filePattern)
-                                                .Where(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
-                    expandedPaths.AddRange(matchingFiles);
+                    var directory = Path.GetDirectoryName(finalPath) ?? ".";
+                    var filePattern = Path.GetFileName(finalPath);
+                    
+                    if (Directory.Exists(directory))
+                    {
+                        var matchingFiles = Directory.GetFiles(directory, filePattern)
+                                                  .Where(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+                        expandedPaths.AddRange(matchingFiles);
+                        
+                        if (!matchingFiles.Any())
+                        {
+                            ConsoleHelper.WriteWarning($"No files matching '{filePattern}' found in directory '{directory}'");
+                        }
+                    }
+                    else
+                    {
+                        ConsoleHelper.WriteError($"Directory does not exist: {directory}");
+                    }
                 }
-                else if (File.Exists(path))
+                else if (File.Exists(finalPath))
                 {
-                    expandedPaths.Add(path);
+                    expandedPaths.Add(finalPath);
+                    ConsoleHelper.WriteInfo($"Found file: {finalPath}");
+                }
+                else
+                {
+                    // Show detailed error for missing file
+                    ConsoleHelper.WriteError($"Could not find file: {finalPath}");
+                    
+                    // Display how the path was processed for debugging
+                    if (originalPath != finalPath)
+                    {
+                        ConsoleHelper.WriteInfo($"Original input was '{originalPath}', which was processed as '{finalPath}'");
+                    }
+                    
+                    // Check if the directory exists
+                    var dir = Path.GetDirectoryName(finalPath);
+                    if (dir != null && !Directory.Exists(dir))
+                    {
+                        ConsoleHelper.WriteError($"Directory does not exist: {dir}");
+                    }
+                    else if (dir != null)
+                    {
+                        // Directory exists, suggest similar files that might be what the user intended
+                        var jsonFiles = Directory.GetFiles(dir, "*.json");
+                        if (jsonFiles.Length > 0)
+                        {
+                            ConsoleHelper.WriteInfo($"Files available in {dir}:");
+                            foreach (var file in jsonFiles.Take(5)) // Limit to 5 suggestions
+                            {
+                                ConsoleHelper.WriteInfo($"  - {Path.GetFileName(file)}");
+                            }
+                            
+                            if (jsonFiles.Length > 5)
+                            {
+                                ConsoleHelper.WriteInfo($"  ... and {jsonFiles.Length - 5} more");
+                            }
+                        }
+                    }
                 }
             }
 
@@ -339,6 +398,82 @@ namespace APITester.Commands
             }
         }
         
+        private void EnsureApiDirectoryExists()
+        {
+            if (!Directory.Exists(DefaultApiDirectory))
+            {
+                try
+                {
+                    Directory.CreateDirectory(DefaultApiDirectory);
+                    ConsoleHelper.WriteInfo($"Created '{DefaultApiDirectory}' directory as it didn't exist.");
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.WriteError($"Failed to create '{DefaultApiDirectory}' directory: {ex.Message}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Process a file path using the same logic as in CreateRequestCommand.
+        /// This ensures consistent behavior between commands.
+        /// </summary>
+        private string ProcessFilePath(string filePath)
+        {
+            // Apply the same logic as in CreateRequestCommand to handle dot notation
+            // and ensure .json extension 
+            
+            // Start with original path
+            string processedPath = filePath;
+            
+            // Add .json extension if missing
+            if (!processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                processedPath += ".json";
+            }
+            
+            // Convert dot notation to directory separators if present
+            string filenameWithoutExt = Path.GetFileNameWithoutExtension(processedPath);
+            
+            // If there are dots in the filename part (not in the extension)
+            if (filenameWithoutExt.Contains('.'))
+            {
+                string extension = Path.GetExtension(processedPath);
+                
+                // Only handle as dot notation if no directory separators already exist
+                bool hasDirectorySeparator = processedPath.Contains(Path.DirectorySeparatorChar) || 
+                                            processedPath.Contains(Path.AltDirectorySeparatorChar);
+                
+                if (!hasDirectorySeparator && !processedPath.StartsWith("."))
+                {
+                    string[] parts = filenameWithoutExt.Split('.');
+                    string filename = parts[parts.Length - 1]; // Last part becomes the filename
+                    string[] folderParts = parts.Take(parts.Length - 1).ToArray(); // Earlier parts become folders
+                    
+                    // Join with directory separators
+                    processedPath = string.Join(Path.DirectorySeparatorChar.ToString(), folderParts) + 
+                                   Path.DirectorySeparatorChar + filename + extension;
+                    
+                    ConsoleHelper.WriteInfo($"Converted dot notation: {filePath} → {processedPath}");
+                }
+            }
+            
+            // Add .apify prefix if not already present
+            bool alreadyHasApiDirectory = processedPath.StartsWith(DefaultApiDirectory + Path.DirectorySeparatorChar) || 
+                                         processedPath.StartsWith(DefaultApiDirectory + Path.AltDirectorySeparatorChar);
+            
+            if (!alreadyHasApiDirectory)
+            {
+                // Ensure the .apify directory exists
+                EnsureApiDirectoryExists();
+                
+                processedPath = Path.Combine(DefaultApiDirectory, processedPath);
+                ConsoleHelper.WriteInfo($"Added default directory: {processedPath}");
+            }
+            
+            return processedPath;
+        }
+        
         private void ListEnvironments(TestEnvironmentConfig config)
         {
             if (config == null)
@@ -382,5 +517,7 @@ namespace APITester.Commands
                 }
             }
         }
+        
+
     }
 }

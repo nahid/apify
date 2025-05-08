@@ -1,0 +1,62 @@
+{
+  "name": "Project Variables Test",
+  "description": "Tests using project-level variables in requests",
+  "uri": "https://httpbin.org/get?projectId={{projectId}}&version={{version}}",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json",
+    "Content-Type": "{{defaultHeaders}}",
+    "X-Timeout": "{{requestTimeout}}"
+  },
+  "tests": [
+    {
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "name": "Project ID query parameter is set",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.projectId",
+          "value": "api-testing-project"
+        }
+      ]
+    },
+    {
+      "name": "Version query parameter is set",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.version",
+          "value": "1.0.0"
+        }
+      ]
+    },
+    {
+      "name": "Content-Type header is correctly set",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "headers.Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "name": "Timeout header matches project configuration",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "headers.X-Timeout",
+          "value": "5000"
+        }
+      ]
+    }
+  ]
+}

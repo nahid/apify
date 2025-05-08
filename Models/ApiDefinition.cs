@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace APITester.Models
+namespace Apify.Models
 {
     // Add DynamicallyAccessedMembers attribute to preserve public members for reflection
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
@@ -139,12 +139,58 @@ namespace APITester.Models
 
         [JsonPropertyName("tests")]
         public List<TestAssertion>? Tests { get; set; }
+        
+        // For supporting the legacy test format that uses nested test definitions
+        [JsonPropertyName("testGroups")]
+        [Newtonsoft.Json.JsonProperty("testGroups")]
+        private List<TestGroup>? LegacyTestGroups { get; set; }
+        
+        // Convert legacy format tests if needed
+        public void ProcessTestFormats()
+        {
+            // If we have no tests but have legacy test groups, convert them
+            if ((Tests == null || Tests.Count == 0) && LegacyTestGroups != null && LegacyTestGroups.Count > 0)
+            {
+                Tests = new List<TestAssertion>();
+                foreach (var group in LegacyTestGroups)
+                {
+                    if (group.Assertions != null)
+                    {
+                        foreach (var assertion in group.Assertions)
+                        {
+                            var testAssertion = new TestAssertion
+                            {
+                                Name = group.Name,
+                                // Combine group name with assertion type for better debugging
+                                Description = $"{group.Name}: {assertion.Type ?? "check"} {assertion.Property ?? string.Empty}",
+                                AssertType = assertion.Type ?? string.Empty,
+                                Property = assertion.Property, // Preserve the original property
+                                ExpectedValue = assertion.Value
+                            };
+                            Tests.Add(testAssertion);
+                        }
+                    }
+                }
+            }
+            
+            // Convert legacy format assertions to new format
+            if (Tests != null)
+            {
+                foreach (var test in Tests)
+                {
+                    test.ConvertLegacyFormat();
+                }
+            }
+        }
 
         [JsonPropertyName("timeout")]
         public int Timeout { get; set; } = 30000; // 30 seconds default timeout
         
         [JsonPropertyName("variables")]
         public Dictionary<string, string>? Variables { get; set; }
+        
+        [JsonPropertyName("tags")]
+        public List<string>? Tags { get; set; }
     }
 
     public enum PayloadType

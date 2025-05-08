@@ -1,4 +1,4 @@
-# API Tester
+# Apify
 
 A powerful C# CLI application for comprehensive API testing, enabling developers to streamline API validation workflows with rich configuration and execution capabilities.
 
@@ -10,6 +10,7 @@ A powerful C# CLI application for comprehensive API testing, enabling developers
 - **Environment Variables**: Use different configurations for development, staging, production
 - **Test Assertions**: Validate response status, headers, body content
 - **Detailed Reports**: Comprehensive output with request and response details
+- **Visual Progress Indicators**: Animated progress display for running multiple tests
 - **Single File Deployment**: Simplified deployment as a single executable file
 - **.NET 9 Ready**: Automatic multi-targeting with .NET 9.0 when available
 
@@ -53,17 +54,17 @@ dotnet publish -c Release -r linux-x64 --self-contained true
 
 ### Integration into Existing API Projects
 
-You can use API Tester within your existing API projects:
+You can use Apify within your existing API projects:
 
-1. **Build and Install API Tester**
+1. **Build and Install Apify**
    ```bash
    # Build as a single file executable
    dotnet publish -c Release -r <your-platform> --self-contained true
    
    # Copy the executable to a location in your PATH, or use it directly
-   cp bin/Release/net8.0/<your-platform>/publish/apitester /usr/local/bin/
+   cp bin/Release/net8.0/<your-platform>/publish/apify /usr/local/bin/
    # or for Windows
-   # copy bin\Release\net8.0\win-x64\publish\apitester.exe C:\path\to\your\bin\
+   # copy bin\Release\net8.0\win-x64\publish\apify.exe C:\path\to\your\bin\
    ```
 
 2. **Initialize API Testing in Your Project Directory**
@@ -71,32 +72,44 @@ You can use API Tester within your existing API projects:
    # Navigate to your API project
    cd /path/to/your/weatherapi
    
-   # Initialize API testing (creates apify-config.json and apis/ directory)
-   apitester init --name "Weather API Tests" --base-url "https://api.weather.com"
+   # Initialize API testing (creates apify-config.json and .apify/ directory)
+   apify init --name "Weather API Tests" --base-url "https://api.weather.com"
    # If you didn't install globally, use the full path to the executable
-   # /path/to/apitester init --name "Weather API Tests" --base-url "https://api.weather.com"
+   # /path/to/apify init --name "Weather API Tests" --base-url "https://api.weather.com"
    ```
 
 3. **Create API Test Definitions**
-   - Add test files to the `apis/` directory in your project
+   - You can use the interactive command to create API request definitions:
+     ```bash
+     # Create a new API request in .apify/users/all.json
+     apify create request --file users.all
+     ```
+   - Or manually add test files to the `.apify/` directory in your project
    - Each JSON file represents an API endpoint test
+   - You can use dot notation for nested directories (e.g., `users.all` for `.apify/users/all.json`)
 
 4. **Run Tests**
    ```bash
    # From your project directory where apify-config.json is located
-   apitester run apis/get-weather.json
+   apify run users.all
    
    # Run with verbose output
-   apitester run apis/get-weather.json --verbose
+   apify run users.all --verbose
    
    # Run with a specific environment
-   apitester run apis/get-weather.json --env Production
+   apify run users.all --env Production
+   
+   # Run all tests in the project with visual progress indicators
+   apify tests
+   
+   # Run all tests with detailed output
+   apify tests --verbose
    ```
 
 5. **View Environment Configuration**
    ```bash
    # From your project directory
-   apitester list-env
+   apify list-env
    ```
 
 ### Direct Usage (without installation)
@@ -107,17 +120,40 @@ You can use API Tester within your existing API projects:
 dotnet run init --name "My API Project" --base-url "https://api.example.com"
 ```
 
+### Create API Requests
+
+```bash
+# Create a new API request interactively
+dotnet run create request --file users.all
+```
+
 ### Run API Tests
 
 ```bash
 # Run a specific test
-dotnet run run apis/sample-api.json
+dotnet run run users.all
 
 # Run with verbose output
-dotnet run run apis/sample-api.json --verbose
+dotnet run run users.all --verbose
 
 # Run with a specific environment
-dotnet run run apis/sample-api.json --env Production
+dotnet run run users.all --env Production
+```
+
+### Run All Tests
+
+```bash
+# Run all API tests in the project with visual progress indicators
+dotnet run tests
+
+# Run all tests with detailed output
+dotnet run tests --verbose
+
+# Run all tests in a specific environment
+dotnet run tests --env Production
+
+# Run only tests with a specific tag
+dotnet run tests --tag payments
 ```
 
 ### List Environments
@@ -187,7 +223,7 @@ API tests are defined in JSON files with this structure:
 
 ## Example: Testing a Weather API
 
-Here's a practical example of how to use API Tester with a Weather API project:
+Here's a practical example of how to use Apify with a Weather API project:
 
 ### Step 1: Setup
 
@@ -195,13 +231,18 @@ Here's a practical example of how to use API Tester with a Weather API project:
 # Navigate to your Weather API project
 cd ~/projects/weatherapi
 
-# Initialize API testing (creates apify-config.json and apis/ directory)
-apitester init --name "Weather API Tests" --base-url "https://api.weather.com"
+# Initialize API testing (creates apify-config.json and .apify/ directory)
+apify init --name "Weather API Tests" --base-url "https://api.weather.com"
 ```
 
 ### Step 2: Create API Test Definitions
 
-Create a file `apis/get-current-weather.json`:
+Create a file `.apify/weather/current.json` using the interactive command:
+```bash
+apify create request --file weather.current
+```
+
+Or manually create a file with the following content:
 
 ```json
 {
@@ -267,7 +308,13 @@ Edit `apify-config.json` to add your environment variables:
 
 ```bash
 # From your Weather API project directory
-apitester run apis/get-current-weather.json --verbose
+apify run weather.current --verbose
+
+# Run all tests in the project
+apify tests
+
+# Run all tests with detailed output and custom environment
+apify tests --verbose --env Production
 ```
 
 ## License

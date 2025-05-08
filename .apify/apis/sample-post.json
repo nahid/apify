@@ -1,0 +1,66 @@
+{
+  "name": "Sample POST Request",
+  "description": "Example of POST request with JSON payload",
+  "uri": "{{baseUrl}}/posts",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "X-API-Key": "{{apiKey}}"
+  },
+  "payload": {
+    "title": "Apify Test",
+    "body": "This is a test post created by Apify testing tool",
+    "userId": "{{userId}}"
+  },
+  "tests": [
+    {
+      "name": "Status code is 201",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "201"
+        }
+      ]
+    },
+    {
+      "name": "Response contains the correct user ID",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "userId",
+          "value": "{{userId}}"
+        }
+      ]
+    },
+    {
+      "name": "Response contains the title",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "title",
+          "value": "Apify Test"
+        }
+      ]
+    },
+    {
+      "name": "Response contains an ID",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "id",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Response time is acceptable",
+      "assertions": [
+        {
+          "type": "ResponseTimeBelow",
+          "value": "{{timeout}}"
+        }
+      ]
+    }
+  ]
+}

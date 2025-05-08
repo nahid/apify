@@ -1,0 +1,47 @@
+{
+  "method": "GET",
+  "path": "/api/users/{id}",
+  "name": "Get User by ID",
+  "statusCode": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "response": {
+    "id": "{{id}}",
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "username": "johndoe",
+    "phone": "555-123-4567",
+    "website": "johndoe.example.com"
+  },
+  "dynamicTemplate": true,
+  "pathParams": ["id"],
+  "conditionalResponses": [
+    {
+      "condition": {
+        "pathParam": "id",
+        "value": "999"
+      },
+      "response": {
+        "statusCode": 404,
+        "body": {
+          "error": "Not Found",
+          "message": "User with ID 999 not found"
+        }
+      }
+    },
+    {
+      "condition": {
+        "header": "Authorization",
+        "exists": false
+      },
+      "response": {
+        "statusCode": 401,
+        "body": {
+          "error": "Unauthorized",
+          "message": "Missing authentication token"
+        }
+      }
+    }
+  ]
+}

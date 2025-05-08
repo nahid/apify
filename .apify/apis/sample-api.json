@@ -1,0 +1,70 @@
+{
+  "name": "Sample GET Request",
+  "description": "Example of GET request to JSONPlaceholder API",
+  "uri": "{{baseUrl}}/users/{{userId}}",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json",
+    "X-API-Key": "{{apiKey}}"
+  },
+  "tests": [
+    {
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "name": "Contains user ID",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "id",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Contains user name",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "name",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Contains email",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "email",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Response time is under timeout",
+      "assertions": [
+        {
+          "type": "ResponseTimeBelow",
+          "value": "{{timeout}}"
+        }
+      ]
+    },
+    {
+      "name": "Content-Type header is present",
+      "assertions": [
+        {
+          "type": "HeaderContains",
+          "header": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    }
+  ]
+}

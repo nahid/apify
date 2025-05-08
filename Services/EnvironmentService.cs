@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-using APITester.Models;
+using Apify.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 
-namespace APITester.Services
+namespace Apify.Services
 {
     public class EnvironmentService
     {
@@ -16,13 +16,26 @@ namespace APITester.Services
         
         private TestEnvironment? _currentEnvironment;
         private string? _configFilePath;
+        private bool _debug;
         
         public TestEnvironment? CurrentEnvironment => _currentEnvironment;
         
-        public EnvironmentService()
+        public EnvironmentService(bool debug = false)
         {
             // Initialize config path to null - it will be determined dynamically when needed
             _configFilePath = null;
+            _debug = debug;
+        }
+        
+        public async Task LoadConfig()
+        {
+            // Load configuration file
+            var config = LoadConfigurationProfile();
+            
+            // Set the environment
+            SetCurrentEnvironment();
+            
+            await Task.CompletedTask;
         }
         
         // Function to get the configuration file path - always uses current working directory
@@ -41,7 +54,10 @@ namespace APITester.Services
             else
             {
                 // File doesn't exist yet, so we'll use this path for creating it
-                Console.WriteLine($"Configuration file not found. Will use: {Path.GetFullPath(currentPath)}");
+                if (_debug)
+                {
+                    Console.WriteLine($"Configuration file not found. Will use: {Path.GetFullPath(currentPath)}");
+                }
             }
             
             // Always use the current directory path
@@ -89,13 +105,20 @@ namespace APITester.Services
                 
                 if (config != null)
                 {
-                    Console.WriteLine("Successfully loaded environment configuration");
+                    if (_debug)
+                    {
+                        Console.WriteLine("Successfully loaded environment configuration");
+                    }
                     
                     // Ensure Environments collection is initialized
                     if (config.Environments == null)
                     {
                         config.Environments = new List<TestEnvironment>();
-                        Console.WriteLine("Initialized empty Environments collection");
+                        
+                        if (_debug)
+                        {
+                            Console.WriteLine("Initialized empty Environments collection");
+                        }
                     }
                     
                     return config;
@@ -209,6 +232,7 @@ namespace APITester.Services
             return true;
         }
         
+        // Apply environment variables from the current environment only
         public string ApplyEnvironmentVariables(string input)
         {
             if (_currentEnvironment == null)
@@ -218,6 +242,46 @@ namespace APITester.Services
             {
                 var variableName = match.Groups[1].Value.Trim();
                 if (_currentEnvironment.Variables.TryGetValue(variableName, out var value))
+                {
+                    return value;
+                }
+                return match.Value; // Keep the original {{variable}} if not found
+            });
+        }
+        
+        // Apply variables from all sources - project, environment, and request-specific
+        public string ApplyVariablesToString(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+            
+            // Load config to access project-level variables
+            var config = LoadConfigurationProfile();
+            var mergedVariables = new Dictionary<string, string>();
+            
+            // Add project-level variables (lowest priority)
+            if (config.Variables != null)
+            {
+                foreach (var projectVar in config.Variables)
+                {
+                    mergedVariables[projectVar.Key] = projectVar.Value;
+                }
+            }
+            
+            // Add environment-specific variables (medium priority)
+            if (_currentEnvironment != null && _currentEnvironment.Variables != null)
+            {
+                foreach (var envVar in _currentEnvironment.Variables)
+                {
+                    mergedVariables[envVar.Key] = envVar.Value;
+                }
+            }
+            
+            // Apply all variables to the input string
+            return VariablePattern.Replace(input, match =>
+            {
+                var variableName = match.Groups[1].Value.Trim();
+                if (mergedVariables.TryGetValue(variableName, out var value))
                 {
                     return value;
                 }
@@ -239,10 +303,16 @@ namespace APITester.Services
             // First, add project-level variables (lowest priority)
             if (config.Variables != null && config.Variables.Count > 0)
             {
-                Console.WriteLine("Applying project-level variables from apify-config.json...");
+                if (_debug)
+                {
+                    Console.WriteLine("Applying project-level variables from apify-config.json...");
+                }
                 foreach (var projectVar in config.Variables)
                 {
-                    Console.WriteLine($"  Added project-level variable: {projectVar.Key}");
+                    if (_debug)
+                    {
+                        Console.WriteLine($"  Added project-level variable: {projectVar.Key}");
+                    }
                     mergedVariables[projectVar.Key] = projectVar.Value;
                 }
             }
@@ -250,22 +320,31 @@ namespace APITester.Services
             // Next, add environment-specific variables (medium priority - overrides project variables)
             if (_currentEnvironment == null)
             {
-                Console.WriteLine("Warning: No active environment set. Only project and request variables will be applied.");
+                if (_debug)
+                {
+                    Console.WriteLine("Warning: No active environment set. Only project and request variables will be applied.");
+                }
             }
             else
             {
-                Console.WriteLine($"Applying environment variables from '{_currentEnvironment.Name}' environment...");
+                if (_debug)
+                {
+                    Console.WriteLine($"Applying environment variables from '{_currentEnvironment.Name}' environment...");
+                }
                 
                 // Add environment variables from the current environment
                 foreach (var envVar in _currentEnvironment.Variables)
                 {
-                    if (mergedVariables.ContainsKey(envVar.Key))
+                    if (_debug)
                     {
-                        Console.WriteLine($"  Environment variable '{envVar.Key}' overrides project variable with same name");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"  Added environment variable: {envVar.Key}");
+                        if (mergedVariables.ContainsKey(envVar.Key))
+                        {
+                            Console.WriteLine($"  Environment variable '{envVar.Key}' overrides project variable with same name");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  Added environment variable: {envVar.Key}");
+                        }
                     }
                     mergedVariables[envVar.Key] = envVar.Value;
                 }
@@ -274,16 +353,22 @@ namespace APITester.Services
             // Finally, add request-specific variables (highest priority - overrides both project and environment variables)
             if (apiDefinition.Variables != null && apiDefinition.Variables.Count > 0)
             {
-                Console.WriteLine("Applying request-specific variables from API definition...");
+                if (_debug)
+                {
+                    Console.WriteLine("Applying request-specific variables from API definition...");
+                }
                 foreach (var customVar in apiDefinition.Variables)
                 {
-                    if (mergedVariables.ContainsKey(customVar.Key))
+                    if (_debug)
                     {
-                        Console.WriteLine($"  Request-specific variable '{customVar.Key}' overrides variable with same name");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"  Added request-specific variable: {customVar.Key}");
+                        if (mergedVariables.ContainsKey(customVar.Key))
+                        {
+                            Console.WriteLine($"  Request-specific variable '{customVar.Key}' overrides variable with same name");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  Added request-specific variable: {customVar.Key}");
+                        }
                     }
                     mergedVariables[customVar.Key] = customVar.Value;
                 }
@@ -302,7 +387,7 @@ namespace APITester.Services
             };
             
             // Log URI transformation for debugging
-            if (apiDefinition.Uri != modifiedApi.Uri)
+            if (_debug && apiDefinition.Uri != modifiedApi.Uri)
             {
                 Console.WriteLine($"  Transformed URI: {apiDefinition.Uri} -> {modifiedApi.Uri}");
             }
@@ -316,7 +401,7 @@ namespace APITester.Services
                     modifiedApi.Headers[header.Key] = transformedValue;
                     
                     // Log header transformation for debugging
-                    if (header.Value != transformedValue)
+                    if (_debug && header.Value != transformedValue)
                     {
                         Console.WriteLine($"  Transformed Header {header.Key}: {header.Value} -> {transformedValue}");
                     }
@@ -343,7 +428,7 @@ namespace APITester.Services
                     };
                     
                     // Log test value transformation for debugging
-                    if (originalValue != transformedValue)
+                    if (_debug && originalValue != transformedValue)
                     {
                         Console.WriteLine($"  Transformed Test Value: {originalValue} -> {transformedValue}");
                     }
@@ -463,8 +548,11 @@ namespace APITester.Services
                 var variableName = match.Groups[1].Value.Trim();
                 if (!mergedVariables.ContainsKey(variableName))
                 {
-                    // Show a warning for missing variables
-                    Console.WriteLine($"  Warning: Variable '{variableName}' is referenced but not defined in environment or custom variables.");
+                    // Show a warning for missing variables only when debug is enabled
+                    if (_debug)
+                    {
+                        Console.WriteLine($"  Warning: Variable '{variableName}' is referenced but not defined in environment or custom variables.");
+                    }
                 }
             }
         }

@@ -39,5 +39,30 @@ jobs:
     - name: Run POST Tests
       run: dotnet run run apis/sample-post.json
       
+    - name: Run All Tests Command
+      run: dotnet run tests
+      
     - name: List environments
       run: dotnet run list-env
+      
+    - name: Test Mock Server (Linux/macOS only)
+      if: runner.os != 'Windows'
+      run: |
+        # Start mock server in background
+        dotnet run mock-server --port 5000 &
+        # Give server time to start
+        sleep 2
+        # Test default response for products search
+        curl -s "http://localhost:5000/products/search" | grep "Programming Guide" || exit 1
+        # Kill background process
+        kill %1
+      
+    - name: Test Mock Server (Windows only)
+      if: runner.os == 'Windows'
+      run: |
+        # Start mock server in background
+        start /b dotnet run mock-server --port 5000
+        # Give server time to start
+        timeout /t 2
+        # Test default response - check if server is running
+        curl -s "http://localhost:5000/products/search"

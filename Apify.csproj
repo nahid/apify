@@ -5,25 +5,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>apitester</AssemblyName>
-    <RootNamespace>APITester</RootNamespace>
+    <AssemblyName>apify</AssemblyName>
+    <RootNamespace>Apify</RootNamespace>
     <LangVersion>latest</LangVersion>
     <AnalysisLevel>latest</AnalysisLevel>
-    <!-- Target .NET 9 compatibility -->
-    <CheckEolTargetFramework>false</CheckEolTargetFramework>
-    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
     <!-- Single file publishing options -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <DebugType>embedded</DebugType>
-  </PropertyGroup>
-  
-  <!-- Conditional targeting for .NET 9.0 -->
-  <PropertyGroup>
-    <!-- Set conditions to determine if .NET 9.0 is available -->
-    <_Net9Available Condition="$([MSBuild]::VersionGreaterThanOrEquals($([MSBuild]::ValueOrDefault('$(NETCoreSDKVersion)', '0.0')), '9.0.0'))">true</_Net9Available>
-    
-    <!-- Change TargetFramework to TargetFrameworks when .NET 9.0 is available -->
-    <TargetFrameworks Condition="'$(_Net9Available)' == 'true'">net8.0;net9.0</TargetFrameworks>
   </PropertyGroup>
 
   <!-- Properties for publishing -->
@@ -35,7 +23,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ConsoleTableExt" Version="3.2.0" />
+    <PackageReference Include="ConsoleTableExt" Version="3.3.0" />
+    <PackageReference Include="DynamicExpresso.Core" Version="2.19.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>

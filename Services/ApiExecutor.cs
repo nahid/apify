@@ -1,19 +1,26 @@
-using APITester.Models;
-using APITester.Utils;
+using Apify.Models;
+using Apify.Utils;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace APITester.Services
+namespace Apify.Services
 {
     public class ApiExecutor
     {
         private readonly HttpClient _httpClient;
+        private EnvironmentService? _environmentService;
 
         public ApiExecutor()
         {
             _httpClient = new HttpClient();
+            _environmentService = null;
+        }
+        
+        public void SetEnvironmentService(EnvironmentService environmentService)
+        {
+            _environmentService = environmentService;
         }
 
         public async Task<ApiResponse> ExecuteRequestAsync(ApiDefinition apiDefinition)
@@ -24,7 +31,17 @@ namespace APITester.Services
             try
             {
                 // Create request message
-                var request = new HttpRequestMessage(new HttpMethod(apiDefinition.Method), apiDefinition.Uri);
+                // Check if URI has a valid scheme (http:// or https://)
+                var uri = apiDefinition.Uri;
+                
+                // If URI doesn't start with http:// or https://, add https:// prefix
+                if (!uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && 
+                    !uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    uri = "https://" + uri;
+                }
+                
+                var request = new HttpRequestMessage(new HttpMethod(apiDefinition.Method), uri);
 
                 // Add headers
                 if (apiDefinition.Headers != null)
@@ -84,12 +101,8 @@ namespace APITester.Services
                 response.ErrorMessage = ex.Message;
                 response.ResponseTimeMs = stopwatch.ElapsedMilliseconds;
                 
-                // Log the full exception details for debugging
-                Console.WriteLine($"API Request Error: {ex.GetType().Name} - {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
-                }
+                // The detailed error info is already included in the response object
+                // so we don't need to log anything here
                 
                 // Include the error message in the response body for test assertion context
                 response.Body = $"{{\"error\": \"{ex.Message.Replace("\"", "\\\"")}\", \"exception_type\": \"{ex.GetType().Name}\"}}";
@@ -149,9 +162,9 @@ namespace APITester.Services
                             content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
                         }
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        ConsoleHelper.WriteWarning($"Error processing form data: {ex.Message}");
+                        // Error is already handled by falling back to string content
                         content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
                     }
                     break;
@@ -189,9 +202,9 @@ namespace APITester.Services
                         }
                     }
                 }
-                catch (Exception ex)
+                catch
                 {
-                    ConsoleHelper.WriteWarning($"Error parsing form data payload: {ex.Message}");
+                    // Silently ignore parsing errors for form data
                 }
             }
 
@@ -217,9 +230,13 @@ namespace APITester.Services
                     string fileName = Path.GetFileName(file.FilePath);
                     multipartContent.Add(fileContent, file.FieldName, fileName);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    ConsoleHelper.WriteWarning($"Error adding file {file.FilePath}: {ex.Message}");
+                    // Only show file errors when they're critical to the request
+                    if (!File.Exists(file.FilePath))
+                    {
+                        ConsoleHelper.WriteWarning($"File not found: {file.FilePath}");
+                    }
                 }
             }
 

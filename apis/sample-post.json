@@ -1,40 +1,76 @@
 {
-  "Name": "Sample POST API Test",
-  "Uri": "{{baseUrl}}/posts",
-  "Method": "POST",
-  "Headers": {
-    "Accept": "application/json",
-    "Content-Type": "application/json"
+  "name": "Sample POST API",
+  "description": "Sample API for testing POST requests",
+  "uri": "{{baseUrl}}/posts",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
   },
   "payload": {
-    "title": "Sample Post",
-    "body": "This is a sample post body",
-    "userId": 1
+    "title": "Test Post",
+    "body": "This is a test post created by Apify",
+    "userId": "{{userId}}"
   },
-  "PayloadType": 2,
-  "Tests": [
+  "payloadType": "Json",
+  "tests": [
     {
-      "Name": "Status code is Created",
-      "Description": "Status code is 201",
-      "Assertion": "",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "201"
+      "name": "Status code is 201",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "201"
+        }
+      ]
     },
     {
-      "Name": "Response contains id property",
-      "Description": "Response contains id property",
-      "Assertion": "",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "id"
+      "name": "Response time is acceptable",
+      "assertions": [
+        {
+          "type": "ResponseTimeBelow",
+          "value": "5000"
+        }
+      ]
     },
     {
-      "Name": "Response contains title property",
-      "Description": "Response contains title property",
-      "Assertion": "",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "title"
+      "name": "Response contains ID property",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "id",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "name": "Response contains title property",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "title",
+          "value": "Test Post" 
+        }
+      ]
+    },
+    {
+      "name": "Response contains body property",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "body",
+          "value": "This is a test post created by Apify"
+        }
+      ]
+    },
+    {
+      "name": "Response contains userId property",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "userId",
+          "value": "{{userId}}"
+        }
+      ]
     }
-  ],
-  "Timeout": 30000,
-  "Variables": {}
+  ]
 }

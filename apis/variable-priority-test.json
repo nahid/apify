@@ -1,38 +1,54 @@
 {
-  "Name": "Variable Priority Test",
-  "Uri": "{{baseUrl}}/posts/{{userId}}",
-  "Method": "GET",
-  "Headers": {
+  "name": "Variable Priority Test",
+  "description": "Tests to demonstrate the variable priority system",
+  "uri": "https://httpbin.org/get?baseUrl={{baseUrl}}&projectVersion={{version}}&priorityVar={{priorityVar}}",
+  "method": "GET",
+  "headers": {
     "Accept": "application/json",
-    "X-API-Version": "{{apiVersion}}",
-    "X-Project-ID": "{{projectId}}",
-    "X-Version": "{{version}}",
-    "X-Priority-Test": "{{priorityVar}}"
+    "X-Test-Variable": "{{priorityVar}}"
   },
-  "Tests": [
+  "variables": {
+    "priorityVar": "request-specific-value"
+  },
+  "tests": [
     {
-      "Name": "Status code should be 200",
-      "Description": "Checks if the status code is 200",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "200"
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
     },
     {
-      "Name": "Response contains userId property",
-      "Description": "Validates that the response has the userId property",
-      "AssertType": "ContainsProperty",
-      "ExpectedValue": "userId"
+      "name": "Request-specific variable has highest priority",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.priorityVar",
+          "value": "request-specific-value"
+        }
+      ]
     },
     {
-      "Name": "Common variable value check",
-      "Description": "Checks that priorityVar is correctly set from request variables",
-      "AssertType": "equal",
-      "propertyPath": "id",
-      "ExpectedValue": "{{userId}}"
+      "name": "Project variable is accessible",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.projectVersion",
+          "value": "{{version}}"
+        }
+      ]
+    },
+    {
+      "name": "Environment variable is accessible",
+      "assertions": [
+        {
+          "type": "ContainsProperty",
+          "property": "args.baseUrl",
+          "value": "{{baseUrl}}"
+        }
+      ]
     }
-  ],
-  "Variables": {
-    "userId": "2",
-    "priorityVar": "request-level-priority"
-  },
-  "Timeout": 15000
+  ]
 }

@@ -1,8 +1,8 @@
-modules = ["dotnet", "dotnet-8.0"]
+modules = ["dotnet", "dotnet-8.0", "python-3.11", "nodejs-20", "dotnet-sdk-8.0.300"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["dotnet-sdk", "dotnet-sdk_8"]
+packages = ["dotnet-sdk", "dotnet-sdk_8", "jq"]
 
 [workflows]
 runButton = "Project"
@@ -95,6 +95,34 @@ args = "TestProjectVariables"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "TestVariablePriority"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestDotNotationRun"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "RunTests"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MockServer"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestRunFixedSample"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestSingleBuild"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestMockServer"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TestCreateMock"
 
 [[workflows.workflow]]
 name = "APITester-ListEnv"
@@ -264,5 +292,67 @@ author = "agent"
 task = "shell.exec"
 args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run apis/variable-priority-test.json --verbose"
 
+[[workflows.workflow]]
+name = "TestDotNotationRun"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run users.all --verbose"
+
+[[workflows.workflow]]
+name = "RunTests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run tests"
+
+[[workflows.workflow]]
+name = "MockServer"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run mock-server --port 5000 --verbose"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "TestRunFixedSample"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run run apis/sample-api.json --verbose"
+
+[[workflows.workflow]]
+name = "TestSingleBuild"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet build -c Release -f net8.0 /p:DebugType=None /p:DebugSymbols=false"
+
+[[workflows.workflow]]
+name = "TestMockServer"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run mock-server --port 5000 --verbose"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "TestCreateMock"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd /home/runner/workspace && PATH=\"/nix/store/8y83na7h81fw5kr1msmjc7rvx329djp0-dotnet-sdk-8.0.300/bin:$PATH\" dotnet run create mock --file test.get --force"
+
 [deployment]
 run = ["sh", "-c", "dotnet run run Examples/get-user.json --verbose"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80

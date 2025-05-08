@@ -1,0 +1,67 @@
+{
+  "name": "Variable Priority Test",
+  "description": "Tests the priority of variables across different scopes",
+  "uri": "https://httpbin.org/get?userId={{userId}}&projectId={{projectId}}&apiKey={{apiKey}}",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json",
+    "X-UserId": "{{userId}}",
+    "X-ProjectId": "{{projectId}}",
+    "X-ApiKey": "{{apiKey}}"
+  },
+  "variables": {
+    "userId": "request-level-user-id",
+    "projectId": "request-level-project-id"
+  },
+  "tests": [
+    {
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "name": "Request-level user ID has highest priority",
+      "assertions": [
+        {
+          "type": "Equal",
+          "property": "args.userId",
+          "expectedValue": "request-level-user-id"
+        }
+      ]
+    },
+    {
+      "name": "Request-level project ID has higher priority than environment",
+      "assertions": [
+        {
+          "type": "Equal",
+          "property": "args.projectId",
+          "expectedValue": "request-level-project-id"
+        }
+      ]
+    },
+    {
+      "name": "API key from environment is accessible",
+      "assertions": [
+        {
+          "type": "Equal",
+          "property": "args.apiKey",
+          "expectedValue": "dev-api-key-123"
+        }
+      ]
+    },
+    {
+      "name": "Headers contain the correct values",
+      "assertions": [
+        {
+          "type": "Equal",
+          "property": "headers.X-Userid",
+          "expectedValue": "request-level-user-id"
+        }
+      ]
+    }
+  ]
+}
