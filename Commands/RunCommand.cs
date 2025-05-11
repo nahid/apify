@@ -15,12 +15,9 @@ namespace Apify.Commands
             Command = new Command("run", "Run API tests from the .apify directory (uses simplified path format)");
 
             // Add arguments
-            var fileArgument = new Argument<string[]>(
+            var fileArgument = new Argument<string>(
                 name: "files",
-                description: "API definition files to test (located in .apify directory by default, no need to specify file extension, supports dot notation for nested directories and wildcards)")
-            {
-                Arity = ArgumentArity.OneOrMore
-            };
+                description: "API definition files to test (located in .apify directory by default, no need to specify file extension, supports dot notation for nested directories and wildcards)");
             Command.AddArgument(fileArgument);
 
             // Add options
@@ -49,7 +46,7 @@ namespace Apify.Commands
             }, fileArgument, verboseOption, profileOption, environmentOption, RootCommand.DebugOption);
         }
 
-        private async Task ExecuteRunCommand(string[] filePaths, bool verbose, string? profileName, string? environmentName, bool debug)
+        private async Task ExecuteRunCommand(string filePath, bool verbose, string? profileName, string? environmentName, bool debug)
         {
             ConsoleHelper.DisplayTitle("Apify - Running Tests");
 
@@ -70,14 +67,14 @@ namespace Apify.Commands
             {
                 return; // Error message already displayed by the service
             }
-
+            
             ConsoleHelper.WriteKeyValue("Using Configuration", "From current directory");
             
             var currentEnv = environmentService.CurrentEnvironment;
             ConsoleHelper.WriteKeyValue("Active Environment", currentEnv?.Name ?? "None");
             
             // Display environment variables for better transparency
-            if (currentEnv?.Variables?.Count > 0)
+            if (currentEnv?.Variables?.Count > 0 && debug)
             {
                 ConsoleHelper.WriteInfo("Environment Variables:");
                 foreach (var variable in currentEnv.Variables)
@@ -105,74 +102,66 @@ namespace Apify.Commands
             var testRunner = new TestRunner();
             var apiExecutor = new ApiExecutor();
 
-            var expandedPaths = ExpandWildcards(filePaths);
-            if (expandedPaths.Count == 0)
+            var path = ProcessFilePath(filePath);
+        
+            try
             {
-                ConsoleHelper.WriteError("No matching files found.");
-                return;
-            }
-
-            foreach (var path in expandedPaths)
-            {
-                try
+                
+                // Extract property paths directly from the JSON file before deserialization
+                // This helps us work around issues with property name case sensitivity
+                var propertyPaths = JsonHelper.ExtractPropertyPaths(path);
+                
+                var apiDefinition = JsonHelper.DeserializeFromFile<ApiDefinition>(path);
+                if (apiDefinition == null)
                 {
-                    ConsoleHelper.WriteSection($"Processing {path}...");
-                    
-                    // Extract property paths directly from the JSON file before deserialization
-                    // This helps us work around issues with property name case sensitivity
-                    var propertyPaths = JsonHelper.ExtractPropertyPaths(path);
-                    
-                    var apiDefinition = JsonHelper.DeserializeFromFile<ApiDefinition>(path);
-                    if (apiDefinition == null)
+                    ConsoleHelper.WriteError($"Failed to parse {path}");
+                    return;
+                }
+                
+                // Process any legacy test format
+                apiDefinition.ProcessTestFormats();
+                
+                // Apply extracted property paths to the test assertions if available
+                if (propertyPaths.Count > 0 && apiDefinition.Tests != null)
+                {
+                    foreach (var test in apiDefinition.Tests)
                     {
-                        ConsoleHelper.WriteError($"Failed to parse {path}");
-                        continue;
-                    }
-                    
-                    // Process any legacy test format
-                    apiDefinition.ProcessTestFormats();
-                    
-                    // Apply extracted property paths to the test assertions if available
-                    if (propertyPaths.Count > 0 && apiDefinition.Tests != null)
-                    {
-                        foreach (var test in apiDefinition.Tests)
+                        if (propertyPaths.TryGetValue(test.Name, out var propertyPath) && 
+                            string.IsNullOrEmpty(test.PropertyPath))
                         {
-                            if (propertyPaths.TryGetValue(test.Name, out var propertyPath) && 
-                                string.IsNullOrEmpty(test.PropertyPath))
-                            {
-                                test.PropertyPath = propertyPath;
-                                // Property path applied successfully
-                            }
+                            test.PropertyPath = propertyPath;
+                            // Property path applied successfully
                         }
                     }
-
-                    // Apply environment variables
-                    apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
-
-                    if (verbose)
-                    {
-                        DisplayApiDefinition(apiDefinition);
-                    }
-
-                    var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
-                    
-                    if (verbose)
-                    {
-                        DisplayApiResponse(response);
-                    }
-                    
-                    var testResults = await testRunner.RunTestsAsync(apiDefinition, response);
-
-                    totalTests += testResults.Count;
-                    passedTests += testResults.Count(r => r.Passed);
-
-                    DisplayTestResults(testResults, verbose);
                 }
-                catch (Exception ex)
+
+                // Apply environment variables
+                apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
+
+                if (verbose)
                 {
-                    ConsoleHelper.WriteError($"Error processing {path}: {ex.Message}");
+                    DisplayApiDefinition(apiDefinition);
                 }
+
+                var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
+                
+                if (verbose)
+                {
+                    DisplayApiResponse(response);
+                }
+                
+                var testResults = await testRunner.RunTestsAsync(apiDefinition, response);
+
+                totalTests += testResults.Count;
+                passedTests += testResults.Count(r => r.Passed);
+
+                DisplayTestResults(testResults, verbose);
             }
+            catch (Exception ex)
+            {
+                ConsoleHelper.WriteError($"Error processing {path}: {ex.Message}");
+            }
+           
 
             ConsoleHelper.WriteSection("==========================");
             ConsoleHelper.WriteKeyValue("Test Summary", $"{passedTests}/{totalTests} tests passed");
@@ -180,83 +169,7 @@ namespace Apify.Commands
         }
 
         private const string DefaultApiDirectory = ".apify";
-
-        private List<string> ExpandWildcards(string[] filePaths)
-        {
-            var expandedPaths = new List<string>();
-            
-            foreach (var originalPath in filePaths)
-            {
-                // Use the ProcessFilePath method to ensure consistent behavior with CreateRequestCommand
-                string finalPath = ProcessFilePath(originalPath);
-                
-                // STEP 5: Handle wildcards, or add the path if the file exists
-                if (finalPath.Contains("*") || finalPath.Contains("?"))
-                {
-                    var directory = Path.GetDirectoryName(finalPath) ?? ".";
-                    var filePattern = Path.GetFileName(finalPath);
-                    
-                    if (Directory.Exists(directory))
-                    {
-                        var matchingFiles = Directory.GetFiles(directory, filePattern)
-                                                  .Where(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
-                        expandedPaths.AddRange(matchingFiles);
-                        
-                        if (!matchingFiles.Any())
-                        {
-                            ConsoleHelper.WriteWarning($"No files matching '{filePattern}' found in directory '{directory}'");
-                        }
-                    }
-                    else
-                    {
-                        ConsoleHelper.WriteError($"Directory does not exist: {directory}");
-                    }
-                }
-                else if (File.Exists(finalPath))
-                {
-                    expandedPaths.Add(finalPath);
-                    ConsoleHelper.WriteInfo($"Found file: {finalPath}");
-                }
-                else
-                {
-                    // Show detailed error for missing file
-                    ConsoleHelper.WriteError($"Could not find file: {finalPath}");
-                    
-                    // Display how the path was processed for debugging
-                    if (originalPath != finalPath)
-                    {
-                        ConsoleHelper.WriteInfo($"Original input was '{originalPath}', which was processed as '{finalPath}'");
-                    }
-                    
-                    // Check if the directory exists
-                    var dir = Path.GetDirectoryName(finalPath);
-                    if (dir != null && !Directory.Exists(dir))
-                    {
-                        ConsoleHelper.WriteError($"Directory does not exist: {dir}");
-                    }
-                    else if (dir != null)
-                    {
-                        // Directory exists, suggest similar files that might be what the user intended
-                        var jsonFiles = Directory.GetFiles(dir, "*.json");
-                        if (jsonFiles.Length > 0)
-                        {
-                            ConsoleHelper.WriteInfo($"Files available in {dir}:");
-                            foreach (var file in jsonFiles.Take(5)) // Limit to 5 suggestions
-                            {
-                                ConsoleHelper.WriteInfo($"  - {Path.GetFileName(file)}");
-                            }
-                            
-                            if (jsonFiles.Length > 5)
-                            {
-                                ConsoleHelper.WriteInfo($"  ... and {jsonFiles.Length - 5} more");
-                            }
-                        }
-                    }
-                }
-            }
-
-            return expandedPaths;
-        }
+        
 
         private void DisplayApiDefinition(ApiDefinition apiDefinition)
         {
@@ -425,38 +338,17 @@ namespace Apify.Commands
             
             // Start with original path
             string processedPath = filePath;
+            string extension = ".json";
             
             // Add .json extension if missing
-            if (!processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            if (processedPath.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
             {
-                processedPath += ".json";
+                processedPath = processedPath.Replace(extension, "");
             }
             
-            // Convert dot notation to directory separators if present
-            string filenameWithoutExt = Path.GetFileNameWithoutExtension(processedPath);
+            processedPath = processedPath.Replace(".", Path.DirectorySeparatorChar.ToString());
+            processedPath += extension;
             
-            // If there are dots in the filename part (not in the extension)
-            if (filenameWithoutExt.Contains('.'))
-            {
-                string extension = Path.GetExtension(processedPath);
-                
-                // Only handle as dot notation if no directory separators already exist
-                bool hasDirectorySeparator = processedPath.Contains(Path.DirectorySeparatorChar) || 
-                                            processedPath.Contains(Path.AltDirectorySeparatorChar);
-                
-                if (!hasDirectorySeparator && !processedPath.StartsWith("."))
-                {
-                    string[] parts = filenameWithoutExt.Split('.');
-                    string filename = parts[parts.Length - 1]; // Last part becomes the filename
-                    string[] folderParts = parts.Take(parts.Length - 1).ToArray(); // Earlier parts become folders
-                    
-                    // Join with directory separators
-                    processedPath = string.Join(Path.DirectorySeparatorChar.ToString(), folderParts) + 
-                                   Path.DirectorySeparatorChar + filename + extension;
-                    
-                    ConsoleHelper.WriteInfo($"Converted dot notation: {filePath} → {processedPath}");
-                }
-            }
             
             // Add .apify prefix if not already present
             bool alreadyHasApiDirectory = processedPath.StartsWith(DefaultApiDirectory + Path.DirectorySeparatorChar) || 

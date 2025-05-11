@@ -49,7 +49,11 @@ namespace Apify.Services
             if (File.Exists(currentPath))
             {
                 string absolutePath = Path.GetFullPath(currentPath);
-                Console.WriteLine($"Using configuration file: {absolutePath}");
+                
+                if (_debug)
+                {
+                    Console.WriteLine($"Configuration file found: {absolutePath}");
+                }
             }
             else
             {
@@ -75,7 +79,10 @@ namespace Apify.Services
             
             if (!File.Exists(configPath))
             {
-                Console.WriteLine($"Configuration file not found at {configPath}");
+                if (_debug)
+                {
+                    Console.WriteLine($"Configuration file not found at {configPath}");
+                }
                 return defaultConfig;
             }
             
@@ -84,7 +91,10 @@ namespace Apify.Services
                 var content = File.ReadAllText(configPath);
                 if (string.IsNullOrWhiteSpace(content))
                 {
-                    Console.WriteLine($"Configuration file at {configPath} is empty");
+                    if (_debug)
+                    {
+                        Console.WriteLine($"Configuration file at {configPath} is empty");
+                    }
                     return defaultConfig;
                 }
                 
