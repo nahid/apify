@@ -54,6 +54,6 @@ namespace Apify.Models
         public bool Verbose { get; set; } = false;
         
         [JsonProperty("DefaultHeaders")]
-        public Dictionary<string, string> DefaultHeaders { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string>? DefaultHeaders { get; set; } = null;
     }
 }

@@ -27,15 +27,15 @@ namespace Apify.Services
             _debug = debug;
         }
         
-        public async Task LoadConfig()
+        public async Task<ApifyConfigSchema> LoadConfig()
         {
             // Load configuration file
             var config = LoadConfigurationProfile();
             
             // Set the environment
             SetCurrentEnvironment();
-            
-            await Task.CompletedTask;
+
+            return await Task.FromResult(config);
         }
         
         // Function to get the configuration file path - always uses current working directory

@@ -5,6 +5,7 @@ using Apify.Models;
 using Apify.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Dynamic;
 
 namespace Apify.Services
 {
@@ -18,14 +19,14 @@ namespace Apify.Services
         private bool _debug;
         private HttpListener? _listener;
         private bool _isRunning;
-        private ApifyConfigSchema _configSchema;
+        private ApifyConfigSchema _config;
         
         public MockServerService(string mockDirectory, bool debug = false)
         {
             _mockDirectory = mockDirectory;
             _debug = debug;
             _environmentService = new EnvironmentService(debug);
-            _configSchema = _environmentService.LoadConfigurationProfile();
+            _config = _environmentService.LoadConfig().Result;
         }
         
         public async Task StartAsync(int port, bool verbose)
@@ -34,13 +35,13 @@ namespace Apify.Services
 
             if (port == 0)
             {
-                port = _configSchema.MockServer?.Port ?? 8080;
+                port = _config.MockServer?.Port ?? 8080;
             }
             // Debug flag is already set in the constructor
             await _environmentService.LoadConfig(); // Load env variables for templates
             
             // Load all mock definitions
-            LoadMockDefinitions();
+            LoadMockSchemaDefinitions();
             
             if (_mockSchemaDefinitions.Count == 0)
             {
@@ -120,7 +121,7 @@ namespace Apify.Services
             _listener?.Close();
         }
         
-        private void LoadMockDefinitions()
+        private void LoadMockSchemaDefinitions()
         {
             if (!Directory.Exists(_mockDirectory))
             {
@@ -211,12 +212,12 @@ namespace Apify.Services
             }
             
             // Look for advanced mock definition first
-            var advancedMockDef = FindMatchingAdvancedMockDefinition(request);
+            var mockDefinition = FindMatchingMockDefinition(request);
             Dictionary<string, string> pathParams = new Dictionary<string, string>();
             
-            if (advancedMockDef != null)
+            if (mockDefinition != null)
             {
-                await ProcessAdvancedMockResponseAsync(context, advancedMockDef, pathParams);
+                await ProcessMockResponseAsync(context, mockDefinition, pathParams);
                 return;
             }
  
@@ -429,7 +430,7 @@ namespace Apify.Services
             return text.StartsWith("{") && text.EndsWith("}");
         }
         
-        private MockSchema? FindMatchingAdvancedMockDefinition(HttpListenerRequest request)
+        private MockSchema? FindMatchingMockDefinition(HttpListenerRequest request)
         {
             string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
             string method = request.HttpMethod;
@@ -470,7 +471,7 @@ namespace Apify.Services
             return null;
         }
         
-        private async Task ProcessAdvancedMockResponseAsync(HttpListenerContext context, MockSchema mockDef, Dictionary<string, string> pathParams)
+        private async Task ProcessMockResponseAsync(HttpListenerContext context, MockSchema mockDef, Dictionary<string, string> pathParams)
         {
             var request = context.Request;
             var response = context.Response;
@@ -517,19 +518,6 @@ namespace Apify.Services
                 }
             }
             
-            // Also try the traditional way as a backup
-            if (request.QueryString.Keys != null && queryParams.Count == 0)
-            {
-                foreach (string? key in request.QueryString.Keys)
-                {
-                    if (key != null && request.QueryString[key] != null)
-                    {
-                        string queryValue = request.QueryString[key] ?? string.Empty;
-                        queryParams[key] = queryValue;
-                    }
-                }
-            }
-            
             // Get Body as JToken (null if not a valid JSON)
             JToken? bodyContent = null;
             string bodyString = string.Empty;
@@ -567,15 +555,15 @@ namespace Apify.Services
             var regularResponses = new List<ConditionalResponse>();
             
             // Sort the responses into appropriate lists
-            foreach (var respOption in mockDef.Responses)
+            foreach (var resp in mockDef.Responses)
             {
-                if (_conditionEvaluator.IsDefaultCondition(respOption.Condition))
+                if (_conditionEvaluator.IsDefaultCondition(resp.Condition))
                 {
-                    defaultResponses.Add(respOption);
+                    defaultResponses.Add(resp);
                 }
                 else
                 {
-                    regularResponses.Add(respOption);
+                    regularResponses.Add(resp);
                 }
             }
             
@@ -587,10 +575,10 @@ namespace Apify.Services
             // First try to match any regular (non-default) condition
             ConditionalResponse? matchedResponse = null;
             
-            foreach (var responseOption in regularResponses)
+            foreach (var resp in regularResponses)
             {
                 bool conditionMet = _conditionEvaluator.EvaluateCondition(
-                    responseOption.Condition, 
+                    resp.Condition, 
                     headers, 
                     bodyContent ?? JToken.Parse("{}"), 
                     queryParams,
@@ -598,10 +586,10 @@ namespace Apify.Services
                     
                 if (conditionMet)
                 {
-                    matchedResponse = responseOption;
+                    matchedResponse = resp;
                     if (_debug)
                     {
-                        Console.WriteLine($"DEBUG: Matched condition: '{responseOption.Condition}'");
+                        Console.WriteLine($"DEBUG: Matched condition: '{resp.Condition}'");
                     }
                     break;
                 }
@@ -661,13 +649,34 @@ namespace Apify.Services
             // Process the matched response
             response.StatusCode = matchedResponse.StatusCode;
             response.ContentType = "application/json"; // Default
-            
+
+            if (_config.MockServer?.DefaultHeaders != null)
+            {
+                foreach (var header in _config.MockServer.DefaultHeaders)
+                {
+                    response.Headers.Add(header.Key, header.Value);
+                    
+                    // Set content type if it's in the headers
+                    if (string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        response.ContentType = header.Value;
+                    }
+                }
+            }
             // Add headers
             if (matchedResponse.Headers != null)
             {
                 foreach (var header in matchedResponse.Headers)
                 {
-                    string headerValue = ApplyTemplateVariables(header.Value, pathParams);
+                    
+                    string headerValue = StubManager.Replace(header.Value, new System.Collections.Generic.Dictionary<string, object>
+                    {
+                        {"headers", headers},
+                        {"path", pathParams},
+                        {"query", queryParams},
+                        {"body", bodyContent ?? new JObject()}
+                    });
+                    
                     response.Headers.Add(header.Key, headerValue);
                     
                     // Set content type if it's in the headers
@@ -691,9 +700,19 @@ namespace Apify.Services
                 {
                     responseContent = JsonConvert.SerializeObject(matchedResponse.ResponseTemplate, Formatting.Indented);
                 }
-                
+
+                _environmentService.SetCurrentEnvironment();
+                Console.WriteLine(_environmentService.CurrentEnvironment.Name);
                 // Replace any template variables with actual values
-                responseContent = ApplyTemplateVariables(responseContent, pathParams);
+                // responseContent = ApplyTemplateVariables(responseContent, pathParams);
+                responseContent = StubManager.Replace(responseContent, new System.Collections.Generic.Dictionary<string, object>
+                {
+                    {"env", _environmentService.CurrentEnvironment?.Variables},
+                    {"headers", headers},
+                    {"path", pathParams},
+                    {"query", queryParams},
+                    {"body", bodyContent ?? new JObject()}
+                });
                 
                 // Process dynamic template expressions (e.g., {{$random:int:1000:1999}})
                 responseContent = ProcessDynamicTemplate(responseContent, request);
