@@ -3,23 +3,23 @@ using Newtonsoft.Json;
 
 namespace Apify.Models
 {
-    public class TestEnvironmentConfig
+    public class ApifyConfigSchema
     {
         // Default constructor with default values
-        public TestEnvironmentConfig()
+        public ApifyConfigSchema()
         {
             Name = "Default";
-            Environments = new List<TestEnvironment>();
+            Environments = new List<EnvironmentSchema>();
             DefaultEnvironment = "Development";
             Variables = new Dictionary<string, string>();
         }
 
         // Parameterized constructor for programmatic creation
-        public TestEnvironmentConfig(string name, string? description, List<TestEnvironment> environments, string? defaultEnvironment, Dictionary<string, string>? variables = null)
+        public ApifyConfigSchema(string name, string? description, List<EnvironmentSchema> environments, string? defaultEnvironment, Dictionary<string, string>? variables = null)
         {
             Name = name ?? "Default";
             Description = description;
-            Environments = environments ?? new List<TestEnvironment>();
+            Environments = environments ?? new List<EnvironmentSchema>();
             DefaultEnvironment = defaultEnvironment ?? "Development";
             Variables = variables ?? new Dictionary<string, string>();
         }
@@ -31,12 +31,29 @@ namespace Apify.Models
         public string? Description { get; set; }
 
         [JsonProperty("Environments")]
-        public List<TestEnvironment> Environments { get; set; }
+        public List<EnvironmentSchema> Environments { get; set; }
 
         [JsonProperty("DefaultEnvironment")]
         public string? DefaultEnvironment { get; set; }
         
         [JsonProperty("Variables")]
         public Dictionary<string, string> Variables { get; set; }
+        
+        [JsonProperty("MockServer")]
+        public MockServer? MockServer { get; set; } = null;
+        
+    }
+
+
+    public class MockServer
+    {
+        [JsonProperty("Port")]
+        public int Port { get; set; } = 0;
+        
+        [JsonProperty("Verbose")]
+        public bool Verbose { get; set; } = false;
+        
+        [JsonProperty("DefaultHeaders")]
+        public Dictionary<string, string> DefaultHeaders { get; set; } = new Dictionary<string, string>();
     }
 }

@@ -112,7 +112,7 @@ namespace Apify.Commands
                     defaultEnvVariables[variable.Key] = variable.Value;
                 }
 
-                var defaultEnv = new TestEnvironment
+                var defaultEnv = new EnvironmentSchema
                 {
                     Name = defaultEnvironment,
                     Description = $"{defaultEnvironment} environment",
@@ -134,7 +134,7 @@ namespace Apify.Commands
                     productionEnvVariables[variable.Key] = variable.Value;
                 }
 
-                var productionEnvironment = new TestEnvironment
+                var productionEnvironment = new EnvironmentSchema
                 {
                     Name = "Production",
                     Description = "Production environment",
@@ -142,13 +142,13 @@ namespace Apify.Commands
                 };
 
                 // Ask if user wants to add additional environments
-                List<TestEnvironment> environments = new List<TestEnvironment> { defaultEnv, productionEnvironment };
+                List<EnvironmentSchema> environments = new List<EnvironmentSchema> { defaultEnv, productionEnvironment };
                 
                 if (PromptYesNo("Add additional environments?"))
                 {
                     while (true)
                     {
-                        string envName = PromptForInput("Environment name (empty to finish):", false);
+                        string envName = PromptForInput("EnvironmentSchema name (empty to finish):", false);
                         if (string.IsNullOrWhiteSpace(envName)) break;
                         
                         string envDescription = PromptForInput($"Description for {envName}:", 
@@ -169,7 +169,7 @@ namespace Apify.Commands
                                 () => variable.Value);
                         }
                         
-                        environments.Add(new TestEnvironment 
+                        environments.Add(new EnvironmentSchema 
                         { 
                             Name = envName, 
                             Description = envDescription,
@@ -179,7 +179,7 @@ namespace Apify.Commands
                 }
 
                 // Create environment configuration with project-level variables
-                var config = new TestEnvironmentConfig
+                var config = new ApifyConfigSchema
                 {
                     Name = "Default",
                     Description = $"Configuration for {projectName}",
@@ -400,7 +400,7 @@ namespace Apify.Commands
                             MissingMemberHandling = MissingMemberHandling.Ignore,
                             NullValueHandling = NullValueHandling.Ignore
                         };
-                        var testObject = JsonConvert.DeserializeObject<TestEnvironmentConfig>(configJson, jsonSettings);
+                        var testObject = JsonConvert.DeserializeObject<ApifyConfigSchema>(configJson, jsonSettings);
                         
                         // Check if the deserialized object is valid
                         if (testObject == null || testObject.Environments == null || testObject.Environments.Count == 0)
@@ -458,7 +458,7 @@ namespace Apify.Commands
                 ConsoleHelper.WriteSuccess("\nProject initialized successfully!");
 
                 // Check if we're running as a compiled executable or via dotnet run
-                string exeName = Path.GetFileName(Environment.ProcessPath ?? "apitester");
+                string exeName = Path.GetFileName(System.Environment.ProcessPath ?? "apitester");
                 bool isCompiledExecutable = !exeName.Equals("dotnet", StringComparison.OrdinalIgnoreCase);
                 
                 // Display the interactive quick start guide
@@ -471,7 +471,7 @@ namespace Apify.Commands
         }
 
         private string BuildConfigJson(string projectName, string defaultEnvironment, string baseUrl, 
-                                     List<TestEnvironment> environments, Dictionary<string, string> additionalVariables)
+                                     List<EnvironmentSchema> environments, Dictionary<string, string> additionalVariables)
         {
             // Start building the JSON manually
             var sb = new System.Text.StringBuilder();

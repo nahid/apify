@@ -11,31 +11,38 @@ namespace Apify.Services
     public class MockServerService
     {
         private readonly string _mockDirectory;
-        private readonly List<AdvancedMockApiDefinition> _advancedMockDefinitions = new();
+        private readonly List<MockSchema> _mockSchemaDefinitions = new();
         private readonly EnvironmentService _environmentService;
         private readonly ConditionEvaluator _conditionEvaluator = new();
         private bool _verbose;
         private bool _debug;
         private HttpListener? _listener;
         private bool _isRunning;
+        private ApifyConfigSchema _configSchema;
         
         public MockServerService(string mockDirectory, bool debug = false)
         {
             _mockDirectory = mockDirectory;
             _debug = debug;
             _environmentService = new EnvironmentService(debug);
+            _configSchema = _environmentService.LoadConfigurationProfile();
         }
         
         public async Task StartAsync(int port, bool verbose)
         {
             _verbose = verbose;
+
+            if (port == 0)
+            {
+                port = _configSchema.MockServer?.Port ?? 8080;
+            }
             // Debug flag is already set in the constructor
             await _environmentService.LoadConfig(); // Load env variables for templates
             
             // Load all mock definitions
             LoadMockDefinitions();
             
-            if (_advancedMockDefinitions.Count == 0)
+            if (_mockSchemaDefinitions.Count == 0)
             {
                 ConsoleHelper.WriteWarning("No mock API definitions found. Create .mock.json files in your .apify directory.");
                 ConsoleHelper.WriteInfo("Example path: .apify/users/all.mock.json");
@@ -55,7 +62,7 @@ namespace Apify.Services
                 ConsoleHelper.WriteInfo("Available endpoints:");
                 
                 // Display advanced mock endpoints
-                foreach (var mock in _advancedMockDefinitions)
+                foreach (var mock in _mockSchemaDefinitions)
                 {
                     ConsoleHelper.WriteSuccess($"[{mock.Method}] {mock.Endpoint} - {mock.Name} (Advanced)");
                 }
@@ -140,24 +147,24 @@ namespace Apify.Services
                     }
 
                     // First try to parse as advanced mock definition
-                    AdvancedMockApiDefinition advancedMockDef;
+                    MockSchema mockDef;
                     
-                    advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json) ??
-                                      new AdvancedMockApiDefinition();
+                    mockDef = JsonConvert.DeserializeObject<MockSchema>(json) ??
+                                      new MockSchema();
 
                     if (_debug)
                     {
-                        ConsoleHelper.WriteInfo($"Successfully parsed {file} as AdvancedMockApiDefinition");
+                        ConsoleHelper.WriteInfo($"Successfully parsed {file} as MockSchema");
                     }
 
-                    if (advancedMockDef != null && advancedMockDef.Responses != null &&
-                        advancedMockDef.Responses.Count > 0)
+                    if (mockDef != null && mockDef.Responses != null &&
+                        mockDef.Responses.Count > 0)
                     {
-                        _advancedMockDefinitions.Add(advancedMockDef);
+                        _mockSchemaDefinitions.Add(mockDef);
 
                         // Always show loaded API info
                         ConsoleHelper.WriteInfo(
-                            $"Loaded advanced mock API: {advancedMockDef.Name} [{advancedMockDef.Method}] {advancedMockDef.Endpoint}");
+                            $"Loaded advanced mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
                     }
 
                 }
@@ -172,7 +179,7 @@ namespace Apify.Services
                 }
                 catch (Exception ex)
                 {
-                    ConsoleHelper.WriteError($"Error parsing {file} as AdvancedMockApiDefinition: {ex.Message}");
+                    ConsoleHelper.WriteError($"Error parsing {file} as MockSchema: {ex.Message}");
                     if (_debug)
                     {
                         Console.WriteLine(ex.StackTrace);
@@ -220,7 +227,7 @@ namespace Apify.Services
             // Combine both legacy and advanced mock endpoints in the error message
             var availableEndpoints = new List<object>();
             
-            availableEndpoints.AddRange(_advancedMockDefinitions.Select(m => new { 
+            availableEndpoints.AddRange(_mockSchemaDefinitions.Select(m => new { 
                 method = m.Method, 
                 endpoint = m.Endpoint,
                 name = m.Name,
@@ -422,13 +429,13 @@ namespace Apify.Services
             return text.StartsWith("{") && text.EndsWith("}");
         }
         
-        private AdvancedMockApiDefinition? FindMatchingAdvancedMockDefinition(HttpListenerRequest request)
+        private MockSchema? FindMatchingAdvancedMockDefinition(HttpListenerRequest request)
         {
             string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
             string method = request.HttpMethod;
             
             // First try exact match
-            var exactMatch = _advancedMockDefinitions.FirstOrDefault(m => 
+            var exactMatch = _mockSchemaDefinitions.FirstOrDefault(m => 
                 string.Equals(m.Endpoint, requestUrl, StringComparison.OrdinalIgnoreCase) && 
                 string.Equals(m.Method, method, StringComparison.OrdinalIgnoreCase));
                 
@@ -436,7 +443,7 @@ namespace Apify.Services
                 return exactMatch;
                 
             // Try wildcard/pattern match (for path parameters like /users/{id})
-            foreach (var mockDef in _advancedMockDefinitions)
+            foreach (var mockDef in _mockSchemaDefinitions)
             {
                 if (!string.Equals(mockDef.Method, method, StringComparison.OrdinalIgnoreCase))
                     continue;
@@ -463,7 +470,7 @@ namespace Apify.Services
             return null;
         }
         
-        private async Task ProcessAdvancedMockResponseAsync(HttpListenerContext context, AdvancedMockApiDefinition mockDef, Dictionary<string, string> pathParams)
+        private async Task ProcessAdvancedMockResponseAsync(HttpListenerContext context, MockSchema mockDef, Dictionary<string, string> pathParams)
         {
             var request = context.Request;
             var response = context.Response;

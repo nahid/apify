@@ -63,7 +63,7 @@ namespace Apify
             
             if (!string.IsNullOrEmpty(profile.DefaultEnvironment))
             {
-                ConsoleHelper.WriteLineColored($"  Default Environment: {profile.DefaultEnvironment}", ConsoleColor.DarkCyan);
+                ConsoleHelper.WriteLineColored($"  Default EnvironmentSchema: {profile.DefaultEnvironment}", ConsoleColor.DarkCyan);
             }
             
             ConsoleHelper.WriteLineColored("  Environments:", ConsoleColor.White);

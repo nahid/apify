@@ -3,10 +3,10 @@ using Newtonsoft.Json;
 
 namespace Apify.Models
 {
-    public class TestEnvironment
+    public class EnvironmentSchema
     {
         // Default constructor for general use
-        public TestEnvironment()
+        public EnvironmentSchema()
         {
             Name = string.Empty;
             Variables = new Dictionary<string, string>();
@@ -14,7 +14,7 @@ namespace Apify.Models
         }
 
         // Parameterized constructor for creating environments programmatically
-        public TestEnvironment(string name, Dictionary<string, string> variables, string? description)
+        public EnvironmentSchema(string name, Dictionary<string, string> variables, string? description)
         {
             Name = name;
             Variables = variables ?? new Dictionary<string, string>();
