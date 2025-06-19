@@ -544,12 +544,12 @@ namespace Apify.Services
                 catch (Exception e)
                 {
                     Console.WriteLine($"Error reading JSON body: {e.Message}");
-                    bodyContent = JToken.Parse("{}");
+                    bodyContent = JsonConvert.DeserializeObject<JToken>("{}");
                 }
             }
             else
             {
-                bodyContent = JToken.Parse("{}");
+                bodyContent = JsonConvert.DeserializeObject<JToken>("{}");
             }
             
             // First process the responses in two groups: defaults and non-defaults
@@ -582,7 +582,7 @@ namespace Apify.Services
                 bool conditionMet = _conditionEvaluator.EvaluateCondition(
                     resp.Condition, 
                     headers, 
-                    bodyContent ?? JToken.Parse("{}"), 
+                    bodyContent,
                     queryParams,
                     pathParams);
                     
@@ -678,7 +678,7 @@ namespace Apify.Services
                         {"headers", headers},
                         {"path", pathParams},
                         {"query", queryParams},
-                        {"body", bodyContent ?? new JObject()}
+                        {"body", bodyContent}
                     });
                     
                     response.Headers.Add(header.Key, headerValue);
@@ -715,27 +715,15 @@ namespace Apify.Services
                     {"headers", headers},
                     {"path", pathParams},
                     {"query", queryParams},
-                    {"body", bodyContent ?? new JObject()}
+                    {"body", bodyContent}
                 });
                 
                 // Process dynamic template expressions (e.g., {{$random:int:1000:1999}})
-                responseContent = ProcessDynamicTemplate(responseContent, request);
+                // responseContent = ProcessDynamicTemplate(responseContent, request);
                 
                 // Apply advanced template replacements
                 
                 // 1. Replace body.X references with actual body values
-                if (bodyContent != null && bodyContent.Type == JTokenType.Object)
-                {
-                    foreach (var prop in (JObject)bodyContent)
-                    {
-                        string placeholder = $"{{{{body.{prop.Key}}}}}";
-                        if (responseContent.Contains(placeholder))
-                        {
-                            string replacement = prop.Value?.ToString() ?? string.Empty;
-                            responseContent = responseContent.Replace(placeholder, replacement);
-                        }
-                    }
-                }
             }
             else
             {

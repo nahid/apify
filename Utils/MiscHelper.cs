@@ -1,10 +1,11 @@
+using Newtonsoft.Json.Linq;
 using System.Dynamic;
 
 namespace Apify.Utils;
 
 public static class MiscHelper
 {
-    public static ExpandoObject? ToExpandoObject(Dictionary<string, string> dict)
+    public static ExpandoObject? DictionaryToExpandoObject(Dictionary<string, string> dict)
     {
         if (dict == null)
         {
@@ -20,4 +21,5 @@ public static class MiscHelper
             
         return expando as ExpandoObject;
     }
+
 }

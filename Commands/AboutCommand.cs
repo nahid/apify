@@ -3,6 +3,7 @@ using System.Text.Json;
 using Apify.Models;
 using Apify.Services;
 using Apify.Utils;
+using Bogus;
 using Newtonsoft.Json;
 
 namespace Apify.Commands
@@ -37,14 +38,15 @@ namespace Apify.Commands
             ConsoleHelper.WriteHeader("About API Testing Project");
 
 
-            var result = DynamicFunction.Execute("RandomString():30");
+            var result = DynamicExpression.Execute("Faker.Email()");
             // var result = funcs["RandomString()"]() as string;
             ConsoleHelper.WriteSection($"Result: {result}: {result?.Length}");
             
 
             var config = _env.LoadConfiguration();
             var env = _env.LoadEnvironment("Development");
-            
+            /*var faker = new Faker();
+            var name = faker.Internet.Email()*/
             Console.WriteLine("Configuration:");
         }
 
