@@ -14,11 +14,11 @@ namespace Apify.Services
         private const string ConfigFileName = "apify-config.json";
         private static readonly Regex VariablePattern = new Regex(@"{{(.+?)}}", RegexOptions.Compiled);
         
-        private TestEnvironment? _currentEnvironment;
+        private EnvironmentSchema? _currentEnvironment;
         private string? _configFilePath;
         private bool _debug;
         
-        public TestEnvironment? CurrentEnvironment => _currentEnvironment;
+        public EnvironmentSchema? CurrentEnvironment => _currentEnvironment;
         
         public EnvironmentService(bool debug = false)
         {
@@ -27,15 +27,15 @@ namespace Apify.Services
             _debug = debug;
         }
         
-        public async Task LoadConfig()
+        public async Task<ApifyConfigSchema> LoadConfig()
         {
             // Load configuration file
             var config = LoadConfigurationProfile();
             
             // Set the environment
             SetCurrentEnvironment();
-            
-            await Task.CompletedTask;
+
+            return await Task.FromResult(config);
         }
         
         // Function to get the configuration file path - always uses current working directory
@@ -65,7 +65,7 @@ namespace Apify.Services
             return currentPath;
         }
 
-        public TestEnvironmentConfig LoadConfigurationProfile()
+        public ApifyConfigSchema LoadConfigurationProfile()
         {
             // Always get the latest config file path from the current directory
             string configPath = GetConfigFilePath();
@@ -101,7 +101,7 @@ namespace Apify.Services
                 };
                 
                 // Try to deserialize the config
-                TestEnvironmentConfig? config = JsonConvert.DeserializeObject<TestEnvironmentConfig>(content, settings);
+                ApifyConfigSchema? config = JsonConvert.DeserializeObject<ApifyConfigSchema>(content, settings);
                 
                 if (config != null)
                 {
@@ -113,7 +113,7 @@ namespace Apify.Services
                     // Ensure Environments collection is initialized
                     if (config.Environments == null)
                     {
-                        config.Environments = new List<TestEnvironment>();
+                        config.Environments = new List<EnvironmentSchema>();
                         
                         if (_debug)
                         {
@@ -135,13 +135,13 @@ namespace Apify.Services
             }
         }
         
-        private TestEnvironmentConfig CreateDefaultConfig()
+        private ApifyConfigSchema CreateDefaultConfig()
         {
             // Use a default URL for testing, which can be overridden by config file
             // Using httpbin.org as it's a reliable testing endpoint with both GET and POST support
             string baseUrl = "https://httpbin.org"; 
             
-            return new TestEnvironmentConfig
+            return new ApifyConfigSchema
             {
                 DefaultEnvironment = "Development",
                 // Project-level variables (shared across all environments)
@@ -150,9 +150,9 @@ namespace Apify.Services
                     { "projectId", "api-test-1" },
                     { "version", "1.0.0" }
                 },
-                Environments = new List<TestEnvironment>
+                Environments = new List<EnvironmentSchema>
                 {
-                    new TestEnvironment
+                    new EnvironmentSchema
                     {
                         Name = "Development",
                         Description = "Development environment",
@@ -177,9 +177,9 @@ namespace Apify.Services
             if (config.Environments == null || config.Environments.Count == 0)
             {
                 // Add a default environment
-                config.Environments = new List<TestEnvironment>
+                config.Environments = new List<EnvironmentSchema>
                 {
-                    new TestEnvironment
+                    new EnvironmentSchema
                     {
                         Name = "Development",
                         Description = "Development environment",
@@ -205,12 +205,12 @@ namespace Apify.Services
                 if (config.Environments.Count > 0)
                 {
                     environment = config.Environments[0];
-                    Console.WriteLine($"Environment '{envName}' not found. Using '{environment.Name}' instead.");
+                    Console.WriteLine($"EnvironmentSchema '{envName}' not found. Using '{environment.Name}' instead.");
                 }
                 else
                 {
                     // Create a default environment
-                    environment = new TestEnvironment
+                    environment = new EnvironmentSchema
                     {
                         Name = "Development",
                         Description = "Development environment",
@@ -228,7 +228,7 @@ namespace Apify.Services
             }
             
             _currentEnvironment = environment;
-            Console.WriteLine($"Active Environment: {environment.Name}");
+            Console.WriteLine($"Active EnvironmentSchema: {environment.Name}");
             return true;
         }
         
@@ -293,7 +293,7 @@ namespace Apify.Services
         {
             // Create a merged dictionary of variables with updated priority:
             // 1. Request-specific variables (highest priority)
-            // 2. Environment variables (medium priority)
+            // 2. EnvironmentSchema variables (medium priority)
             // 3. Project-level variables (lowest priority)
             var mergedVariables = new Dictionary<string, string>();
             
@@ -339,7 +339,7 @@ namespace Apify.Services
                     {
                         if (mergedVariables.ContainsKey(envVar.Key))
                         {
-                            Console.WriteLine($"  Environment variable '{envVar.Key}' overrides project variable with same name");
+                            Console.WriteLine($"  EnvironmentSchema variable '{envVar.Key}' overrides project variable with same name");
                         }
                         else
                         {
@@ -615,7 +615,7 @@ namespace Apify.Services
             
             if (hasEnvironmentVars)
             {
-                Console.WriteLine($"Environment Variables (from '{_currentEnvironment!.Name}' environment):");
+                Console.WriteLine($"EnvironmentSchema Variables (from '{_currentEnvironment!.Name}' environment):");
                 foreach (var variable in _currentEnvironment.Variables)
                 {
                     string displayValue = variable.Key.ToLower().Contains("key") || 

@@ -12,7 +12,7 @@ namespace Apify.Commands
             var portOption = new Option<int>(
                 name: "--port",
                 description: "The port on which to run the mock server (on Windows, ports above 1024 may not require admin rights)",
-                getDefaultValue: () => 8080);
+                getDefaultValue: () => 0);
                 
             var directoryOption = new Option<string>(
                 name: "--directory",

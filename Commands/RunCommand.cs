@@ -38,7 +38,7 @@ namespace Apify.Commands
 
             var environmentOption = new Option<string?>(
                 name: "--env",
-                description: "Environment to use from the configuration profile");
+                description: "EnvironmentSchema to use from the configuration profile");
             environmentOption.AddAlias("-e");
             Command.AddOption(environmentOption);
 
@@ -74,12 +74,12 @@ namespace Apify.Commands
             ConsoleHelper.WriteKeyValue("Using Configuration", "From current directory");
             
             var currentEnv = environmentService.CurrentEnvironment;
-            ConsoleHelper.WriteKeyValue("Active Environment", currentEnv?.Name ?? "None");
+            ConsoleHelper.WriteKeyValue("Active EnvironmentSchema", currentEnv?.Name ?? "None");
             
             // Display environment variables for better transparency
             if (currentEnv?.Variables?.Count > 0)
             {
-                ConsoleHelper.WriteInfo("Environment Variables:");
+                ConsoleHelper.WriteInfo("EnvironmentSchema Variables:");
                 foreach (var variable in currentEnv.Variables)
                 {
                     if (variable.Key.Contains("key", StringComparison.OrdinalIgnoreCase) || 
@@ -474,9 +474,9 @@ namespace Apify.Commands
             return processedPath;
         }
         
-        private void ListEnvironments(TestEnvironmentConfig config)
+        private void ListEnvironments(ApifyConfigSchema configSchema)
         {
-            if (config == null)
+            if (configSchema == null)
             {
                 ConsoleHelper.WriteInfo("No environment configuration found.");
                 return;
@@ -484,21 +484,21 @@ namespace Apify.Commands
             
             ConsoleHelper.WriteSection("Available Configuration:");
             
-            ConsoleHelper.WriteLineColored($"Name: {config.Name}", ConsoleColor.Cyan);
+            ConsoleHelper.WriteLineColored($"Name: {configSchema.Name}", ConsoleColor.Cyan);
             
-            if (!string.IsNullOrEmpty(config.Description))
+            if (!string.IsNullOrEmpty(configSchema.Description))
             {
-                ConsoleHelper.WriteLineColored($"  Description: {config.Description}", ConsoleColor.DarkGray);
+                ConsoleHelper.WriteLineColored($"  Description: {configSchema.Description}", ConsoleColor.DarkGray);
             }
             
-            if (!string.IsNullOrEmpty(config.DefaultEnvironment))
+            if (!string.IsNullOrEmpty(configSchema.DefaultEnvironment))
             {
-                ConsoleHelper.WriteLineColored($"  Default Environment: {config.DefaultEnvironment}", ConsoleColor.DarkCyan);
+                ConsoleHelper.WriteLineColored($"  Default EnvironmentSchema: {configSchema.DefaultEnvironment}", ConsoleColor.DarkCyan);
             }
             
             ConsoleHelper.WriteLineColored("  Environments:", ConsoleColor.White);
             
-            foreach (var env in config.Environments)
+            foreach (var env in configSchema.Environments)
             {
                 ConsoleHelper.WriteLineColored($"    - {env.Name}", ConsoleColor.Green);
                 

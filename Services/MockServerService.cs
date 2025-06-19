@@ -5,38 +5,45 @@ using Apify.Models;
 using Apify.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Dynamic;
 
 namespace Apify.Services
 {
     public class MockServerService
     {
         private readonly string _mockDirectory;
-        private readonly List<MockApiDefinition> _mockDefinitions = new();
-        private readonly List<AdvancedMockApiDefinition> _advancedMockDefinitions = new();
+        private readonly List<MockSchema> _mockSchemaDefinitions = new();
         private readonly EnvironmentService _environmentService;
         private readonly ConditionEvaluator _conditionEvaluator = new();
         private bool _verbose;
         private bool _debug;
         private HttpListener? _listener;
         private bool _isRunning;
+        private ApifyConfigSchema _config;
         
         public MockServerService(string mockDirectory, bool debug = false)
         {
             _mockDirectory = mockDirectory;
             _debug = debug;
             _environmentService = new EnvironmentService(debug);
+            _config = _environmentService.LoadConfig().Result;
         }
         
         public async Task StartAsync(int port, bool verbose)
         {
             _verbose = verbose;
+
+            if (port == 0)
+            {
+                port = _config.MockServer?.Port ?? 8080;
+            }
             // Debug flag is already set in the constructor
             await _environmentService.LoadConfig(); // Load env variables for templates
             
             // Load all mock definitions
-            LoadMockDefinitions();
+            LoadMockSchemaDefinitions();
             
-            if (_mockDefinitions.Count == 0 && _advancedMockDefinitions.Count == 0)
+            if (_mockSchemaDefinitions.Count == 0)
             {
                 ConsoleHelper.WriteWarning("No mock API definitions found. Create .mock.json files in your .apify directory.");
                 ConsoleHelper.WriteInfo("Example path: .apify/users/all.mock.json");
@@ -55,14 +62,8 @@ namespace Apify.Services
                 ConsoleHelper.WriteSuccess($"Mock API Server started on http://0.0.0.0:{port}");
                 ConsoleHelper.WriteInfo("Available endpoints:");
                 
-                // Display legacy mock endpoints
-                foreach (var mock in _mockDefinitions)
-                {
-                    ConsoleHelper.WriteSuccess($"[{mock.Method}] {mock.Endpoint} - {mock.Name}");
-                }
-                
                 // Display advanced mock endpoints
-                foreach (var mock in _advancedMockDefinitions)
+                foreach (var mock in _mockSchemaDefinitions)
                 {
                     ConsoleHelper.WriteSuccess($"[{mock.Method}] {mock.Endpoint} - {mock.Name} (Advanced)");
                 }
@@ -120,7 +121,7 @@ namespace Apify.Services
             _listener?.Close();
         }
         
-        private void LoadMockDefinitions()
+        private void LoadMockSchemaDefinitions()
         {
             if (!Directory.Exists(_mockDirectory))
             {
@@ -140,109 +141,53 @@ namespace Apify.Services
                 try
                 {
                     var json = File.ReadAllText(file);
-                    
+
                     if (_debug)
                     {
                         ConsoleHelper.WriteInfo($"Attempting to load mock from: {file}");
                     }
-                    
+
                     // First try to parse as advanced mock definition
-                    AdvancedMockApiDefinition advancedMockDef;
-                    try
-                    {
-                        advancedMockDef = JsonConvert.DeserializeObject<AdvancedMockApiDefinition>(json) ?? new AdvancedMockApiDefinition();
-                        if (_debug)
-                        {
-                            ConsoleHelper.WriteInfo($"Successfully parsed {file} as AdvancedMockApiDefinition");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ConsoleHelper.WriteError($"Error parsing {file} as AdvancedMockApiDefinition: {ex.Message}");
-                        if (_debug)
-                        {
-                            Console.WriteLine(ex.StackTrace);
-                            if (ex.InnerException != null)
-                            {
-                                Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                            }
-                        }
-                        continue;
-                    }
+                    MockSchema mockDef;
                     
-                    if (advancedMockDef != null && advancedMockDef.Responses != null && advancedMockDef.Responses.Count > 0)
+                    mockDef = JsonConvert.DeserializeObject<MockSchema>(json) ??
+                                      new MockSchema();
+
+                    if (_debug)
                     {
-                        _advancedMockDefinitions.Add(advancedMockDef);
-                        // Always show loaded API info
-                        ConsoleHelper.WriteInfo($"Loaded advanced mock API: {advancedMockDef.Name} [{advancedMockDef.Method}] {advancedMockDef.Endpoint}");
-                        continue; // Skip legacy mock format if advanced format was detected
+                        ConsoleHelper.WriteInfo($"Successfully parsed {file} as MockSchema");
                     }
-                    
-                    // If not advanced format, try legacy format
-                    var mockDef = JsonConvert.DeserializeObject<MockApiDefinition>(json);
-                    if (mockDef != null)
+
+                    if (mockDef != null && mockDef.Responses != null &&
+                        mockDef.Responses.Count > 0)
                     {
-                        // If the mock definition has a responseFile, load its content
-                        if (!string.IsNullOrEmpty(mockDef.ResponseFile))
-                        {
-                            var responseFilePath = Path.Combine(Path.GetDirectoryName(file) ?? string.Empty, mockDef.ResponseFile);
-                            if (File.Exists(responseFilePath))
-                            {
-                                string responseContent = File.ReadAllText(responseFilePath);
-                                
-                                // Try to parse as JSON, otherwise use as string
-                                try
-                                {
-                                    mockDef.Response = JsonConvert.DeserializeObject(responseContent);
-                                }
-                                catch
-                                {
-                                    mockDef.Response = responseContent;
-                                }
-                            }
-                            else
-                            {
-                                ConsoleHelper.WriteWarning($"Response file not found: {responseFilePath}");
-                            }
-                        }
-                        
-                        // Process conditions if present
-                        if (mockDef.Conditions != null)
-                        {
-                            foreach (var condition in mockDef.Conditions)
-                            {
-                                if (!string.IsNullOrEmpty(condition.ResponseFile))
-                                {
-                                    var responseFilePath = Path.Combine(Path.GetDirectoryName(file) ?? string.Empty, condition.ResponseFile);
-                                    if (File.Exists(responseFilePath))
-                                    {
-                                        string responseContent = File.ReadAllText(responseFilePath);
-                                        
-                                        // Try to parse as JSON, otherwise use as string
-                                        try
-                                        {
-                                            condition.Response = JsonConvert.DeserializeObject(responseContent);
-                                        }
-                                        catch
-                                        {
-                                            condition.Response = responseContent;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        _mockDefinitions.Add(mockDef);
+                        _mockSchemaDefinitions.Add(mockDef);
+
                         // Always show loaded API info
-                        ConsoleHelper.WriteInfo($"Loaded mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
+                        ConsoleHelper.WriteInfo(
+                            $"Loaded advanced mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
+                    }
+
+                }
+                catch (FileLoadException ex)
+                {
+                    ConsoleHelper.WriteError($"Error loading mock definition from {file}: {ex.Message}");
+
+                    if (_debug)
+                    {
+                        Console.WriteLine(ex.StackTrace);
                     }
                 }
                 catch (Exception ex)
                 {
-                    ConsoleHelper.WriteError($"Error loading mock definition from {file}: {ex.Message}");
+                    ConsoleHelper.WriteError($"Error parsing {file} as MockSchema: {ex.Message}");
                     if (_debug)
                     {
                         Console.WriteLine(ex.StackTrace);
+                        if (ex.InnerException != null)
+                        {
+                            Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                        }
                     }
                 }
             }
@@ -267,313 +212,44 @@ namespace Apify.Services
             }
             
             // Look for advanced mock definition first
-            var advancedMockDef = FindMatchingAdvancedMockDefinition(request);
+            var mockDefinition = FindMatchingMockDefinition(request);
             Dictionary<string, string> pathParams = new Dictionary<string, string>();
             
-            if (advancedMockDef != null)
+            if (mockDefinition != null)
             {
-                await ProcessAdvancedMockResponseAsync(context, advancedMockDef, pathParams);
+                await ProcessMockResponseAsync(context, mockDefinition, pathParams);
                 return;
             }
+ 
+            // No matching mock definition found
+            response.StatusCode = 404;
+            response.ContentType = "application/json";
             
-            // If no advanced mock definition found, try legacy format
-            var mockDef = FindMatchingMockDefinition(request);            
-            if (mockDef != null)
+            // Combine both legacy and advanced mock endpoints in the error message
+            var availableEndpoints = new List<object>();
+            
+            availableEndpoints.AddRange(_mockSchemaDefinitions.Select(m => new { 
+                method = m.Method, 
+                endpoint = m.Endpoint,
+                name = m.Name,
+                type = "advanced"
+            }));
+            
+            string notFoundResponse = JsonConvert.SerializeObject(new
             {
-                // Extract path parameters for use in templates
-                string urlPath = request.Url?.AbsolutePath ?? string.Empty;
-                ExtractPathParameters(mockDef.Endpoint, urlPath, out pathParams);
-                
-                // Check authentication if required
-                if (mockDef.RequireAuthentication)
-                {
-                    string? authHeader = request.Headers[mockDef.AuthHeaderName];
-                    bool isAuthenticated = false;
-                    
-                    if (!string.IsNullOrEmpty(authHeader))
-                    {
-                        if (string.IsNullOrEmpty(mockDef.AuthHeaderPrefix) || 
-                            authHeader.StartsWith(mockDef.AuthHeaderPrefix, StringComparison.OrdinalIgnoreCase))
-                        {
-                            string token = authHeader;
-                            
-                            // If prefix is specified, extract the token part
-                            if (!string.IsNullOrEmpty(mockDef.AuthHeaderPrefix) && 
-                                authHeader.StartsWith(mockDef.AuthHeaderPrefix, StringComparison.OrdinalIgnoreCase))
-                            {
-                                token = authHeader.Substring(mockDef.AuthHeaderPrefix.Length).Trim();
-                            }
-                            
-                            // Validate token if tokens are specified
-                            if (mockDef.ValidTokens != null && mockDef.ValidTokens.Count > 0)
-                            {
-                                isAuthenticated = mockDef.ValidTokens.Contains(token);
-                            }
-                            else
-                            {
-                                // If no specific tokens are specified, any non-empty token is considered valid
-                                isAuthenticated = !string.IsNullOrEmpty(token);
-                            }
-                        }
-                    }
-                    
-                    // If authentication failed, return 401 Unauthorized
-                    if (!isAuthenticated)
-                    {
-                        response.StatusCode = 401;
-                        response.ContentType = "application/json";
-                        response.Headers.Add("WWW-Authenticate", $"{mockDef.AuthHeaderPrefix} realm=\"Mock API Server\"");
-                        
-                        string unauthorizedContent;
-                        if (mockDef.UnauthorizedResponse != null)
-                        {
-                            unauthorizedContent = mockDef.UnauthorizedResponse is string str 
-                                ? str 
-                                : JsonConvert.SerializeObject(mockDef.UnauthorizedResponse, Formatting.Indented);
-                        }
-                        else
-                        {
-                            unauthorizedContent = JsonConvert.SerializeObject(new { 
-                                error = "Unauthorized", 
-                                message = "Authentication required" 
-                            }, Formatting.Indented);
-                        }
-                        
-                        byte[] authBuffer = Encoding.UTF8.GetBytes(unauthorizedContent);
-                        response.ContentLength64 = authBuffer.Length;
-                        await response.OutputStream.WriteAsync(authBuffer);
-                        
-                        if (_debug)
-                        {
-                            ConsoleHelper.WriteWarning($"Authentication failed for {method} {requestUrl}");
-                        }
-                        
-                        return;
-                    }
-                }
-                
-                // Handle file uploads if the endpoint accepts them
-                if (mockDef.AcceptsFileUpload && request.ContentType != null && request.ContentType.StartsWith("multipart/form-data"))
-                {
-                    try
-                    {
-                        if (_debug)
-                        {
-                            ConsoleHelper.WriteInfo($"Processing file upload for {method} {requestUrl}");
-                        }
-                        
-                        Dictionary<string, string> formFields = new Dictionary<string, string>();
-                        Dictionary<string, (string FileName, byte[] Data)> files = new Dictionary<string, (string, byte[])>();
-                        
-                        await ProcessMultipartFormDataAsync(request, formFields, files);
-                        
-                        if (files.Count > 0)
-                        {
-                            string uploadDir = mockDef.SaveUploadedFilesTo ?? "uploads";
-                            
-                            // Create directory if it doesn't exist
-                            if (!Directory.Exists(uploadDir))
-                            {
-                                Directory.CreateDirectory(uploadDir);
-                            }
-                            
-                            List<string> savedFiles = new List<string>();
-                            
-                            foreach (var file in files)
-                            {
-                                string fileName = Path.GetFileName(file.Value.FileName);
-                                string filePath = Path.Combine(uploadDir, fileName);
-                                
-                                await File.WriteAllBytesAsync(filePath, file.Value.Data);
-                                savedFiles.Add(fileName);
-                                
-                                if (_debug)
-                                {
-                                    ConsoleHelper.WriteSuccess($"Saved uploaded file: {fileName} ({file.Value.Data.Length} bytes)");
-                                }
-                            }
-                            
-                            // Add file info to path params for template substitution
-                            pathParams["fileName"] = files.Count == 1 ? Path.GetFileName(files.First().Value.FileName) : "";
-                            pathParams["fileCount"] = files.Count.ToString();
-                            pathParams["files"] = string.Join(",", savedFiles);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ConsoleHelper.WriteError($"Error processing file upload: {ex.Message}");
-                    }
-                }
-                
-                // Apply any delay specified in the mock
-                if (mockDef.Delay > 0)
-                {
-                    await Task.Delay(mockDef.Delay);
-                }
-                
-                // Set response status code
-                response.StatusCode = mockDef.StatusCode;
-                
-                // Set content type
-                response.ContentType = mockDef.ContentType;
-                
-                // Add any custom headers
-                if (mockDef.Headers != null)
-                {
-                    foreach (var header in mockDef.Headers)
-                    {
-                        response.Headers.Add(header.Key, header.Value);
-                    }
-                }
-                
-                // Prepare response content
-                string responseContent;
-                
-                // Check for matching condition first
-                var matchedCondition = FindMatchingCondition(mockDef, request);
-                if (matchedCondition != null)
-                {
-                    if (matchedCondition.StatusCode.HasValue)
-                    {
-                        response.StatusCode = matchedCondition.StatusCode.Value;
-                    }
-                    
-                    if (matchedCondition.Response != null)
-                    {
-                        responseContent = matchedCondition.Response is string str 
-                            ? str 
-                            : JsonConvert.SerializeObject(matchedCondition.Response, Formatting.Indented);
-                    }
-                    else
-                    {
-                        responseContent = "{}";
-                    }
-                }
-                else if (mockDef.IsDynamic && !string.IsNullOrEmpty(mockDef.DynamicTemplate))
-                {
-                    // Process dynamic template
-                    responseContent = ProcessDynamicTemplate(mockDef.DynamicTemplate, request);
-                }
-                else
-                {
-                    // Use static response
-                    responseContent = mockDef.GetResponseAsString();
-                }
-                
-                // Apply environment variables and path parameters to the response content
-                responseContent = ApplyTemplateVariables(responseContent, pathParams);
-                
-                byte[] buffer = Encoding.UTF8.GetBytes(responseContent);
-                response.ContentLength64 = buffer.Length;
-                
-                try
-                {
-                    await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                    
-                    // Always show basic response info
-                    Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode}");
-                    
-                    // Show more detailed info only in debug mode
-                    if (_debug)
-                    {
-                        ConsoleHelper.WriteSuccess($"Responded to {method} {requestUrl} with status {response.StatusCode}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Always show basic error info
-                    ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
-                    
-                    // Show more detailed info only in debug mode
-                    if (_debug)
-                    {
-                        Console.WriteLine(ex.StackTrace);
-                    }
-                }
-                finally
-                {
-                    response.Close();
-                }
-            }
-            else
-            {
-                // No matching mock definition found
-                response.StatusCode = 404;
-                response.ContentType = "application/json";
-                
-                // Combine both legacy and advanced mock endpoints in the error message
-                var availableEndpoints = new List<object>();
-                
-                availableEndpoints.AddRange(_mockDefinitions.Select(m => new { 
-                    method = m.Method, 
-                    endpoint = m.Endpoint,
-                    name = m.Name,
-                    type = "legacy"
-                }));
-                
-                availableEndpoints.AddRange(_advancedMockDefinitions.Select(m => new { 
-                    method = m.Method, 
-                    endpoint = m.Endpoint,
-                    name = m.Name,
-                    type = "advanced"
-                }));
-                
-                string notFoundResponse = JsonConvert.SerializeObject(new
-                {
-                    error = "Not Found",
-                    message = $"No mock defined for {method} {requestUrl}",
-                    availableEndpoints = availableEndpoints
-                }, Formatting.Indented);
-                
-                byte[] buffer = Encoding.UTF8.GetBytes(notFoundResponse);
-                response.ContentLength64 = buffer.Length;
-                
-                await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                ConsoleHelper.WriteWarning($"No mock found for {method} {requestUrl}");
-                
-                response.Close();
-            }
-        }
+                error = "Not Found",
+                message = $"No mock defined for {method} {requestUrl}",
+                availableEndpoints = availableEndpoints
+            }, Formatting.Indented);
+            
+            byte[] buffer = Encoding.UTF8.GetBytes(notFoundResponse);
+            response.ContentLength64 = buffer.Length;
+            
+            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+            ConsoleHelper.WriteWarning($"No mock found for {method} {requestUrl}");
+            
+            response.Close();
         
-        private MockApiDefinition? FindMatchingMockDefinition(HttpListenerRequest request)
-        {
-            string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
-            string method = request.HttpMethod;
-            
-            // First try exact match
-            var exactMatch = _mockDefinitions.FirstOrDefault(m => 
-                string.Equals(m.Endpoint, requestUrl, StringComparison.OrdinalIgnoreCase) && 
-                string.Equals(m.Method, method, StringComparison.OrdinalIgnoreCase));
-                
-            if (exactMatch != null)
-                return exactMatch;
-                
-            // Try wildcard/pattern match (for path parameters like /users/{id})
-            foreach (var mockDef in _mockDefinitions)
-            {
-                if (!string.Equals(mockDef.Method, method, StringComparison.OrdinalIgnoreCase))
-                    continue;
-                    
-                // Convert endpoint pattern to regex
-                // Example: "/users/{id}" becomes "^/users/[^/]+$"
-                if (mockDef.Endpoint.Contains("{") && mockDef.Endpoint.Contains("}"))
-                {
-                    string pattern = "^" + Regex.Escape(mockDef.Endpoint)
-                        .Replace("\\{", "{")
-                        .Replace("\\}", "}")
-                        .Replace("{[^/]+}", "[^/]+") + "$";
-                        
-                    // Convert parameters like {id} or {name} to regex capture groups
-                    pattern = Regex.Replace(pattern, "{([^/]+)}", "([^/]+)");
-                    
-                    if (Regex.IsMatch(requestUrl, pattern))
-                    {
-                        return mockDef;
-                    }
-                }
-            }
-            
-            return null;
         }
         
         private MockCondition? FindMatchingCondition(MockApiDefinition mockDef, HttpListenerRequest request)
@@ -754,13 +430,13 @@ namespace Apify.Services
             return text.StartsWith("{") && text.EndsWith("}");
         }
         
-        private AdvancedMockApiDefinition? FindMatchingAdvancedMockDefinition(HttpListenerRequest request)
+        private MockSchema? FindMatchingMockDefinition(HttpListenerRequest request)
         {
             string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
             string method = request.HttpMethod;
             
             // First try exact match
-            var exactMatch = _advancedMockDefinitions.FirstOrDefault(m => 
+            var exactMatch = _mockSchemaDefinitions.FirstOrDefault(m => 
                 string.Equals(m.Endpoint, requestUrl, StringComparison.OrdinalIgnoreCase) && 
                 string.Equals(m.Method, method, StringComparison.OrdinalIgnoreCase));
                 
@@ -768,7 +444,7 @@ namespace Apify.Services
                 return exactMatch;
                 
             // Try wildcard/pattern match (for path parameters like /users/{id})
-            foreach (var mockDef in _advancedMockDefinitions)
+            foreach (var mockDef in _mockSchemaDefinitions)
             {
                 if (!string.Equals(mockDef.Method, method, StringComparison.OrdinalIgnoreCase))
                     continue;
@@ -795,7 +471,7 @@ namespace Apify.Services
             return null;
         }
         
-        private async Task ProcessAdvancedMockResponseAsync(HttpListenerContext context, AdvancedMockApiDefinition mockDef, Dictionary<string, string> pathParams)
+        private async Task ProcessMockResponseAsync(HttpListenerContext context, MockSchema mockDef, Dictionary<string, string> pathParams)
         {
             var request = context.Request;
             var response = context.Response;
@@ -842,19 +518,6 @@ namespace Apify.Services
                 }
             }
             
-            // Also try the traditional way as a backup
-            if (request.QueryString.Keys != null && queryParams.Count == 0)
-            {
-                foreach (string? key in request.QueryString.Keys)
-                {
-                    if (key != null && request.QueryString[key] != null)
-                    {
-                        string queryValue = request.QueryString[key] ?? string.Empty;
-                        queryParams[key] = queryValue;
-                    }
-                }
-            }
-            
             // Get Body as JToken (null if not a valid JSON)
             JToken? bodyContent = null;
             string bodyString = string.Empty;
@@ -892,15 +555,15 @@ namespace Apify.Services
             var regularResponses = new List<ConditionalResponse>();
             
             // Sort the responses into appropriate lists
-            foreach (var respOption in mockDef.Responses)
+            foreach (var resp in mockDef.Responses)
             {
-                if (_conditionEvaluator.IsDefaultCondition(respOption.Condition))
+                if (_conditionEvaluator.IsDefaultCondition(resp.Condition))
                 {
-                    defaultResponses.Add(respOption);
+                    defaultResponses.Add(resp);
                 }
                 else
                 {
-                    regularResponses.Add(respOption);
+                    regularResponses.Add(resp);
                 }
             }
             
@@ -912,10 +575,10 @@ namespace Apify.Services
             // First try to match any regular (non-default) condition
             ConditionalResponse? matchedResponse = null;
             
-            foreach (var responseOption in regularResponses)
+            foreach (var resp in regularResponses)
             {
                 bool conditionMet = _conditionEvaluator.EvaluateCondition(
-                    responseOption.Condition, 
+                    resp.Condition, 
                     headers, 
                     bodyContent ?? JToken.Parse("{}"), 
                     queryParams,
@@ -923,10 +586,10 @@ namespace Apify.Services
                     
                 if (conditionMet)
                 {
-                    matchedResponse = responseOption;
+                    matchedResponse = resp;
                     if (_debug)
                     {
-                        Console.WriteLine($"DEBUG: Matched condition: '{responseOption.Condition}'");
+                        Console.WriteLine($"DEBUG: Matched condition: '{resp.Condition}'");
                     }
                     break;
                 }
@@ -986,13 +649,34 @@ namespace Apify.Services
             // Process the matched response
             response.StatusCode = matchedResponse.StatusCode;
             response.ContentType = "application/json"; // Default
-            
+
+            if (_config.MockServer?.DefaultHeaders != null)
+            {
+                foreach (var header in _config.MockServer.DefaultHeaders)
+                {
+                    response.Headers.Add(header.Key, header.Value);
+                    
+                    // Set content type if it's in the headers
+                    if (string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        response.ContentType = header.Value;
+                    }
+                }
+            }
             // Add headers
             if (matchedResponse.Headers != null)
             {
                 foreach (var header in matchedResponse.Headers)
                 {
-                    string headerValue = ApplyTemplateVariables(header.Value, pathParams);
+                    
+                    string headerValue = StubManager.Replace(header.Value, new System.Collections.Generic.Dictionary<string, object>
+                    {
+                        {"headers", headers},
+                        {"path", pathParams},
+                        {"query", queryParams},
+                        {"body", bodyContent ?? new JObject()}
+                    });
+                    
                     response.Headers.Add(header.Key, headerValue);
                     
                     // Set content type if it's in the headers
@@ -1016,9 +700,19 @@ namespace Apify.Services
                 {
                     responseContent = JsonConvert.SerializeObject(matchedResponse.ResponseTemplate, Formatting.Indented);
                 }
-                
+
+                _environmentService.SetCurrentEnvironment();
+                Console.WriteLine(_environmentService.CurrentEnvironment.Name);
                 // Replace any template variables with actual values
-                responseContent = ApplyTemplateVariables(responseContent, pathParams);
+                // responseContent = ApplyTemplateVariables(responseContent, pathParams);
+                responseContent = StubManager.Replace(responseContent, new System.Collections.Generic.Dictionary<string, object>
+                {
+                    {"env", _environmentService.CurrentEnvironment?.Variables},
+                    {"headers", headers},
+                    {"path", pathParams},
+                    {"query", queryParams},
+                    {"body", bodyContent ?? new JObject()}
+                });
                 
                 // Process dynamic template expressions (e.g., {{$random:int:1000:1999}})
                 responseContent = ProcessDynamicTemplate(responseContent, request);
@@ -1260,19 +954,6 @@ namespace Apify.Services
             {
                 string requestPath = request.Url.AbsolutePath;
                 
-                Dictionary<string, string> extractedParams = new Dictionary<string, string>();
-                var mockDef = _mockDefinitions.FirstOrDefault(m => 
-                    string.Equals(m.Method, request.HttpMethod, StringComparison.OrdinalIgnoreCase) &&
-                    PatternMatchesPath(m.Endpoint, requestPath, out var tempParams) && 
-                    (extractedParams = tempParams ?? new Dictionary<string, string>()) != null);
-                    
-                if (mockDef != null && extractedParams.Count > 0)
-                {
-                    foreach (var param in extractedParams)
-                    {
-                        templateVars[param.Key] = param.Value;
-                    }
-                }
                 
                 // Add query parameters
                 foreach (string key in request.QueryString.Keys)

@@ -14,16 +14,16 @@ namespace Apify.Models
         public ConfigurationProfile()
         {
             Name = string.Empty;
-            Environments = new List<TestEnvironment>();
+            Environments = new List<EnvironmentSchema>();
             DefaultEnvironment = "Development";
         }
 
         // Parameterized constructor for creating profiles programmatically
-        public ConfigurationProfile(string name, string? description, List<TestEnvironment> environments, string? defaultEnvironment)
+        public ConfigurationProfile(string name, string? description, List<EnvironmentSchema> environments, string? defaultEnvironment)
         {
             Name = name;
             Description = description;
-            Environments = environments ?? new List<TestEnvironment>();
+            Environments = environments ?? new List<EnvironmentSchema>();
             DefaultEnvironment = defaultEnvironment;
         }
 
@@ -34,7 +34,7 @@ namespace Apify.Models
         public string? Description { get; set; }
 
         [JsonProperty("Environments")]
-        public List<TestEnvironment> Environments { get; set; }
+        public List<EnvironmentSchema> Environments { get; set; }
 
         [JsonProperty("DefaultEnvironment")]
         public string? DefaultEnvironment { get; set; }

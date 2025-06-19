@@ -35,6 +35,7 @@
     <Compile Remove="Examples\**" />
     <EmbeddedResource Remove="Examples\**" />
     <None Remove="Examples\**" />
+    <None Include="bin\Debug\net8.0\apify-config.json" />
   </ItemGroup>
 
 </Project>
