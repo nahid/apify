@@ -1,0 +1,21 @@
+{
+  "name": "Get A Single User",
+  "description": "Retrieve a user",
+  "uri": "https://jsonplaceholder.typicode.com/users/1",
+  "method": "GET",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "payload": null,
+  "tests": [
+    {
+      "name": "Status code is 200",
+      "assertions": [
+        {
+          "type": "StatusCode",
+          "value": "200"
+        }
+      ]
+    }
+  ]
+}
