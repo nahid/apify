@@ -13,20 +13,19 @@ namespace Apify.Services
     {
         private readonly string _mockDirectory;
         private readonly List<MockSchema> _mockSchemaDefinitions = new();
-        private readonly EnvironmentService _environmentService;
+        private readonly ConfigService _configService;
         private readonly ConditionEvaluator _conditionEvaluator = new();
         private bool _verbose;
         private bool _debug;
         private HttpListener? _listener;
         private bool _isRunning;
-        private ApifyConfigSchema _config;
         
         public MockServerService(string mockDirectory, bool debug = false)
         {
             _mockDirectory = mockDirectory;
             _debug = debug;
-            _environmentService = new EnvironmentService(debug);
-            _config = _environmentService.LoadConfig().Result;
+            _configService = new ConfigService(debug);
+           
         }
         
         public async Task StartAsync(int port, bool verbose)
@@ -35,10 +34,8 @@ namespace Apify.Services
 
             if (port == 0)
             {
-                port = _config.MockServer?.Port ?? 8080;
+                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 8080;
             }
-            // Debug flag is already set in the constructor
-            await _environmentService.LoadConfig(); // Load env variables for templates
             
             // Load all mock definitions
             LoadMockSchemaDefinitions();
@@ -526,22 +523,27 @@ namespace Apify.Services
             {
                 try
                 {
-                    using (var reader = new StreamReader(request.InputStream, request.ContentEncoding, leaveOpen: true))
+                    using (var memoryStream = new MemoryStream())
                     {
-                        bodyString = reader.ReadToEnd();
-                    }
-                    
-                    // Reset stream position for further reads
-                    request.InputStream.Position = 0;
-                    
-                    if (IsJsonObject(bodyString) || bodyString.Trim().StartsWith("["))
-                    {
-                        bodyContent = JsonConvert.DeserializeObject<JToken>(bodyString);
+                        request.InputStream.CopyTo(memoryStream);
+                        memoryStream.Position = 0; // rewind for reading
+
+                        using (var reader = new StreamReader(memoryStream, request.ContentEncoding, leaveOpen: true))
+                        {
+                            bodyString = reader.ReadToEnd();
+                        }
+
+                        memoryStream.Position = 0; // rewind again if needed later
+
+                        if (IsJsonObject(bodyString) || bodyString.Trim().StartsWith("["))
+                        {
+                            bodyContent = JsonConvert.DeserializeObject<JToken>(bodyString);
+                        }
                     }
                 }
-                catch
+                catch (Exception e)
                 {
-                    // If we can't parse as JSON, we'll use empty object 
+                    Console.WriteLine($"Error reading JSON body: {e.Message}");
                     bodyContent = JToken.Parse("{}");
                 }
             }
@@ -650,9 +652,9 @@ namespace Apify.Services
             response.StatusCode = matchedResponse.StatusCode;
             response.ContentType = "application/json"; // Default
 
-            if (_config.MockServer?.DefaultHeaders != null)
+            if (_configService?.LoadConfiguration().MockServer?.DefaultHeaders != null)
             {
-                foreach (var header in _config.MockServer.DefaultHeaders)
+                foreach (var header in _configService?.LoadConfiguration().MockServer?.DefaultHeaders ?? new Dictionary<string, string>())
                 {
                     response.Headers.Add(header.Key, header.Value);
                     
@@ -668,9 +670,11 @@ namespace Apify.Services
             {
                 foreach (var header in matchedResponse.Headers)
                 {
+                    var envVars = _configService.GetDefaultEnvironment()?.Variables ?? new Dictionary<string, string>();
                     
-                    string headerValue = StubManager.Replace(header.Value, new System.Collections.Generic.Dictionary<string, object>
+                    string headerValue = StubManager.Replace(header.Value, new Dictionary<string, object>
                     {
+                        {"env", envVars},
                         {"headers", headers},
                         {"path", pathParams},
                         {"query", queryParams},
@@ -701,13 +705,13 @@ namespace Apify.Services
                     responseContent = JsonConvert.SerializeObject(matchedResponse.ResponseTemplate, Formatting.Indented);
                 }
 
-                _environmentService.SetCurrentEnvironment();
-                Console.WriteLine(_environmentService.CurrentEnvironment.Name);
+                
                 // Replace any template variables with actual values
                 // responseContent = ApplyTemplateVariables(responseContent, pathParams);
+                var envVars = _configService.GetDefaultEnvironment();
                 responseContent = StubManager.Replace(responseContent, new System.Collections.Generic.Dictionary<string, object>
                 {
-                    {"env", _environmentService.CurrentEnvironment?.Variables},
+                    {"env", envVars},
                     {"headers", headers},
                     {"path", pathParams},
                     {"query", queryParams},
@@ -1040,9 +1044,9 @@ namespace Apify.Services
             allVariables["timestamp"] = DateTimeOffset.Now.ToUnixTimeSeconds().ToString();
             
             // Add environment variables (lowest priority, won't override path params)
-            if (_environmentService.CurrentEnvironment != null && _environmentService.CurrentEnvironment.Variables != null)
+            if (_configService.GetDefaultEnvironment()?.Variables != null)
             {
-                foreach (var envVar in _environmentService.CurrentEnvironment.Variables)
+                foreach (var envVar in _configService.GetDefaultEnvironment()?.Variables ?? new Dictionary<string, string>())
                 {
                     if (!allVariables.ContainsKey(envVar.Key))
                     {
