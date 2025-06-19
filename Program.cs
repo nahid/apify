@@ -21,6 +21,7 @@ namespace Apify
 
             // Add subcommands
             rootCommand.AddCommand(new RunCommand().Command);
+            rootCommand.AddCommand(new AboutCommand());
             rootCommand.AddCommand(new InitCommand());
             rootCommand.AddCommand(new CreateRequestCommand());
             rootCommand.AddCommand(new TestsCommand().Command);
