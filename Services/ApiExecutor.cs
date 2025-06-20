@@ -11,11 +11,13 @@ namespace Apify.Services
     {
         private readonly HttpClient _httpClient;
         private EnvironmentService? _environmentService;
+        private ConfigService _configService;
 
         public ApiExecutor()
         {
             _httpClient = new HttpClient();
             _environmentService = null;
+            _configService = new ConfigService();
         }
         
         public void SetEnvironmentService(EnvironmentService environmentService)
@@ -241,6 +243,33 @@ namespace Apify.Services
             }
 
             request.Content = multipartContent;
+        }
+        
+        public ApiDefinition ApplyEnvToApiDefinition(ApiDefinition apiDefinition, string environment)
+        {
+            var apiDefContent = JsonHelper.SerializeToJson(apiDefinition);
+            
+            if (string.IsNullOrEmpty(apiDefContent))
+            {
+                return apiDefinition;
+            }
+
+            var conf = _configService.LoadConfiguration();
+            var vars = MiscHelper.MergeDictionaries(conf.Variables, _configService.LoadEnvironment(environment)?.Variables ?? new Dictionary<string, string>());
+            vars = MiscHelper.MergeDictionaries(vars, apiDefinition.Variables ?? new Dictionary<string, string>());
+            
+            apiDefContent = StubManager.Replace(apiDefContent, new Dictionary<string, object> {
+                {"env", vars },
+            });
+            
+            if (string.IsNullOrEmpty(apiDefContent))
+            {
+                return apiDefinition;
+            }
+
+            apiDefinition = JsonHelper.DeserializeString<ApiDefinition>(apiDefContent) ?? new ApiDefinition();
+
+            return apiDefinition;
         }
     }
 

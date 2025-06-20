@@ -54,6 +54,9 @@ namespace Apify.Commands
             ConsoleHelper.DisplayTitle("Apify - Running Tests");
 
             var environmentService = new EnvironmentService(debug);
+            var configService = new ConfigService(debug);
+            var envName = environmentName ?? configService.LoadConfiguration()?.DefaultEnvironment ?? "Development";
+            var currentEnv = configService.LoadEnvironment(envName);
             
             // Load the profile from the current directory
             var profile = environmentService.LoadConfigurationProfile();
@@ -64,41 +67,17 @@ namespace Apify.Commands
                 environmentService.CreateDefaultEnvironmentFile();
                 profile = environmentService.LoadConfigurationProfile();
             }
-
-            // Set active environment - we don't need profile name anymore
-            if (!environmentService.SetCurrentEnvironment(environmentName))
+     
+            if (currentEnv?.Variables.Count == 0)
             {
-                return; // Error message already displayed by the service
+                ConsoleHelper.WriteInfo("No environment variables found.");
+                return;
             }
-
-            ConsoleHelper.WriteKeyValue("Using Configuration", "From current directory");
             
-            var currentEnv = environmentService.CurrentEnvironment;
             ConsoleHelper.WriteKeyValue("Active EnvironmentSchema", currentEnv?.Name ?? "None");
             
-            // Display environment variables for better transparency
-            if (currentEnv?.Variables?.Count > 0)
-            {
-                ConsoleHelper.WriteInfo("EnvironmentSchema Variables:");
-                foreach (var variable in currentEnv.Variables)
-                {
-                    if (variable.Key.Contains("key", StringComparison.OrdinalIgnoreCase) || 
-                        variable.Key.Contains("password", StringComparison.OrdinalIgnoreCase) ||
-                        variable.Key.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
-                        variable.Key.Contains("token", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Mask sensitive values
-                        Console.Write("  ");
-                        ConsoleHelper.WriteKeyValue(variable.Key, "********");
-                    }
-                    else
-                    {
-                        // Display non-sensitive values
-                        Console.Write("  ");
-                        ConsoleHelper.WriteKeyValue(variable.Key, variable.Value);
-                    }
-                }
-            }
+    
+            ConsoleHelper.WriteInfo("EnvironmentSchema Variables:");
 
             int totalTests = 0;
             int passedTests = 0;
@@ -129,6 +108,8 @@ namespace Apify.Commands
                         continue;
                     }
                     
+                    apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName);
+                    
                     // Process any legacy test format
                     apiDefinition.ProcessTestFormats();
                     
@@ -147,7 +128,7 @@ namespace Apify.Commands
                     }
 
                     // Apply environment variables
-                    apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
+                    //apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
 
                     if (verbose)
                     {
@@ -233,24 +214,6 @@ namespace Apify.Commands
                     if (dir != null && !Directory.Exists(dir))
                     {
                         ConsoleHelper.WriteError($"Directory does not exist: {dir}");
-                    }
-                    else if (dir != null)
-                    {
-                        // Directory exists, suggest similar files that might be what the user intended
-                        var jsonFiles = Directory.GetFiles(dir, "*.json");
-                        if (jsonFiles.Length > 0)
-                        {
-                            ConsoleHelper.WriteInfo($"Files available in {dir}:");
-                            foreach (var file in jsonFiles.Take(5)) // Limit to 5 suggestions
-                            {
-                                ConsoleHelper.WriteInfo($"  - {Path.GetFileName(file)}");
-                            }
-                            
-                            if (jsonFiles.Length > 5)
-                            {
-                                ConsoleHelper.WriteInfo($"  ... and {jsonFiles.Length - 5} more");
-                            }
-                        }
                     }
                 }
             }
@@ -472,50 +435,6 @@ namespace Apify.Commands
             }
             
             return processedPath;
-        }
-        
-        private void ListEnvironments(ApifyConfigSchema configSchema)
-        {
-            if (configSchema == null)
-            {
-                ConsoleHelper.WriteInfo("No environment configuration found.");
-                return;
-            }
-            
-            ConsoleHelper.WriteSection("Available Configuration:");
-            
-            ConsoleHelper.WriteLineColored($"Name: {configSchema.Name}", ConsoleColor.Cyan);
-            
-            if (!string.IsNullOrEmpty(configSchema.Description))
-            {
-                ConsoleHelper.WriteLineColored($"  Description: {configSchema.Description}", ConsoleColor.DarkGray);
-            }
-            
-            if (!string.IsNullOrEmpty(configSchema.DefaultEnvironment))
-            {
-                ConsoleHelper.WriteLineColored($"  Default EnvironmentSchema: {configSchema.DefaultEnvironment}", ConsoleColor.DarkCyan);
-            }
-            
-            ConsoleHelper.WriteLineColored("  Environments:", ConsoleColor.White);
-            
-            foreach (var env in configSchema.Environments)
-            {
-                ConsoleHelper.WriteLineColored($"    - {env.Name}", ConsoleColor.Green);
-                
-                if (!string.IsNullOrEmpty(env.Description))
-                {
-                    ConsoleHelper.WriteLineColored($"      Description: {env.Description}", ConsoleColor.DarkGray);
-                }
-                
-                ConsoleHelper.WriteLineColored($"      Variables: {env.Variables.Count}", ConsoleColor.DarkYellow);
-                
-                // Display variable names (not values to protect sensitive information)
-                if (env.Variables.Count > 0)
-                {
-                    var variableNames = string.Join(", ", env.Variables.Keys);
-                    ConsoleHelper.WriteLineColored($"      Names: {variableNames}", ConsoleColor.DarkGray);
-                }
-            }
         }
         
 
