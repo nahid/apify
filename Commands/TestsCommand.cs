@@ -135,7 +135,7 @@ namespace Apify.Commands
                     Console.WriteLine(new string('─', 50));
                     
                     // Apply environment variables (this was missing!)
-                    apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
+                    //apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
                     
                     var apiExecutor = new ApiExecutor();
                     apiExecutor.SetEnvironmentService(environmentService);
@@ -143,7 +143,7 @@ namespace Apify.Commands
                     var testRunner = new TestRunner();
                     testRunner.SetApiExecutor(apiExecutor);
                     
-                    var testResult = await testRunner.RunApiTestAsync(apiDefinition, verbose);
+                    /*var testResult = await testRunner.RunApiTestAsync(apiDefinition, verbose);
                     
                     if (testResult != null)
                     {
@@ -165,7 +165,7 @@ namespace Apify.Commands
                             
                             testResults.Add((apiDefinition.Name, assertion.Name, isSuccess, assertion.ErrorMessage));
                         }
-                    }
+                    }*/
                 }
                 catch (Exception ex)
                 {

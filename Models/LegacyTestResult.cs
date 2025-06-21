@@ -1,6 +1,6 @@
 namespace Apify.Models
 {
-    public class TestResult
+    public class LegacyTestResult
     {
         public string TestName { get; set; } = string.Empty;
         
@@ -19,18 +19,18 @@ namespace Apify.Models
             set => Success = value;
         }
 
-        public static TestResult CreateSuccess(string testName)
+        public static LegacyTestResult CreateSuccess(string testName)
         {
-            return new TestResult
+            return new LegacyTestResult
             {
                 TestName = testName,
                 Success = true
             };
         }
 
-        public static TestResult Failure(string testName, string errorMessage, string? actual = null, string? expected = null)
+        public static LegacyTestResult Failure(string testName, string errorMessage, string? actual = null, string? expected = null)
         {
-            return new TestResult
+            return new LegacyTestResult
             {
                 TestName = testName,
                 Success = false,

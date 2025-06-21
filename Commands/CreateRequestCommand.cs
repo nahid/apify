@@ -177,7 +177,7 @@ namespace Apify.Commands
             }
 
             // Ask if user wants to add tests
-            List<TestAssertion> tests = new List<TestAssertion>();
+            List<AssertionEntity> tests = new List<AssertionEntity>();
             if (PromptYesNo("Add tests?"))
             {
                 ConsoleHelper.WriteInfo("Enter tests (empty name to finish):");
@@ -203,12 +203,10 @@ namespace Apify.Commands
                     
                     string expectedValue = PromptForInput("Expected value:");
                     
-                    tests.Add(new TestAssertion
+                    tests.Add(new AssertionEntity()
                     {
-                        Name = testName,
-                        AssertType = assertionType,
-                        Property = property,
-                        ExpectedValue = expectedValue
+                        Title = testName,
+                        Case = assertionType
                     });
                 }
             }

@@ -111,10 +111,10 @@ namespace Apify.Commands
                     apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName);
                     
                     // Process any legacy test format
-                    apiDefinition.ProcessTestFormats();
+                    //apiDefinition.ProcessTestFormats();
                     
                     // Apply extracted property paths to the test assertions if available
-                    if (propertyPaths.Count > 0 && apiDefinition.Tests != null)
+                    /*if (propertyPaths.Count > 0 && apiDefinition.Tests != null)
                     {
                         foreach (var test in apiDefinition.Tests)
                         {
@@ -125,7 +125,7 @@ namespace Apify.Commands
                                 // Property path applied successfully
                             }
                         }
-                    }
+                    }*/
 
                     // Apply environment variables
                     //apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
@@ -141,13 +141,18 @@ namespace Apify.Commands
                     {
                         DisplayApiResponse(response);
                     }
-                    
-                    var testResults = await testRunner.RunTestsAsync(apiDefinition, response);
 
-                    totalTests += testResults.Count;
+                    var assertionExecutor = new AssertionExecutor(response);
+                    var testResults = assertionExecutor.Run(apiDefinition.Tests ?? new List<AssertionEntity>());
+                    
+                    Console.WriteLine("Passed:");
+
+                    //var testResults = await testRunner.RunTestsAsync(apiDefinition, response);
+
+                    /*totalTests += testResults.Count;
                     passedTests += testResults.Count(r => r.Passed);
 
-                    DisplayTestResults(testResults, verbose);
+                    DisplayTestResults(testResults, verbose);*/
                 }
                 catch (Exception ex)
                 {
@@ -300,7 +305,7 @@ namespace Apify.Commands
             }
         }
 
-        private void DisplayTestResults(List<TestResult> results, bool verbose)
+        private void DisplayTestResults(List<LegacyTestResult> results, bool verbose)
         {
             ConsoleHelper.WriteSection("Test Results:");
             

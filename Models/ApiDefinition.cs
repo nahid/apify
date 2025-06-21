@@ -138,7 +138,7 @@ namespace Apify.Models
         public List<FileUpload>? Files { get; set; }
 
         [JsonPropertyName("tests")]
-        public List<TestAssertion>? Tests { get; set; }
+        public List<AssertionEntity>? Tests { get; set; }
         
         // For supporting the legacy test format that uses nested test definitions
         [JsonPropertyName("testGroups")]
@@ -146,21 +146,22 @@ namespace Apify.Models
         private List<TestGroup>? LegacyTestGroups { get; set; }
         
         // Convert legacy format tests if needed
-        public void ProcessTestFormats()
+        /*public void ProcessTestFormats()
         {
             // If we have no tests but have legacy test groups, convert them
             if ((Tests == null || Tests.Count == 0) && LegacyTestGroups != null && LegacyTestGroups.Count > 0)
             {
-                Tests = new List<TestAssertion>();
+                Tests = new List<AssertionEntity>();
                 foreach (var group in LegacyTestGroups)
                 {
                     if (group.Assertions != null)
                     {
                         foreach (var assertion in group.Assertions)
                         {
-                            var testAssertion = new TestAssertion
+                            var testAssertion = new AssertionEntity
                             {
                                 Name = group.Name,
+                                Assertion = group.Assertions,
                                 // Combine group name with assertion type for better debugging
                                 Description = $"{group.Name}: {assertion.Type ?? "check"} {assertion.Property ?? string.Empty}",
                                 AssertType = assertion.Type ?? string.Empty,
@@ -181,7 +182,7 @@ namespace Apify.Models
                     test.ConvertLegacyFormat();
                 }
             }
-        }
+        }*/
 
         [JsonPropertyName("timeout")]
         public int Timeout { get; set; } = 30000; // 30 seconds default timeout

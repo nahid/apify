@@ -205,26 +205,11 @@ namespace Apify.Commands
                         { "Accept", "application/json" }
                     },
                     PayloadType = PayloadType.None,
-                    Tests = new List<TestAssertion>
+                    Tests = new List<AssertionEntity>
                     {
-                        new TestAssertion { 
-                            Name = "Status code is successful", 
-                            Description = "Status code is 200",
-                            AssertType = "StatusCode",
-                            ExpectedValue = "200"
-                        },
-                        new TestAssertion { 
-                            Name = "Response format is JSON", 
-                            Description = "Content-Type header is application/json",
-                            AssertType = "HeaderContains",
-                            Property = "Content-Type",
-                            ExpectedValue = "application/json"
-                        },
-                        new TestAssertion { 
-                            Name = "Response contains id property", 
-                            Description = "Response contains id property",
-                            AssertType = "ContainsProperty",
-                            ExpectedValue = "id"
+                        new AssertionEntity { 
+                            Title = "Status code is successful", 
+                            Case = "Assertion.Response.StatusCodeIs(200)",
                         }
                     }
                 };
@@ -252,25 +237,11 @@ namespace Apify.Commands
                         { "userId", 1 }
                     },
                     PayloadType = PayloadType.Json,
-                    Tests = new List<TestAssertion>
+                    Tests = new List<AssertionEntity>
                     {
-                        new TestAssertion { 
-                            Name = "Status code is Created", 
-                            Description = "Status code is 201",
-                            AssertType = "StatusCode",
-                            ExpectedValue = "201"
-                        },
-                        new TestAssertion { 
-                            Name = "Response contains id property", 
-                            Description = "Response contains id property",
-                            AssertType = "ContainsProperty",
-                            ExpectedValue = "id"
-                        },
-                        new TestAssertion { 
-                            Name = "Response contains title property", 
-                            Description = "Response contains title property",
-                            AssertType = "ContainsProperty",
-                            ExpectedValue = "title"
+                        new AssertionEntity { 
+                            Title = "Status code is Created", 
+                            Case = "Assertion.Response.StatusCodeIs(201)",
                         }
                     }
                 };

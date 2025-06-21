@@ -341,7 +341,7 @@ public class ConfigService
             Payload = ProcessPayload(apiDefinition.Payload, mergedVariables),
             PayloadType = apiDefinition.PayloadType,
             Files = apiDefinition.Files, // Preserve file upload configurations
-            Tests = new List<TestAssertion>(),
+            Tests = new List<AssertionEntity>(),
             Variables = apiDefinition.Variables // Keep the original variables for reference
         };
         
@@ -368,7 +368,7 @@ public class ConfigService
         }
         
         // Process test assertions and apply variables
-        if (apiDefinition.Tests != null)
+        /*if (apiDefinition.Tests != null)
         {
             foreach (var test in apiDefinition.Tests)
             {
@@ -394,7 +394,7 @@ public class ConfigService
                 
                 modifiedApi.Tests.Add(modifiedTest);
             }
-        }
+        }*/
         
         // Check if there are any variables that might be needed but are missing
         CheckForMissingVariables(apiDefinition.Uri, mergedVariables);

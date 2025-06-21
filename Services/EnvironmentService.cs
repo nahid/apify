@@ -289,7 +289,7 @@ namespace Apify.Services
             });
         }
         
-        public ApiDefinition ApplyEnvironmentVariables(ApiDefinition apiDefinition)
+        /*public ApiDefinition ApplyEnvironmentVariables(ApiDefinition apiDefinition)
         {
             // Create a merged dictionary of variables with updated priority:
             // 1. Request-specific variables (highest priority)
@@ -382,7 +382,7 @@ namespace Apify.Services
                 Payload = ProcessPayload(apiDefinition.Payload, mergedVariables),
                 PayloadType = apiDefinition.PayloadType,
                 Files = apiDefinition.Files, // Preserve file upload configurations
-                Tests = new List<TestAssertion>(),
+                Tests = new List<AssertionEntity>(),
                 Variables = apiDefinition.Variables // Keep the original variables for reference
             };
             
@@ -441,7 +441,7 @@ namespace Apify.Services
             CheckForMissingVariables(apiDefinition.Uri, mergedVariables);
             
             return modifiedApi;
-        }
+        }*/
         
         // Method to apply variable substitution using a provided dictionary
         private string ApplyVariables(string input, Dictionary<string, string> variables)
