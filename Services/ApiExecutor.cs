@@ -293,5 +293,12 @@ namespace Apify.Services
             
             return string.Empty;
         }
+
+        public bool HasHeader(string name)
+        {
+            return Headers.ContainsKey(name) || ContentHeaders.ContainsKey(name);
+        }
+        
+        
     }
 }

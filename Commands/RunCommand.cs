@@ -143,9 +143,9 @@ namespace Apify.Commands
                     }
 
                     var assertionExecutor = new AssertionExecutor(response);
-                    var testResults = assertionExecutor.Run(apiDefinition.Tests ?? new List<AssertionEntity>());
+                    var testResults = await assertionExecutor.RunAsync(apiDefinition.Tests ?? new List<AssertionEntity>());
                     
-                    Console.WriteLine("Passed:");
+                    DisplayTestResults(testResults, verbose);
 
                     //var testResults = await testRunner.RunTestsAsync(apiDefinition, response);
 
@@ -159,10 +159,6 @@ namespace Apify.Commands
                     ConsoleHelper.WriteError($"Error processing {path}: {ex.Message}");
                 }
             }
-
-            ConsoleHelper.WriteSection("==========================");
-            ConsoleHelper.WriteKeyValue("Test Summary", $"{passedTests}/{totalTests} tests passed");
-            ConsoleHelper.WriteLineColored("==========================", ConsoleColor.Cyan);
         }
 
         private const string DefaultApiDirectory = ".apify";
@@ -305,23 +301,35 @@ namespace Apify.Commands
             }
         }
 
-        private void DisplayTestResults(List<LegacyTestResult> results, bool verbose)
+        private void DisplayTestResults(TestResults testResults, bool verbose = false)
         {
-            ConsoleHelper.WriteSection("Test Results:");
+            if (!verbose) return;
             
-            foreach (var result in results)
+            ConsoleHelper.WriteSection("===============================");
+            ConsoleHelper.WriteKeyValue("Test Summary", $"{testResults.Results.Count}/{testResults.PassedCount} tests passed");
+            ConsoleHelper.WriteLineColored("===============================\n", ConsoleColor.Cyan);
+            
+            
+            foreach (var testResult in testResults.Results)
             {
-                if (result.Passed)
+                if (testResult.Status)
                 {
-                    ConsoleHelper.WriteSuccess($"✓ {result.TestName}");
+                    ConsoleHelper.WriteSuccess($"✓ {testResult.Name} >>", true);
                 }
                 else
                 {
-                    ConsoleHelper.WriteError($"✗ {result.TestName}");
-                    if (verbose)
+                    ConsoleHelper.WriteError($"✗ {testResult.Name} >>", true);
+                }
+
+                foreach (var assertResult in testResult.Result)
+                {
+                    if (assertResult.IsPassed())
                     {
-                        Console.Write("  ");
-                        ConsoleHelper.WriteKeyValue("Error", result.ErrorMessage ?? "Unknown error");
+                        ConsoleHelper.WriteSuccess($"{" ",-2}✓ - {assertResult.GetMessage()}");
+                    }
+                    else
+                    {
+                        ConsoleHelper.WriteError($"{" ",-2}✗ - {assertResult.GetMessage()}");
                     }
                 }
             }
