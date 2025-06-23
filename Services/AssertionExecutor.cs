@@ -272,12 +272,21 @@ public class TestResults
     {
         Results.Add(result);
     }
+    public void AddResults(IEnumerable<TestResultEntity> results)
+    {
+        Results.AddRange(results);
+    }
 
     public bool AllPassed => Results.All(r => r.Status);
     
     public int PassedCount => Results.Count(r => r.Status);
     
     public int FailedCount => Results.Count(r => !r.Status);
+    
+    public bool IsPassed()
+    {
+        return FailedCount == 0;
+    }
 }
 
 public class AssertResponse
@@ -429,6 +438,24 @@ public class AssertResponse
             return _assertionTracker.AddResult(false,
                 $"Location header was '{loc ?? "<missing>"}', " +
                 $"expected '{expectedLocation}'.");
+        }
+
+        return _assertionTracker.AddResult(true, message);
+    }
+    
+    public bool IsRedirected(string message = "")
+    {
+        message = MakeMessage(message, "Response is a redirect.");
+        
+        if (_apiResponse == null)
+        {
+            return _assertionTracker.AddResult(false, "API response is null.");
+        }
+
+        int code = (int)_apiResponse.StatusCode;
+        if (code < 300 || code >= 400)
+        {
+            return _assertionTracker.AddResult(false, "Status code " + code + " is not a redirect (3xx).");
         }
 
         return _assertionTracker.AddResult(true, message);

@@ -67,10 +67,21 @@ namespace Apify.Utils
             Console.ResetColor();
         }
 
-        public static void WriteInfo(string message)
+        public static void WriteInfo(string message, bool strong = false)
         {
+            if (strong)
+            {
+                Console.Write("\x1b[1m");
+            }
+            
             Console.ForegroundColor = SectionColor;
             Console.WriteLine(message);
+            
+            if (strong)
+            {
+                Console.Write("\x1b[0m");
+            }
+            
             Console.ResetColor();
         }
         
@@ -96,6 +107,15 @@ namespace Apify.Utils
             Console.WriteLine(value);
             Console.ResetColor();
         }
+        
+        
+        public static void WriteRepeatChar(char ch = '-', int repeats = 100, ConsoleColor color = ConsoleColor.Gray)
+        {
+            Console.ForegroundColor = color;
+            Console.WriteLine(new string(ch, repeats));
+            Console.ResetColor();
+        }
+        
 
         public static void WriteSection(string section)
         {
