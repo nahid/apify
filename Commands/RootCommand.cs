@@ -35,7 +35,7 @@ namespace Apify.Commands
             var initCommand = new InitCommand();
             
             // Add the run command
-            var runCommand = new RunCommand();
+            var runCommand = new CallCommand();
             
             // Add the create command
             var createCommand = new CreateRequestCommand();

@@ -181,6 +181,130 @@ namespace Apify.Utils
             Console.WriteLine(message);
             Console.ResetColor();
         }
+        
+        public static T PromptInput<T>(string message, T? defaultValue = default, bool required = false)
+        {
+            while (true)
+            {
+                string prompt = defaultValue is null || defaultValue.Equals(default(T))
+                ? $"{message}: "
+                : $"{message} [{defaultValue}]: ";
+
+                Console.Write(prompt);
+                string? input = Console.ReadLine();
+
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    if (!required && defaultValue is not null)
+                        return defaultValue;
+
+                    if (required)
+                    {
+                        Console.WriteLine("Input is required. Please try again.");
+                        continue;
+                    }
+
+                    return default!;
+                }
+
+                try
+                {
+                    return (T)Convert.ChangeType(input, typeof(T));
+                }
+                catch
+                {
+                    Console.WriteLine($"Invalid input. Please enter a value of type {typeof(T).Name}.");
+                }
+            }
+        }
+        
+        public static T PromptChoice<T>(string question, IEnumerable<T> options)
+        {
+            var optionList = options.ToList();
+
+            if (!optionList.Any())
+                throw new ArgumentException("Option list cannot be empty.");
+
+            Console.WriteLine(question);
+            for (int i = 0; i < optionList.Count; i++)
+            {
+                Console.WriteLine($"  {i + 1}) {optionList[i]}");
+            }
+
+            while (true)
+            {
+                Console.Write("Enter choice number: ");
+                string? input = Console.ReadLine();
+
+                if (int.TryParse(input, out int choice) &&
+                    choice >= 1 && choice <= optionList.Count)
+                {
+                    return optionList[choice - 1];
+                }
+
+                Console.WriteLine("Invalid selection. Please try again.");
+            }
+        }
+        
+        public static int PromptChoiceWithIndex<T>(string question, IEnumerable<T> options)
+        {
+            var optionList = options.ToList();
+
+            if (!optionList.Any())
+                throw new ArgumentException("Option list cannot be empty.");
+
+            Console.WriteLine(question);
+            for (int i = 0; i < optionList.Count; i++)
+            {
+                Console.WriteLine($"  {i + 1}) {optionList[i]}");
+            }
+
+            while (true)
+            {
+                Console.Write("Enter choice number: ");
+                string? input = Console.ReadLine();
+
+                if (int.TryParse(input, out int choice) &&
+                    choice >= 1 && choice <= optionList.Count)
+                {
+                    return choice - 1; // Return 0-based index
+                }
+
+                Console.WriteLine("Invalid selection. Please try again.");
+            }
+        }
+
+
+
+        public static bool PromptYesNo(string question, bool? defaultValue = null)
+        {
+            string options = defaultValue == true ? "Y/n"
+            : defaultValue == false ? "y/N"
+            : "y/n";
+
+            while (true)
+            {
+                Console.Write($"{question} [{options}]: ");
+                string? input = Console.ReadLine()?.Trim().ToLower();
+
+                if (string.IsNullOrEmpty(input))
+                {
+                    if (defaultValue.HasValue)
+                        return defaultValue.Value;
+
+                    Console.WriteLine("Please enter 'y' or 'n'.");
+                    continue;
+                }
+
+                if (input == "y" || input == "yes")
+                    return true;
+
+                if (input == "n" || input == "no")
+                    return false;
+
+                Console.WriteLine("Invalid input. Please enter 'y' or 'n'.");
+            }
+        }
 
         public static void WritePrompt(string prompt)
         {

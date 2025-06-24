@@ -34,10 +34,10 @@ jobs:
       run: dotnet run init --name "Test API Project" --mock --force
       
     - name: Run GET Tests
-      run: dotnet run run get
+      run: dotnet run call get
 
     - name: Run POST Tests
-      run: dotnet run run create
+      run: dotnet run call create
       
     - name: Run All Tests Command
       run: dotnet run tests

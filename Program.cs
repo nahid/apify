@@ -19,7 +19,7 @@ namespace Apify
             rootCommand.AddCommand(listEnvCommand);
 
             // Add subcommands
-            rootCommand.AddCommand(new RunCommand().Command);
+            rootCommand.AddCommand(new CallCommand().Command);
             rootCommand.AddCommand(new AboutCommand());
             rootCommand.AddCommand(new InitCommand());
             rootCommand.AddCommand(new CreateRequestCommand());

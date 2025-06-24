@@ -231,23 +231,7 @@ namespace Apify.Services
             Console.WriteLine($"Active EnvironmentSchema: {environment.Name}");
             return true;
         }
-        
-        // Apply environment variables from the current environment only
-        public string ApplyEnvironmentVariables(string input)
-        {
-            if (_currentEnvironment == null)
-                return input;
-                
-            return VariablePattern.Replace(input, match =>
-            {
-                var variableName = match.Groups[1].Value.Trim();
-                if (_currentEnvironment.Variables.TryGetValue(variableName, out var value))
-                {
-                    return value;
-                }
-                return match.Value; // Keep the original {{variable}} if not found
-            });
-        }
+
         
         // Apply variables from all sources - project, environment, and request-specific
         

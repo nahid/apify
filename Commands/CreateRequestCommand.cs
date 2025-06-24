@@ -51,7 +51,7 @@ namespace Apify.Commands
             }
 
             // Process file path to convert dot notation if needed
-            string processedPath = ProcessFilePath(filePath);
+            string processedPath = MiscHelper.HandlePath(filePath, DefaultApiDirectory);
             
             // Check if file already exists
             if (File.Exists(processedPath) && !force)
@@ -68,7 +68,6 @@ namespace Apify.Commands
                 try
                 {
                     Directory.CreateDirectory(directory);
-                    ConsoleHelper.WriteInfo($"Created directory: {directory}");
                 }
                 catch (Exception ex)
                 {
@@ -78,12 +77,12 @@ namespace Apify.Commands
             }
 
             // Prompt for required information
-            string name = PromptForInput("API request name (e.g., Get User):");
-            string method = PromptForHttpMethod();
-            string uri = PromptForInput("URI (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users):");
+            string name = ConsoleHelper.PromptInput<string>("API request name (e.g., Get User)");
+            string method = ConsoleHelper.PromptChoice("Choose HTTP Method?", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
+            string uri = ConsoleHelper.PromptInput<string>("URI (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)", required: true);
 
             // Optional inputs
-            bool addHeaders = PromptYesNo("Add request headers?");
+            bool addHeaders = ConsoleHelper.PromptYesNo("Add request headers?", false);
             Dictionary<string, string> headers = new Dictionary<string, string>();
             
             if (addHeaders)
@@ -92,10 +91,10 @@ namespace Apify.Commands
                 
                 while (true)
                 {
-                    string headerName = PromptForInput("Header name (e.g., Content-Type):", false);
+                    string headerName = ConsoleHelper.PromptInput<string>("Header name (e.g., Content-Type):", "");
                     if (string.IsNullOrWhiteSpace(headerName)) break;
                     
-                    string headerValue = PromptForInput($"Value for {headerName}:");
+                    string headerValue = ConsoleHelper.PromptInput<string>($"Value for {headerName}:", required: true);
                     headers[headerName] = headerValue;
                 }
             }
@@ -105,16 +104,16 @@ namespace Apify.Commands
             PayloadType payloadType = PayloadType.None;
             object? payload = null;
             
-            if (needsPayload && PromptYesNo("Add request payload?"))
+            if (needsPayload && ConsoleHelper.PromptYesNo("Add request payload?", false))
             {
                 string[] payloadOptions = { "JSON", "Text", "FormData" };
-                int payloadOptionIndex = PromptChoice("Payload type:", payloadOptions);
+                int payloadOptionIndex = ConsoleHelper.PromptChoiceWithIndex("Payload type:", payloadOptions);
                 
                 switch (payloadOptionIndex)
                 {
                     case 0: // JSON
                         payloadType = PayloadType.Json;
-                        string jsonPayload = PromptForInput("Enter JSON payload:");
+                        string jsonPayload = ConsoleHelper.PromptInput("Enter JSON payload:");
                         try
                         {
                             // Attempt to parse as JSON using Newtonsoft
@@ -130,20 +129,20 @@ namespace Apify.Commands
                     
                     case 1: // Text
                         payloadType = PayloadType.Text;
-                        payload = PromptForInput("Enter text payload:");
+                        payload = ConsoleHelper.PromptInput("Enter text payload");
                         break;
                     
                     case 2: // FormData
                         payloadType = PayloadType.FormData;
                         var formData = new Dictionary<string, string>();
                         
-                        ConsoleHelper.WriteInfo("Enter form fields (empty name to finish):");
+                        ConsoleHelper.WriteInfo("Enter form fields (empty name to finish)");
                         while (true)
                         {
-                            string fieldName = PromptForInput("Field name:", false);
+                            string fieldName = ConsoleHelper.PromptInput("Field name:", "");
                             if (string.IsNullOrWhiteSpace(fieldName)) break;
                             
-                            string fieldValue = PromptForInput($"Value for {fieldName}:");
+                            string fieldValue = ConsoleHelper.PromptInput($"Value for {fieldName}");
                             formData[fieldName] = fieldValue;
                         }
                         
@@ -154,17 +153,17 @@ namespace Apify.Commands
 
             // Ask if user wants to add file uploads
             List<FileUpload> files = new List<FileUpload>();
-            if (needsPayload && PromptYesNo("Add file uploads?"))
+            if (needsPayload && ConsoleHelper.PromptYesNo("Add file uploads?", false))
             {
                 ConsoleHelper.WriteInfo("Enter file uploads (empty field name to finish):");
                 
                 while (true)
                 {
-                    string fieldName = PromptForInput("Field name for the file:", false);
+                    string fieldName = ConsoleHelper.PromptInput("Field name for the file", "");
                     if (string.IsNullOrWhiteSpace(fieldName)) break;
                     
-                    string fileLocation = PromptForInput("Path to file:");
-                    string contentType = PromptForInput("Content type (e.g., image/jpeg):");
+                    string fileLocation = ConsoleHelper.PromptInput("Path to file");
+                    string contentType = ConsoleHelper.PromptInput("Content type (e.g., image/jpeg)");
                     
                     files.Add(new FileUpload
                     {
@@ -175,42 +174,7 @@ namespace Apify.Commands
                     });
                 }
             }
-
-            // Ask if user wants to add tests
-            List<AssertionEntity> tests = new List<AssertionEntity>();
-            if (PromptYesNo("Add tests?"))
-            {
-                ConsoleHelper.WriteInfo("Enter tests (empty name to finish):");
-                
-                while (true)
-                {
-                    string testName = PromptForInput("Test name:", false);
-                    if (string.IsNullOrWhiteSpace(testName)) break;
-                    
-                    string[] assertionTypes = { 
-                        "StatusCode", "ContainsText", "ContainsProperty", 
-                        "Equals", "HeaderContains", "ResponseTime" 
-                    };
-                    
-                    int assertionTypeIndex = PromptChoice("Assertion type:", assertionTypes);
-                    string assertionType = assertionTypes[assertionTypeIndex];
-                    
-                    string property = string.Empty;
-                    if (assertionType == "ContainsProperty" || assertionType == "Equals" || assertionType == "HeaderContains")
-                    {
-                        property = PromptForInput("Property name:");
-                    }
-                    
-                    string expectedValue = PromptForInput("Expected value:");
-                    
-                    tests.Add(new AssertionEntity()
-                    {
-                        Title = testName,
-                        Case = assertionType
-                    });
-                }
-            }
-
+            
             // Create the API definition
             var apiDefinition = new ApiDefinition
             {
@@ -221,7 +185,7 @@ namespace Apify.Commands
                 PayloadType = payloadType,
                 Payload = payload,
                 Files = files.Count > 0 ? files : null,
-                Tests = tests.Count > 0 ? tests : null
+                Tests = new List<AssertionEntity>(), // Start with empty tests
             };
 
             try
@@ -230,147 +194,12 @@ namespace Apify.Commands
                 string jsonContent = JsonHelper.SerializeObject(apiDefinition);
                 await File.WriteAllTextAsync(processedPath, jsonContent);
                 
-                ConsoleHelper.WriteSuccess($"API request saved to: {processedPath}");
+                ConsoleHelper.WriteSuccess($"API request is successfully created to: {processedPath}");
                 ConsoleHelper.WriteInfo($"You can run it with: apify run {filePath.Replace(".json", "")}");
             }
             catch (Exception ex)
             {
                 ConsoleHelper.WriteError($"Failed to save API request: {ex.Message}");
-            }
-        }
-
-        private string ProcessFilePath(string filePath)
-        {
-            // Apply the same logic as in RunCommand to handle dot notation
-            // and ensure .json extension 
-            
-            // Start with original path
-            string processedPath = filePath;
-            
-            // Add .json extension if missing
-            if (!processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            {
-                processedPath += ".json";
-            }
-            
-            // Convert dot notation to directory separators if present
-            string filenameWithoutExt = Path.GetFileNameWithoutExtension(processedPath);
-            
-            // If there are dots in the filename part (not in the extension)
-            if (filenameWithoutExt.Contains('.'))
-            {
-                string extension = Path.GetExtension(processedPath);
-                
-                // Only handle as dot notation if no directory separators already exist
-                bool hasDirectorySeparator = processedPath.Contains(Path.DirectorySeparatorChar) || 
-                                            processedPath.Contains(Path.AltDirectorySeparatorChar);
-                
-                if (!hasDirectorySeparator && !processedPath.StartsWith("."))
-                {
-                    string[] parts = filenameWithoutExt.Split('.');
-                    string filename = parts[parts.Length - 1]; // Last part becomes the filename
-                    string[] folderParts = parts.Take(parts.Length - 1).ToArray(); // Earlier parts become folders
-                    
-                    // Join with directory separators
-                    processedPath = string.Join(Path.DirectorySeparatorChar.ToString(), folderParts) + 
-                                   Path.DirectorySeparatorChar + filename + extension;
-                    
-                    ConsoleHelper.WriteInfo($"Converted dot notation: {filePath} → {processedPath}");
-                }
-            }
-            
-            // Add .apify prefix if not already present
-            bool alreadyHasApiDirectory = processedPath.StartsWith(DefaultApiDirectory + Path.DirectorySeparatorChar) || 
-                                         processedPath.StartsWith(DefaultApiDirectory + Path.AltDirectorySeparatorChar);
-            
-            if (!alreadyHasApiDirectory)
-            {
-                // Ensure the .apify directory exists
-                EnsureApiDirectoryExists();
-                
-                processedPath = Path.Combine(DefaultApiDirectory, processedPath);
-                ConsoleHelper.WriteInfo($"Added default directory: {processedPath}");
-            }
-            
-            return processedPath;
-        }
-        
-        private void EnsureApiDirectoryExists()
-        {
-            if (!Directory.Exists(DefaultApiDirectory))
-            {
-                try
-                {
-                    Directory.CreateDirectory(DefaultApiDirectory);
-                    ConsoleHelper.WriteInfo($"Created '{DefaultApiDirectory}' directory as it didn't exist.");
-                }
-                catch (Exception ex)
-                {
-                    ConsoleHelper.WriteError($"Failed to create '{DefaultApiDirectory}' directory: {ex.Message}");
-                }
-            }
-        }
-
-        private string PromptForInput(string prompt, bool required = true)
-        {
-            while (true)
-            {
-                Console.Write($"{prompt} ");
-                string? input = Console.ReadLine();
-                
-                if (string.IsNullOrWhiteSpace(input))
-                {
-                    if (!required) return string.Empty;
-                    ConsoleHelper.WriteWarning("This field is required. Please try again.");
-                }
-                else
-                {
-                    return input;
-                }
-            }
-        }
-
-        private string PromptForHttpMethod()
-        {
-            string[] methods = { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" };
-            int selectedIndex = PromptChoice("HTTP method:", methods);
-            return methods[selectedIndex];
-        }
-
-        private bool PromptYesNo(string prompt)
-        {
-            while (true)
-            {
-                Console.Write($"{prompt} (y/n): ");
-                string? input = Console.ReadLine()?.Trim().ToLower();
-                
-                if (input == "y" || input == "yes") return true;
-                if (input == "n" || input == "no") return false;
-                
-                ConsoleHelper.WriteWarning("Please enter 'y' or 'n'.");
-            }
-        }
-
-        private int PromptChoice(string prompt, string[] options)
-        {
-            Console.WriteLine(prompt);
-            
-            for (int i = 0; i < options.Length; i++)
-            {
-                Console.WriteLine($"{i+1}. {options[i]}");
-            }
-            
-            while (true)
-            {
-                Console.Write($"Enter selection (1-{options.Length}): ");
-                string? input = Console.ReadLine();
-                
-                if (int.TryParse(input, out int selection) && selection >= 1 && selection <= options.Length)
-                {
-                    return selection - 1; // Return zero-based index
-                }
-                
-                ConsoleHelper.WriteWarning($"Please enter a number between 1 and {options.Length}.");
             }
         }
     }

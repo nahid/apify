@@ -58,5 +58,38 @@ public static class MiscHelper
 
         return dict;
     }
+    
+    
+    public static string HandlePath(string path, string defaultDirectory = ".apify")
+    {
+        string processedPath = path;
+            
+        if (processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Path.IsPathRooted(processedPath))
+            {
+                // If it's an absolute path, just return it
+                return processedPath;
+            }
+                
+            if (!Directory.Exists(defaultDirectory))
+            {
+                throw new DirectoryNotFoundException($"Default API directory '{defaultDirectory}' does not exist. Please create it or specify a different path.");
+            }
+                
+            // If it already has .json extension, just return it
+            return Path.Combine(defaultDirectory, path);
+        }
+            
+        if (!Directory.Exists(defaultDirectory))
+        {
+            throw new DirectoryNotFoundException($"Default API directory '{defaultDirectory}' does not exist. Please create it or specify a different path.");
+        }
+            
+        var pathWithoutExtension = path.Replace(".", Path.DirectorySeparatorChar.ToString());
+        path = Path.Combine(defaultDirectory, pathWithoutExtension + ".json");
+
+        return path;
+    }
 
 }
