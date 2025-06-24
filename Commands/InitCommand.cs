@@ -13,66 +13,61 @@ namespace Apify.Commands
 
         public InitCommand() : base("init", "Initialize a new API testing project in the current directory")
         {
+            var projectName = new Option<string>(
+                "--name",
+                "Name of the API testing project"
+            );
+            AddOption(projectName);
+            
+            var mockConfigOption = new Option<bool>(
+                "--mock",
+                () => false,
+                "Create sample mock API definitions"
+            );
+            AddOption(mockConfigOption);
+            
             var forceOption = new Option<bool>(
                 "--force",
                 () => false,
                 "Force overwrite of existing files"
             );
-
             AddOption(forceOption);
 
             this.SetHandler(
-                (force) => ExecuteAsync(force),
-                forceOption
+                (name, mock, force) => ExecuteAsync(name, mock, force),
+                projectName, mockConfigOption, forceOption
             );
         }
 
-        private async Task ExecuteAsync(bool force)
+        private async Task ExecuteAsync(string? name, bool mock, bool force)
         {
             ConsoleHelper.WriteHeader("Initializing API Testing Project");
 
             // Check if configuration file already exists
             string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), DefaultConfigFileName);
             
-            if (File.Exists(configFilePath) && !force)
+            if (File.Exists(configFilePath) && force)
             {
-                if (PromptYesNo($"Configuration file '{DefaultConfigFileName}' already exists. Overwrite?"))
+                if (Directory.Exists(DefaultApiDirectoryName))
                 {
-                    force = true;
+                    Directory.Delete(DefaultApiDirectoryName, true);
                 }
-                else
-                {
-                    ConsoleHelper.WriteWarning("Initialization canceled.");
-                    return;
-                }
-            }
 
-            // Check if API directory already exists
-            if (Directory.Exists(DefaultApiDirectoryName) && !force)
-            {
-                if (PromptYesNo($"API directory '{DefaultApiDirectoryName}' already exists. Overwrite sample files?"))
-                {
-                    force = true;
-                }
-                else
-                {
-                    ConsoleHelper.WriteWarning("Initialization canceled.");
-                    return;
-                }
+                File.Delete(configFilePath);
             }
 
             try
             {
                 // Prompt for required information
-                string projectName = PromptForInput("Enter project name:");
-                string defaultEnvironment = PromptForInput("Enter default environment name:", () => "Development");
-                string baseUrl = PromptForInput("Enter base URL for API endpoints (e.g., https://api.example.com):");
+                string projectName = name ?? PromptForInput("Enter project name:");
+                
+                string defaultEnvironment = Options.Count > 0 ? "Development" : PromptForInput("Enter default environment name:", () => "Development");
 
                 // Advanced options
-                bool configureAdditionalVariables = PromptYesNo("Configure additional environment variables?");
+                bool configureAdditionalVariables = Options.Count <= 0 && PromptYesNo("Configure additional environment variables?");
                 Dictionary<string, string> additionalVariables = new Dictionary<string, string>();
                 
-                if (configureAdditionalVariables)
+                if (Options.Count <= 0 && configureAdditionalVariables)
                 {
                     ConsoleHelper.WriteInfo("Enter environment variables (empty name to finish):");
                     
@@ -98,13 +93,7 @@ namespace Apify.Commands
                 }
 
                 // Create environment configuration
-                var defaultEnvVariables = new Dictionary<string, string>
-                {
-                    { "baseUrl", baseUrl },
-                    { "timeout", "30000" },
-                    { "userId", "1" },
-                    { "apiKey", "dev-api-key" }
-                };
+                var defaultEnvVariables = new Dictionary<string, string>();
 
                 // Add user-defined variables
                 foreach (var variable in additionalVariables)
@@ -120,13 +109,7 @@ namespace Apify.Commands
                 };
 
                 // Create production environment as an example
-                var productionEnvVariables = new Dictionary<string, string>
-                {
-                    { "baseUrl", baseUrl },
-                    { "timeout", "10000" },
-                    { "userId", "1" },
-                    { "apiKey", "prod-api-key" }
-                };
+                var productionEnvVariables = new Dictionary<string, string>();
 
                 // Add user-defined variables to production too
                 foreach (var variable in additionalVariables)
@@ -144,7 +127,7 @@ namespace Apify.Commands
                 // Ask if user wants to add additional environments
                 List<EnvironmentSchema> environments = new List<EnvironmentSchema> { defaultEnv, productionEnvironment };
                 
-                if (PromptYesNo("Add additional environments?"))
+                if (Options.Count <= 0 && PromptYesNo("Add additional environments?"))
                 {
                     while (true)
                     {
@@ -154,13 +137,7 @@ namespace Apify.Commands
                         string envDescription = PromptForInput($"Description for {envName}:", 
                             () => $"{envName} environment");
                         
-                        var envVariables = new Dictionary<string, string>
-                        {
-                            { "baseUrl", PromptForInput($"Base URL for {envName}:", () => baseUrl) },
-                            { "timeout", PromptForInput($"Timeout for {envName} (ms):", () => "20000") },
-                            { "userId", "1" },
-                            { "apiKey", $"{envName.ToLower()}-api-key" }
-                        };
+                        var envVariables = new Dictionary<string, string>();
                         
                         // Add user-defined variables
                         foreach (var variable in additionalVariables)
@@ -181,77 +158,91 @@ namespace Apify.Commands
                 // Create environment configuration with project-level variables
                 var config = new ApifyConfigSchema
                 {
-                    Name = "Default",
+                    Name = projectName,
                     Description = $"Configuration for {projectName}",
                     // Add project-level variables (shared across all environments)
                     Variables = new Dictionary<string, string>
                     {
-                        { "projectId", $"{projectName.ToLower().Replace(" ", "-")}" },
                         { "version", "1.0.0" },
-                        { "apiVersion", "v1" }
+                        { "apiVersion", "v1" },
+                        { "apiToken", "reqres-free-v1" },
+                        { "baseUrl", "https://reqres.in/api"}
                     },
                     DefaultEnvironment = defaultEnvironment,
-                    Environments = environments
+                    Environments = environments,
+                    MockServer = new MockServer() {
+                        Port = 8088,
+                        Verbose = true,
+                        EnableCors = false,
+                        DefaultHeaders = new Dictionary<string, string>() {
+                            { "Content-Type", "application/json"}
+                        }
+                    }
                 };
-
+    
                 // Create the sample API test file
-                var sampleApiTest = new ApiDefinition
+                var sampleUserApi = new ApiDefinition
                 {
-                    Name = "Sample API Test",
-                    Uri = "{{baseUrl}}/posts/1",
+                    Name = "Sample User API Test",
+                    Uri = "{{env.baseUrl}}/users/1",
                     Method = "GET",
                     Headers = new Dictionary<string, string>
                     {
-                        { "Accept", "application/json" }
+                        { "Accept", "application/json" },
+                        { "x-api-key", "{{env.apiToken}}" }
                     },
                     PayloadType = PayloadType.None,
                     Tests = new List<AssertionEntity>
                     {
                         new AssertionEntity { 
                             Title = "Status code is successful", 
-                            Case = "Assertion.Response.StatusCodeIs(200)",
+                            Case = "Assert.Response.StatusCodeIs(200)",
                         }
                     }
                 };
 
                 // Create an example API file in the apis directory
-                string sampleApiFilePath = Path.Combine(DefaultApiDirectoryName, "sample-api.json");
-                await File.WriteAllTextAsync(sampleApiFilePath, JsonHelper.SerializeObject(sampleApiTest));
+                string sampleApiFilePath = Path.Combine(DefaultApiDirectoryName, "get.json");
+                await File.WriteAllTextAsync(sampleApiFilePath, JsonHelper.SerializeObject(sampleUserApi));
                 ConsoleHelper.WriteSuccess($"Created sample API test: {sampleApiFilePath}");
                 
                 // Create a POST sample with JSON payload
                 var samplePostTest = new ApiDefinition
                 {
-                    Name = "Sample POST API Test",
-                    Uri = "{{baseUrl}}/posts",
+                    Name = "Sample Users Create API Test",
+                    Uri = "{{env.baseUrl}}/users",
                     Method = "POST",
                     Headers = new Dictionary<string, string>
                     {
                         { "Accept", "application/json" },
-                        { "Content-Type", "application/json" }
+                        { "Content-Type", "application/json" },
+                        { "x-api-key", "{{env.apiToken}}" }
                     },
                     Payload = new Dictionary<string, object>
                     {
-                        { "title", "Sample Post" },
-                        { "body", "This is a sample post body" },
-                        { "userId", 1 }
+                        { "name", "{{expr|> Faker.Name.FirstName()}}" },
+                        { "job", "{{expr|> Faker.Name.JobTitle()}}" }
                     },
                     PayloadType = PayloadType.Json,
                     Tests = new List<AssertionEntity>
                     {
                         new AssertionEntity { 
                             Title = "Status code is Created", 
-                            Case = "Assertion.Response.StatusCodeIs(201)",
+                            Case = "Assert.Response.StatusCodeIs(201)",
                         }
                     }
                 };
                 
-                string samplePostFilePath = Path.Combine(DefaultApiDirectoryName, "sample-post.json");
+                string samplePostFilePath = Path.Combine(DefaultApiDirectoryName, "create.json");
                 await File.WriteAllTextAsync(samplePostFilePath, JsonHelper.SerializeObject(samplePostTest));
                 ConsoleHelper.WriteSuccess($"Created sample POST API test: {samplePostFilePath}");
-                
+
+                if (Options.Count <= 0)
+                {
+                    mock = PromptYesNo("Create sample mock API definitions?");
+                }
                 // Ask if user wants to create mock API examples
-                if (PromptYesNo("Create sample mock API definitions?"))
+                if (mock)
                 {
                     // Create users directory for mock examples if it doesn't exist
                     string usersDirPath = Path.Combine(DefaultApiDirectoryName, "users");
@@ -260,169 +251,73 @@ namespace Apify.Commands
                         Directory.CreateDirectory(usersDirPath);
                     }
                     
-                    // Create a sample Get All Users mock definition
-                    string getAllUsersMockJson = @"{
-  ""Name"": ""Get All Users"",
-  ""Description"": ""Returns a list of all users"",
-  ""Method"": ""GET"",
-  ""Path"": ""/users"",
-  ""ResponseStatus"": 200,
-  ""ResponseHeaders"": {
-    ""Content-Type"": ""application/json"",
-    ""Cache-Control"": ""max-age=3600""
-  },
-  ""ResponseBody"": [
-    {
-      ""id"": 1,
-      ""name"": ""John Doe"",
-      ""email"": ""john@example.com"",
-      ""isActive"": true,
-      ""createdAt"": ""{{$date}}""
-    },
-    {
-      ""id"": 2,
-      ""name"": ""Jane Smith"",
-      ""email"": ""jane@example.com"",
-      ""isActive"": true,
-      ""createdAt"": ""{{$date}}""
-    },
-    {
-      ""id"": ""{{$random:int:3:100}}"",
-      ""name"": ""Random User"",
-      ""email"": ""user{{$random:int:1:999}}@example.com"",
-      ""isActive"": false,
-      ""createdAt"": ""{{$date}}""
-    }
-  ],
-  ""Conditions"": [
-    {
-      ""Type"": ""HeaderContains"",
-      ""Field"": ""Authorization"",
-      ""Value"": ""Bearer invalid"",
-      ""ResponseStatus"": 401,
-      ""ResponseHeaders"": {
-        ""Content-Type"": ""application/json""
-      },
-      ""ResponseBody"": {
-        ""error"": ""Invalid authentication token""
-      }
-    }
-  ]
-}";
-                    
-                    // Create a sample Get User by ID mock definition
+                                      // Create a sample Get User by ID mock definition
                     string getUserByIdMockJson = @"{
-  ""Name"": ""Get User by ID"",
-  ""Description"": ""Returns a single user by ID"",
+  ""Name"": ""Mock User by ID"",
   ""Method"": ""GET"",
-  ""Path"": ""/users/:id"",
-  ""ResponseStatus"": 200,
-  ""ResponseHeaders"": {
-    ""Content-Type"": ""application/json"",
-    ""Cache-Control"": ""max-age=3600""
-  },
-  ""ResponseBody"": {
-    ""id"": ""{{:id}}"",
-    ""name"": ""John Doe"",
-    ""email"": ""john@example.com"",
-    ""isActive"": true,
-    ""token"": ""{{$random:uuid}}"",
-    ""createdAt"": ""{{$date}}""
-  },
-  ""Conditions"": [
+  ""Endpoint"": ""/api/users/{id}"",
+  ""Responses"": [
     {
-      ""Type"": ""PathParameterEquals"",
-      ""Parameter"": ""id"",
-      ""Value"": ""999"",
-      ""ResponseStatus"": 404,
-      ""ResponseHeaders"": {
-        ""Content-Type"": ""application/json""
+      ""Condition"": ""q.id == \""2\"""",
+      ""StatusCode"": 200,
+      ""Headers"": {
+        ""X-Apify-Version"": ""{{env.apiKey}}""
       },
-      ""ResponseBody"": {
-        ""error"": ""User not found""
+      ""ResponseTemplate"": {
+        ""id"": 1,
+        ""name"": ""{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}"",
+        ""email"": ""{{expr|> Faker.Internet.Email()}}""
+      }
+    },
+    {
+      ""Condition"": ""true"", 
+      ""StatusCode"": 200,
+      ""ResponseTemplate"": {
+        ""id"": 1,
+        ""name"": ""Nahid Bin Azhar"",
+        ""email"": ""nahid@jouleslabs.com""
       }
     }
   ]
 }";
                     
-                    string getAllUsersPath = Path.Combine(usersDirPath, "all.mock.json");
                     string getUserByIdPath = Path.Combine(usersDirPath, "user.mock.json");
                     
-                    await File.WriteAllTextAsync(getAllUsersPath, getAllUsersMockJson);
                     await File.WriteAllTextAsync(getUserByIdPath, getUserByIdMockJson);
                     
                     ConsoleHelper.WriteSuccess($"Created sample mock API definitions in {usersDirPath}");
-                    ConsoleHelper.WriteInfo("To start the mock server: dotnet run mock-server --port 8080 --verbose");
+                    ConsoleHelper.WriteInfo("To start the mock server: apify run mock-server --port 8088 --verbose");
                 }
 
-                // Save the configuration file
-                try
+          
+                string configJson = JsonHelper.SerializeObject(config);
+                
+                try 
                 {
-                    string configJson = JsonHelper.SerializeObject(config);
-                    
-                    // Skip the validation step that's causing issues
-                    bool useRawJson = false;
-                    
-                    try 
-                    {
-                        // Try to manually deserialize the JSON to verify it's correctly formatted
-                        var jsonSettings = new JsonSerializerSettings
-                        {
-                            MissingMemberHandling = MissingMemberHandling.Ignore,
-                            NullValueHandling = NullValueHandling.Ignore
-                        };
-                        var testObject = JsonConvert.DeserializeObject<ApifyConfigSchema>(configJson, jsonSettings);
-                        
-                        // Check if the deserialized object is valid
-                        if (testObject == null || testObject.Environments == null || testObject.Environments.Count == 0)
-                        {
-                            useRawJson = true;
-                        }
-                    }
-                    catch (Exception)
-                    {
-                        // If any error occurs during validation, use the raw JSON
-                        useRawJson = true;
-                    }
-                    
-                    if (useRawJson)
-                    {
-                        ConsoleHelper.WriteInfo("Using direct JSON format for configuration.");
-                        // Create a manual JSON object directly - this would need to be more complex to handle custom environments
-                        configJson = BuildConfigJson(projectName, defaultEnvironment, baseUrl, environments, additionalVariables);
-                    }
-                    
-                    try 
-                    {
-                        string currentDir = Directory.GetCurrentDirectory();
-                        ConsoleHelper.WriteInfo($"Current working directory: {currentDir}");
-                        ConsoleHelper.WriteInfo($"Creating config file at: {configFilePath}");
+                    string currentDir = Directory.GetCurrentDirectory();
+                    ConsoleHelper.WriteInfo($"Current working directory: {currentDir}");
+                    ConsoleHelper.WriteInfo($"Creating config file at: {configFilePath}");
 
-                        await File.WriteAllTextAsync(configFilePath, configJson);
-                        
-                        // Verify file was created
-                        if (File.Exists(configFilePath))
-                        {
-                            ConsoleHelper.WriteSuccess($"Created configuration file: {DefaultConfigFileName}");
-                            ConsoleHelper.WriteInfo($"Configuration file exists at: {configFilePath}");
-                        }
-                        else
-                        {
-                            ConsoleHelper.WriteError($"Failed to create configuration file at: {configFilePath}");
-                        }
-                    }
-                    catch (Exception fileEx)
+                    await File.WriteAllTextAsync(configFilePath, configJson);
+                    
+                    // Verify file was created
+                    if (File.Exists(configFilePath))
                     {
-                        ConsoleHelper.WriteError($"Error writing config file: {fileEx.Message}");
-                        if (fileEx.InnerException != null)
-                        {
-                            ConsoleHelper.WriteError($"Inner exception: {fileEx.InnerException.Message}");
-                        }
+                        ConsoleHelper.WriteSuccess($"Created configuration file: {DefaultConfigFileName}");
+                        ConsoleHelper.WriteInfo($"Configuration file exists at: {configFilePath}");
+                    }
+                    else
+                    {
+                        ConsoleHelper.WriteError($"Failed to create configuration file at: {configFilePath}");
                     }
                 }
-                catch (Exception ex)
+                catch (Exception fileEx)
                 {
-                    ConsoleHelper.WriteError($"Error creating configuration file: {ex.Message}");
+                    ConsoleHelper.WriteError($"Error writing config file: {fileEx.Message}");
+                    if (fileEx.InnerException != null)
+                    {
+                        ConsoleHelper.WriteError($"Inner exception: {fileEx.InnerException.Message}");
+                    }
                 }
 
                 // Display success message
@@ -439,78 +334,6 @@ namespace Apify.Commands
             {
                 ConsoleHelper.WriteError($"Error initializing project: {ex.Message}");
             }
-        }
-
-        private string BuildConfigJson(string projectName, string defaultEnvironment, string baseUrl, 
-                                     List<EnvironmentSchema> environments, Dictionary<string, string> additionalVariables)
-        {
-            // Start building the JSON manually
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("{");
-            sb.AppendLine($"  \"Name\": \"Default\",");
-            sb.AppendLine($"  \"Description\": \"Configuration for {projectName}\",");
-            sb.AppendLine($"  \"DefaultEnvironment\": \"{defaultEnvironment}\",");
-            
-            // Add project variables
-            sb.AppendLine("  \"Variables\": {");
-            sb.AppendLine($"    \"projectId\": \"{projectName.ToLower().Replace(" ", "-")}\",");
-            sb.AppendLine("    \"version\": \"1.0.0\",");
-            sb.AppendLine("    \"apiVersion\": \"v1\"");
-            sb.AppendLine("  },");
-            
-            // Add environments
-            sb.AppendLine("  \"Environments\": [");
-            
-            for (int i = 0; i < environments.Count; i++)
-            {
-                var env = environments[i];
-                sb.AppendLine("    {");
-                sb.AppendLine($"      \"Name\": \"{env.Name}\",");
-                sb.AppendLine($"      \"Description\": \"{env.Description}\",");
-                sb.AppendLine("      \"Variables\": {");
-                
-                // Add all variables for this environment
-                var variables = env.Variables;
-                int varCount = 0;
-                foreach (var variable in variables)
-                {
-                    varCount++;
-                    string comma = varCount < variables.Count ? "," : "";
-                    sb.AppendLine($"        \"{variable.Key}\": \"{variable.Value}\"{comma}");
-                }
-                
-                sb.AppendLine("      }");
-                
-                // Add comma if not the last environment
-                if (i < environments.Count - 1)
-                {
-                    sb.AppendLine("    },");
-                }
-                else
-                {
-                    sb.AppendLine("    }");
-                }
-            }
-            
-            sb.AppendLine("  ],");
-            
-            // Add MockServer configuration
-            sb.AppendLine("  \"MockServer\": {");
-            sb.AppendLine("    \"Port\": 8080,");
-            sb.AppendLine("    \"Directory\": \".apify\",");
-            sb.AppendLine("    \"EnableCORS\": true,");
-            sb.AppendLine("    \"LogRequests\": true,");
-            sb.AppendLine("    \"DefaultHeaders\": {");
-            sb.AppendLine("      \"Access-Control-Allow-Origin\": \"*\",");
-            sb.AppendLine("      \"Access-Control-Allow-Methods\": \"GET, POST, PUT, DELETE, OPTIONS\",");
-            sb.AppendLine("      \"Access-Control-Allow-Headers\": \"Content-Type, Authorization\"");
-            sb.AppendLine("    },");
-            sb.AppendLine("    \"FileStoragePath\": \".apify/uploads\"");
-            sb.AppendLine("  }");
-            
-            sb.AppendLine("}");
-            
-            return sb.ToString();
         }
 
         private string PromptForInput(string prompt, bool required = true)

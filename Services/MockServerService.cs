@@ -34,7 +34,7 @@ namespace Apify.Services
 
             if (port == 0)
             {
-                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 8080;
+                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 8088;
             }
             
             // Load all mock definitions
@@ -162,7 +162,7 @@ namespace Apify.Services
 
                         // Always show loaded API info
                         ConsoleHelper.WriteInfo(
-                            $"Loaded advanced mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
+                            $"Loaded mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
                     }
 
                 }
@@ -247,175 +247,6 @@ namespace Apify.Services
             
             response.Close();
         
-        }
-        
-        private MockCondition? FindMatchingCondition(MockApiDefinition mockDef, HttpListenerRequest request)
-        {
-            if (mockDef.Conditions == null || mockDef.Conditions.Count == 0)
-                return null;
-                
-            foreach (var condition in mockDef.Conditions)
-            {
-                bool matches = true;
-                
-                // Check query parameters
-                if (condition.QueryParams != null && condition.QueryParams.Count > 0)
-                {
-                    foreach (var param in condition.QueryParams)
-                    {
-                        if (request.QueryString[param.Key] != param.Value)
-                        {
-                            matches = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!matches) continue;
-                }
-                
-                // Check for exact header matches
-                if (condition.Headers != null && condition.Headers.Count > 0)
-                {
-                    foreach (var header in condition.Headers)
-                    {
-                        if (request.Headers[header.Key] != header.Value)
-                        {
-                            matches = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!matches) continue;
-                }
-                
-                // Check for header value contains 
-                if (condition.HeadersContain != null && condition.HeadersContain.Count > 0)
-                {
-                    foreach (var header in condition.HeadersContain)
-                    {
-                        string? headerValue = request.Headers[header.Key];
-                        if (string.IsNullOrEmpty(headerValue) || !headerValue.Contains(header.Value))
-                        {
-                            matches = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!matches) continue;
-                }
-                
-                // Check if specified headers exist
-                if (condition.HeaderExists != null && condition.HeaderExists.Count > 0)
-                {
-                    foreach (var headerName in condition.HeaderExists)
-                    {
-                        if (string.IsNullOrEmpty(request.Headers[headerName]))
-                        {
-                            matches = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!matches) continue;
-                }
-                
-                // Check for body content if applicable
-                if (condition.Body != null || condition.BodyContains != null || condition.BodyMatches != null)
-                {
-                    // Try to read request body (if it has one)
-                    string requestBody = string.Empty;
-                    
-                    try
-                    {
-                        if (request.ContentLength64 > 0 && request.HasEntityBody)
-                        {
-                            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
-                            {
-                                requestBody = reader.ReadToEnd();
-                            }
-                            
-                            // Reset the stream position for further reads
-                            request.InputStream.Position = 0;
-                        }
-                        
-                        // Check for exact body match
-                        if (condition.Body != null)
-                        {
-                            string expectedBody = condition.Body is string strBody 
-                                ? strBody 
-                                : JsonConvert.SerializeObject(condition.Body);
-                                
-                            if (!string.Equals(requestBody, expectedBody, StringComparison.OrdinalIgnoreCase))
-                            {
-                                matches = false;
-                            }
-                            
-                            if (!matches) continue;
-                        }
-                        
-                        // Check if body contains specific strings
-                        if (condition.BodyContains != null && condition.BodyContains.Count > 0)
-                        {
-                            foreach (var fragment in condition.BodyContains)
-                            {
-                                if (!requestBody.Contains(fragment))
-                                {
-                                    matches = false;
-                                    break;
-                                }
-                            }
-                            
-                            if (!matches) continue;
-                        }
-                        
-                        // Check if body matches specific patterns (property values in JSON)
-                        if (condition.BodyMatches != null && condition.BodyMatches.Count > 0 &&
-                            !string.IsNullOrEmpty(requestBody) && IsJsonObject(requestBody))
-                        {
-                            try
-                            {
-                                var bodyObject = JsonConvert.DeserializeObject<JObject>(requestBody);
-                                
-                                foreach (var match in condition.BodyMatches)
-                                {
-                                    // Use JPath-like expressions to find values
-                                    var token = bodyObject?.SelectToken(match.Key);
-                                    
-                                    if (token == null || !token.ToString().Equals(match.Value))
-                                    {
-                                        matches = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                if (_debug)
-                                {
-                                    ConsoleHelper.WriteWarning($"Failed to parse JSON body for matching: {ex.Message}");
-                                }
-                                matches = false;
-                            }
-                            
-                            if (!matches) continue;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_debug)
-                        {
-                            ConsoleHelper.WriteWarning($"Error reading request body: {ex.Message}");
-                        }
-                        matches = false;
-                        continue;
-                    }
-                }
-                
-                if (matches)
-                    return condition;
-            }
-            
-            return null;
         }
         
         private bool IsJsonObject(string text)
