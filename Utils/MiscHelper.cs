@@ -38,5 +38,25 @@ public static class MiscHelper
 
         return merged;
     }
+    
+    public static Dictionary<string, string> ParseArgsVariables(string args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+        {
+            return new Dictionary<string, string>();
+        }
+
+        var dict = new Dictionary<string, string>();
+        foreach (string pair in args.Split(';'))
+        {
+            string[] keyValue = pair.Split('=');
+            if (keyValue.Length == 2)
+            {
+                dict[keyValue[0]] = keyValue[1];
+            }
+        }
+
+        return dict;
+    }
 
 }

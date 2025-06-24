@@ -35,14 +35,20 @@ namespace Apify.Commands
             environmentOption.AddAlias("-e");
             Command.AddOption(environmentOption);
 
+            var vars = new Option<string?>(
+                name: "--vars",
+                description: "Runtime variables for the configuration");
+            
+            Command.AddOption(vars);
+
             // Set the handler
-            Command.SetHandler(async (file, verbose, environment, debug) =>
+            Command.SetHandler(async (file, verbose, variables, environment, debug) =>
             {
-                await ExecuteRunCommand(file, verbose, environment, debug);
-            }, fileArgument, verboseOption, environmentOption, RootCommand.DebugOption);
+                await ExecuteRunCommand(file, verbose, variables, environment, debug);
+            }, fileArgument, verboseOption, vars, environmentOption, RootCommand.DebugOption);
         }
 
-        private async Task ExecuteRunCommand(string filePath, bool verbose, string? environmentName, bool debug)
+        private async Task ExecuteRunCommand(string filePath, bool verbose, string? varString, string? environmentName, bool debug)
         {
             ConsoleHelper.DisplayTitle("Apify - API Request Runner");
 
@@ -63,8 +69,12 @@ namespace Apify.Commands
                     ConsoleHelper.WriteError($"Failed to parse {path}");
                     return;
                 }
+
+                var variables = MiscHelper.ParseArgsVariables(varString ?? "");
+                var pathVars = new Dictionary<string, Dictionary<string, string>>();
+                pathVars.Add("vars", variables);
                 
-                apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName);
+                apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, pathVars);
                 if (verbose)
                 {
                     apiExecutor.DisplayApiDefinition(apiDefinition);

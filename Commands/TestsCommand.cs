@@ -33,7 +33,12 @@ namespace Apify.Commands
                 name: "--env",
                 description: "EnvironmentSchema to use from the configuration profile");
             environmentOption.AddAlias("-e");
-            Command.AddOption(environmentOption);
+            Command.AddOption(environmentOption);    
+            
+            var varsOption = new Option<string?>(
+                name: "--vars",
+                description: "Runtime variables for configurations");
+            Command.AddOption(varsOption);
             
             var tagOption = new Option<string>(
                 "--tag",
@@ -45,12 +50,12 @@ namespace Apify.Commands
             Command.AddOption(tagOption);
             
             Command.SetHandler(
-                (verbose, dir, envName, tag) => RunAllTestsAsync(verbose, dir, envName, tag),
-                verboseOption, dirOption, environmentOption, tagOption
+                (verbose, dir, envName, vars, tag) => RunAllTestsAsync(verbose, dir, envName, vars, tag),
+                verboseOption, dirOption, environmentOption, varsOption, tagOption
             );
         }
         
-        private async Task RunAllTestsAsync(bool verbose, string directory, string? envName, string? tag)
+        private async Task RunAllTestsAsync(bool verbose, string directory, string? envName, string? vars, string? tag)
         {
             var configService = new ConfigService();
             envName = envName ?? configService.LoadConfiguration()?.DefaultEnvironment ?? "Development";
@@ -72,8 +77,6 @@ namespace Apify.Commands
             }
             
             int totalTests = 0;
-            int totalPassed = 0;
-            int totalFailed = 0;
             long totalResponseTime = 0;
             var totalTestResults = new AllTestResults();
             
@@ -121,7 +124,11 @@ namespace Apify.Commands
                     
                     var apiExecutor = new ApiExecutor();
                     
-                    apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName);
+                    var variables = MiscHelper.ParseArgsVariables(vars ?? "");
+                    var runtimeVars = new Dictionary<string, Dictionary<string, string>>();
+                    runtimeVars.Add("vars", variables);
+                    
+                    apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, runtimeVars);
                     var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
                     
                     var assertionExecutor = new AssertionExecutor(response);
@@ -140,10 +147,8 @@ namespace Apify.Commands
                     }
                     
                     //apiExecutor.DisplayTestResults(testResults, verbose);
-                    
-                    totalTests += testResults.Results.Count;
-                    totalFailed += testResults.FailedCount;
-                    totalPassed += testResults.PassedCount;
+
+                    totalTests += 1;
                     totalResponseTime += response.ResponseTimeMs;
 
                 }
@@ -168,7 +173,7 @@ namespace Apify.Commands
             ConsoleHelper.WriteColored("Test Summary", ConsoleColor.DarkYellow);
             Console.WriteLine();
             ConsoleHelper.WriteRepeatChar('=', Console.WindowWidth - 1);
-            ConsoleHelper.WriteKeyValue("Result: ", $"{totalTestResults.GetTotalTests()}/{totalTestResults.GetTotalPassed()} tests passed");
+            ConsoleHelper.WriteKeyValue("Result: ", $"{totalTests}/{totalTestResults.GetTotalPassed()} tests passed");
             if (totalTests > 0)
             {
                 ConsoleHelper.WriteKeyValue("Total Execution Time", $"{executionTime:F2} seconds");
@@ -239,24 +244,34 @@ namespace Apify.Commands
         }    
         
         
-        public int GetTotalTests()
+        public int GetTotalAssertions()
         {
             return _allTestResults.Sum(r => r.Values.Sum(v => v.Results.Count));
         }
         
-        public int GetTotalPassed()
+        public int GetTotalAssertionPassed()
         {
             return _allTestResults.Sum(r => r.Values.Sum(v => v.PassedCount));
         }
         
-        public int GetTotalFailed()
+        public int GetTotalAssertionFailed()
         {
             return _allTestResults.Sum(r => r.Values.Sum(v => v.FailedCount));
         }
         
+           
+        public int GetTotalPassed()
+        {
+            return _allTestResults.Sum(r => r.Values.Sum(v => v.IsPassed() ? 1 : 0));
+        }     
+        public int GetTotalFailed()
+        {
+            return _allTestResults.Sum(r => r.Values.Sum(v => v.IsPassed() ? 0 : 1));
+        }
+        
         public bool IsPassed()
         {
-            return GetTotalFailed() == 0;
+            return GetTotalAssertionFailed() == 0;
         }
         
     }

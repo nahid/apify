@@ -245,7 +245,7 @@ namespace Apify.Services
             request.Content = multipartContent;
         }
         
-        public ApiDefinition ApplyEnvToApiDefinition(ApiDefinition apiDefinition, string environment)
+        public ApiDefinition ApplyEnvToApiDefinition(ApiDefinition apiDefinition, string environment, params Dictionary<string, Dictionary<string, string>>[]? variables)
         {
             var apiDefContent = JsonHelper.SerializeToJson(apiDefinition);
             
@@ -258,9 +258,23 @@ namespace Apify.Services
             var vars = MiscHelper.MergeDictionaries(conf.Variables, _configService.LoadEnvironment(environment)?.Variables ?? new Dictionary<string, string>());
             vars = MiscHelper.MergeDictionaries(vars, apiDefinition.Variables ?? new Dictionary<string, string>());
             
-            apiDefContent = StubManager.Replace(apiDefContent, new Dictionary<string, object> {
-                {"env", vars },
-            });
+
+            var stubReplacor = new Dictionary<string, object>();
+            
+            stubReplacor.Add("env", vars);
+            
+            if (variables != null)
+            {
+                foreach (var v in variables)
+                {
+                    foreach (var kvp in v)
+                    {
+                        stubReplacor.Add(kvp.Key, kvp.Value);
+                    }
+                }
+            }
+            
+            apiDefContent = StubManager.Replace(apiDefContent, stubReplacor);
             
             if (string.IsNullOrEmpty(apiDefContent))
             {
