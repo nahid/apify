@@ -11,11 +11,13 @@ namespace Apify.Services
     {
         private readonly HttpClient _httpClient;
         private EnvironmentService? _environmentService;
+        private ConfigService _configService;
 
         public ApiExecutor()
         {
             _httpClient = new HttpClient();
             _environmentService = null;
+            _configService = new ConfigService();
         }
         
         public void SetEnvironmentService(EnvironmentService environmentService)
@@ -242,6 +244,203 @@ namespace Apify.Services
 
             request.Content = multipartContent;
         }
+        
+        public ApiDefinition ApplyEnvToApiDefinition(ApiDefinition apiDefinition, string environment, params Dictionary<string, Dictionary<string, string>>[]? variables)
+        {
+            var apiDefContent = JsonHelper.SerializeToJson(apiDefinition);
+            
+            if (string.IsNullOrEmpty(apiDefContent))
+            {
+                return apiDefinition;
+            }
+
+            var conf = _configService.LoadConfiguration();
+            var vars = MiscHelper.MergeDictionaries(conf.Variables, _configService.LoadEnvironment(environment)?.Variables ?? new Dictionary<string, string>());
+            vars = MiscHelper.MergeDictionaries(vars, apiDefinition.Variables ?? new Dictionary<string, string>());
+            
+
+            var stubReplacor = new Dictionary<string, object>();
+            
+            stubReplacor.Add("env", vars);
+            
+            if (variables != null)
+            {
+                foreach (var v in variables)
+                {
+                    foreach (var kvp in v)
+                    {
+                        stubReplacor.Add(kvp.Key, kvp.Value);
+                    }
+                }
+            }
+            
+            apiDefContent = StubManager.Replace(apiDefContent, stubReplacor);
+            
+            if (string.IsNullOrEmpty(apiDefContent))
+            {
+                return apiDefinition;
+            }
+
+            apiDefinition = JsonHelper.DeserializeString<ApiDefinition>(apiDefContent) ?? new ApiDefinition();
+
+            return apiDefinition;
+        }
+        
+        public void DisplayTestStats(TestResults testResults, bool verbose = false)
+        {
+            if (!verbose) return;
+            
+            ConsoleHelper.WriteSection("===============================");
+            ConsoleHelper.WriteKeyValue("Test Summary", $"{testResults.Results.Count}/{testResults.PassedCount} tests passed");
+            ConsoleHelper.WriteLineColored("===============================\n", ConsoleColor.Cyan);
+        }
+        public void DisplayTestResults(TestResults testResults, bool verbose = false)
+        {
+            if (!verbose) return;
+            
+            
+            foreach (var testResult in testResults.Results)
+            {
+                if (testResult.Status)
+                {
+                    ConsoleHelper.WriteSuccess($"✓ {testResult.Name} >>", true);
+                }
+                else
+                {
+                    ConsoleHelper.WriteError($"✗ {testResult.Name} >>", true);
+                }
+
+                foreach (var assertResult in testResult.Result)
+                {
+                    if (assertResult.IsPassed())
+                    {
+                        ConsoleHelper.WriteSuccess($"{" ",-2}✓ - {assertResult.GetMessage()}");
+                    }
+                    else
+                    {
+                        ConsoleHelper.WriteError($"{" ",-2}✗ - {assertResult.GetMessage()}");
+                    }
+                }
+            }
+        }
+        
+        public void DisplayApiResponse(ApiResponse response)
+        {
+            ConsoleHelper.WriteSection("API Response:");
+            ConsoleHelper.WriteStatusCode(response.StatusCode);
+            ConsoleHelper.WriteTiming(response.ResponseTimeMs);
+            
+            if (response.Headers.Count > 0)
+            {
+                ConsoleHelper.WriteSection("Response Headers:");
+                foreach (var header in response.Headers)
+                {
+                    Console.Write("  ");
+                    ConsoleHelper.WriteKeyValue(header.Key, header.Value);
+                }
+            }
+            
+            if (response.ContentHeaders.Count > 0)
+            {
+                ConsoleHelper.WriteSection("Content Headers:");
+                foreach (var header in response.ContentHeaders)
+                {
+                    Console.Write("  ");
+                    ConsoleHelper.WriteKeyValue(header.Key, header.Value);
+                }
+            }
+            
+            ConsoleHelper.WriteSection("Response Body:");
+            try
+            {
+                // Try to format and colorize JSON for better readability
+                ConsoleHelper.WriteColoredJson(response.Body);
+            }
+            catch
+            {
+                // If formatting fails, display raw response
+                Console.WriteLine(response.Body);
+            }
+        }
+        
+        public void DisplayApiDefinition(ApiDefinition apiDefinition)
+        {
+            ConsoleHelper.WriteSection("API Definition:");
+            ConsoleHelper.WriteKeyValue("Name", apiDefinition.Name);
+            
+            Console.Write("URI: ");
+            ConsoleHelper.WriteUrl(apiDefinition.Uri);
+            
+            Console.Write("Method: ");
+            ConsoleHelper.WriteMethod(apiDefinition.Method);
+            
+            if (apiDefinition.Headers?.Count > 0)
+            {
+                ConsoleHelper.WriteInfo("Headers:");
+                foreach (var header in apiDefinition.Headers)
+                {
+                    Console.Write("  ");
+                    ConsoleHelper.WriteKeyValue(header.Key, header.Value);
+                }
+            }
+
+            if (apiDefinition.Payload != null)
+            {
+                ConsoleHelper.WriteKeyValue("Payload Type", apiDefinition.PayloadType.ToString());
+                ConsoleHelper.WriteInfo("Payload:");
+                Console.Write("  ");
+                
+                if (apiDefinition.PayloadType == PayloadType.Json)
+                {
+                    try
+                    {
+                        // Try to format and colorize JSON payload
+                        var jsonString = apiDefinition.GetPayloadAsString();
+                        if (jsonString != null)
+                        {
+                            ConsoleHelper.WriteColoredJson(jsonString);
+                        }
+                        else
+                        {
+                            Console.WriteLine("[null payload]");
+                        }
+                    }
+                    catch
+                    {
+                        // If it's not valid JSON or formatting fails, display as-is
+                        Console.WriteLine(apiDefinition.Payload);
+                    }
+                }
+                else
+                {
+                    // For non-JSON payloads, display as-is
+                    var payloadString = apiDefinition.GetPayloadAsString();
+                    Console.WriteLine(payloadString ?? "[null payload]");
+                }
+            }
+            
+            // Display file upload information if present
+            if (apiDefinition.Files?.Count > 0)
+            {
+                ConsoleHelper.WriteInfo($"Files to Upload ({apiDefinition.Files.Count}):");
+                foreach (var file in apiDefinition.Files)
+                {
+                    Console.Write("  ");
+                    ConsoleHelper.WriteLineColored($"- {file.Name}", ConsoleColor.Cyan);
+                    Console.Write("    ");
+                    ConsoleHelper.WriteKeyValue("Field Name", file.FieldName);
+                    Console.Write("    ");
+                    ConsoleHelper.WriteKeyValue("Path", file.FilePath);
+                    Console.Write("    ");
+                    ConsoleHelper.WriteKeyValue("Content Type", file.ContentType);
+                }
+            }
+
+            if (apiDefinition.Tests?.Count > 0)
+            {
+                ConsoleHelper.WriteKeyValue("Tests", $"{apiDefinition.Tests.Count} defined");
+            }
+        }
     }
 
     public class ApiResponse
@@ -264,5 +463,12 @@ namespace Apify.Services
             
             return string.Empty;
         }
+
+        public bool HasHeader(string name)
+        {
+            return Headers.ContainsKey(name) || ContentHeaders.ContainsKey(name);
+        }
+        
+        
     }
 }

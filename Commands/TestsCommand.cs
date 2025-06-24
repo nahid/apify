@@ -4,6 +4,7 @@ using Apify.Models;
 using Apify.Services;
 using Apify.Utils;
 using Newtonsoft.Json;
+using System.Security.Cryptography;
 
 namespace Apify.Commands
 {
@@ -28,6 +29,17 @@ namespace Apify.Commands
                 "The directory containing API test files"
             );
             
+            var environmentOption = new Option<string?>(
+                name: "--env",
+                description: "EnvironmentSchema to use from the configuration profile");
+            environmentOption.AddAlias("-e");
+            Command.AddOption(environmentOption);    
+            
+            var varsOption = new Option<string?>(
+                name: "--vars",
+                description: "Runtime variables for configurations");
+            Command.AddOption(varsOption);
+            
             var tagOption = new Option<string>(
                 "--tag",
                 "Filter tests by tag"
@@ -38,13 +50,16 @@ namespace Apify.Commands
             Command.AddOption(tagOption);
             
             Command.SetHandler(
-                (verbose, dir, tag) => RunAllTestsAsync(verbose, dir, tag),
-                verboseOption, dirOption, tagOption
+                (verbose, dir, envName, vars, tag) => RunAllTestsAsync(verbose, dir, envName, vars, tag),
+                verboseOption, dirOption, environmentOption, varsOption, tagOption
             );
         }
         
-        private async Task RunAllTestsAsync(bool verbose, string directory, string? tag)
+        private async Task RunAllTestsAsync(bool verbose, string directory, string? envName, string? vars, string? tag)
         {
+            var configService = new ConfigService();
+            envName = envName ?? configService.LoadConfiguration()?.DefaultEnvironment ?? "Development";
+            
             ConsoleHelper.DisplayTitle("Apify - Running All Tests");
             
             if (!Directory.Exists(directory))
@@ -61,58 +76,32 @@ namespace Apify.Commands
                 return;
             }
             
-            var environmentService = new EnvironmentService();
-            await environmentService.LoadConfig();
-            
             int totalTests = 0;
-            int totalPassed = 0;
-            int totalFailed = 0;
-            var testResults = new List<(string ApiName, string TestName, bool Success, string? ErrorMessage)>();
             long totalResponseTime = 0;
+            var totalTestResults = new AllTestResults();
             
             var startTime = DateTime.Now;
             
-            // Spinner characters for animation
-            var spinner = new string[] { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
-            var spinnerIndex = 0;
-            var spinnerTimer = new System.Timers.Timer(100); // Update spinner every 100ms
-            
-            // Setup a timer to update the spinner animation
-            spinnerTimer.Elapsed += (sender, e) => 
-            {
-                spinnerIndex++;
-                // Only update if we're not at the end of a line (to avoid flickering)
-                try
-                {
-                    int cursorLeft = Console.CursorLeft;
-                    int cursorTop = Console.CursorTop;
-                    
-                    if (cursorLeft > 2) // Make sure we're not at beginning of line
-                    {
-                        Console.SetCursorPosition(1, cursorTop);
-                        Console.Write(spinner[spinnerIndex % spinner.Length]);
-                        Console.SetCursorPosition(cursorLeft, cursorTop);
-                    }
-                }
-                catch
-                {
-                    // Ignore any console errors - they can happen if window is resized
-                }
-            };
-            spinnerTimer.Start();
+            Console.Clear();
+            Console.Clear();
+            Console.SetCursorPosition(0, 0);
+            Console.Write("Testing  ");
+
+            var spinner = new SpinnerAnimation();
+            spinner.Start();
+
+            var cursorPosition = 0;
             
             for (int i = 0; i < apiFiles.Count; i++)
             {
+                cursorPosition = i + 1;
                 var apiFile = apiFiles[i];
-                
-                // Display progress with file counter and clear the whole line first
-                Console.Write($"\r{new string(' ', Console.WindowWidth - 1)}"); // Clear line
-                Console.Write($"\r[{spinner[spinnerIndex % spinner.Length]}] Processing {i+1}/{apiFiles.Count}: {Path.GetFileName(apiFile)}");
+                Console.SetCursorPosition(0, i + 1);
                 
                 try
                 {
                     string json = await File.ReadAllTextAsync(apiFile);
-                    ApiDefinition? apiDefinition = JsonConvert.DeserializeObject<ApiDefinition>(json);
+                    var apiDefinition = JsonConvert.DeserializeObject<ApiDefinition>(json);
                     
                     if (apiDefinition == null)
                     {
@@ -128,44 +117,40 @@ namespace Apify.Commands
                         continue;
                     }
                     
+                    Console.SetCursorPosition(0, cursorPosition);
                     // Show current API being processed with highlighted box
-                    Console.WriteLine();
-                    Console.WriteLine(new string('─', 50));
                     ConsoleHelper.WriteLineColored($"▶ TESTING: {apiDefinition.Name}", ConsoleColor.Cyan);
-                    Console.WriteLine(new string('─', 50));
                     
-                    // Apply environment variables (this was missing!)
-                    apiDefinition = environmentService.ApplyEnvironmentVariables(apiDefinition);
                     
                     var apiExecutor = new ApiExecutor();
-                    apiExecutor.SetEnvironmentService(environmentService);
                     
-                    var testRunner = new TestRunner();
-                    testRunner.SetApiExecutor(apiExecutor);
+                    var variables = MiscHelper.ParseArgsVariables(vars ?? "");
+                    var runtimeVars = new Dictionary<string, Dictionary<string, string>>();
+                    runtimeVars.Add("vars", variables);
                     
-                    var testResult = await testRunner.RunApiTestAsync(apiDefinition, verbose);
+                    apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, runtimeVars);
+                    var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
                     
-                    if (testResult != null)
+                    var assertionExecutor = new AssertionExecutor(response);
+                    
+                    var testResults = await assertionExecutor.RunAsync(apiDefinition.Tests ?? new List<AssertionEntity>());
+                    totalTestResults.AddTestResults(apiDefinition.Uri, testResults);
+                    
+                    Console.SetCursorPosition(0, cursorPosition);
+                    if (testResults.FailedCount > 0)
                     {
-                        totalResponseTime += testResult.ResponseTimeMs;
-                        
-                        // Count tests and results
-                        foreach (var assertion in testResult.AssertionResults)
-                        {
-                            totalTests++;
-                            bool isSuccess = assertion.Success;
-                            if (isSuccess)
-                            {
-                                totalPassed++;
-                            }
-                            else
-                            {
-                                totalFailed++;
-                            }
-                            
-                            testResults.Add((apiDefinition.Name, assertion.Name, isSuccess, assertion.ErrorMessage));
-                        }
+                        ConsoleHelper.WriteError($"✗ FAILED: {apiDefinition.Name} ({response.ResponseTimeMs:F2} ms)");
                     }
+                    else
+                    {
+                        ConsoleHelper.WriteSuccess($"✓ PASSED: {apiDefinition.Name} ({response.ResponseTimeMs:F2} ms)");
+                    }
+                    
+                    //apiExecutor.DisplayTestResults(testResults, verbose);
+
+                    totalTests += 1;
+                    totalResponseTime += response.ResponseTimeMs;
+
                 }
                 catch (Exception ex)
                 {
@@ -173,46 +158,49 @@ namespace Apify.Commands
                     ConsoleHelper.WriteError($"Error processing {apiFile}: {ex.Message}");
                 }
             }
+
+            spinner.Stop();
             
+            Console.SetCursorPosition(0, 0);
+            ConsoleHelper.WritePrompt("Completed!");
+
             var endTime = DateTime.Now;
             var executionTime = (endTime - startTime).TotalSeconds;
+       
+            Console.SetCursorPosition(0, cursorPosition + 1);
             
-            // Stop and dispose the spinner timer
-            spinnerTimer.Stop();
-            spinnerTimer.Dispose();
-            
-            // Display summary
             Console.WriteLine();
+            ConsoleHelper.WriteColored("Test Summary", ConsoleColor.DarkYellow);
             Console.WriteLine();
-            ConsoleHelper.DisplayTitle("Test Results Summary");
-            
-            if (testResults.Count == 0)
-            {
-                ConsoleHelper.WriteWarning("No tests were executed!");
-                return;
-            }
-            
-            ConsoleHelper.WriteKeyValue("Total API Files", $"{apiFiles.Count}");
-            ConsoleHelper.WriteKeyValue("Total Tests", $"{totalTests}");
-            ConsoleHelper.WriteKeyValue("Passed", $"{totalPassed}");
-            ConsoleHelper.WriteKeyValue("Failed", $"{totalFailed}");
-            ConsoleHelper.WriteKeyValue("Success Rate", $"{(totalTests > 0 ? (double)totalPassed / totalTests * 100 : 0):F2}%");
-            ConsoleHelper.WriteKeyValue("Total Execution Time", $"{executionTime:F2} seconds");
-            
+            ConsoleHelper.WriteRepeatChar('=', Console.WindowWidth - 1);
+            ConsoleHelper.WriteKeyValue("Result: ", $"{totalTests}/{totalTestResults.GetTotalPassed()} tests passed");
             if (totalTests > 0)
             {
-                ConsoleHelper.WriteKeyValue("Average Response Time", $"{(double)totalResponseTime / totalTests:F2} ms");
+                ConsoleHelper.WriteKeyValue("Total Execution Time", $"{executionTime:F2} seconds");
+                ConsoleHelper.WriteKeyValue("Total Response Time", $"{(double)(totalResponseTime / 1000.0):F2} seconds");
+                ConsoleHelper.WriteKeyValue("Average Response Time", $"{(double)(totalResponseTime / totalTests):F2} ms");
             }
             
-            // Display failed tests if any
-            if (totalFailed > 0)
+            ConsoleHelper.WriteRepeatChar('=', Console.WindowWidth - 1);
+            
+            Console.WriteLine();
+            ConsoleHelper.WriteColored("Test Report", ConsoleColor.DarkYellow);
+            Console.WriteLine();
+            ConsoleHelper.WriteRepeatChar('=', 20);
+
+            var apiExec = new ApiExecutor();
+            foreach (var testResult in totalTestResults.GetAllResults())
             {
-                Console.WriteLine();
-                ConsoleHelper.WriteHeader("Failed Tests:");
-                foreach (var result in testResults.Where(r => !r.Success))
+                foreach (var tResult in testResult)
                 {
-                    ConsoleHelper.WriteWarning($"- [{result.ApiName}] {result.TestName}: {result.ErrorMessage}");
+                    Console.WriteLine();
+                    ConsoleHelper.WriteColored(tResult.Key, ConsoleColor.Cyan);
+                    Console.WriteLine();
+                    ConsoleHelper.WriteRepeatChar('-', tResult.Key.Length);
+                    apiExec.DisplayTestResults(tResult.Value, true);
                 }
+
+                
             }
         }
         
@@ -222,8 +210,11 @@ namespace Apify.Commands
             
             try
             {
+                var allFiles = Directory.GetFiles(directory, "*.json", SearchOption.AllDirectories);
+                var allApiFiles = allFiles.Where(f => !f.EndsWith(".mock.json", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
                 // Get all JSON files from the directory and its subdirectories
-                result.AddRange(Directory.GetFiles(directory, "*.json", SearchOption.AllDirectories));
+                result.AddRange(allApiFiles);
             }
             catch (Exception ex)
             {
@@ -232,5 +223,57 @@ namespace Apify.Commands
             
             return result;
         }
+  
     }
+
+    public class AllTestResults
+    {
+        private List<Dictionary<string, TestResults>> _allTestResults = new List<Dictionary<string, TestResults>>();
+        
+        public void AddTestResults(string name, TestResults results)
+        {
+            var resultsDict = new Dictionary<string, TestResults>();
+            resultsDict.Add(name, results);
+            
+            _allTestResults.Add(resultsDict);
+        }
+
+        public List<Dictionary<string, TestResults>> GetAllResults()
+        {
+            return _allTestResults;
+        }    
+        
+        
+        public int GetTotalAssertions()
+        {
+            return _allTestResults.Sum(r => r.Values.Sum(v => v.Results.Count));
+        }
+        
+        public int GetTotalAssertionPassed()
+        {
+            return _allTestResults.Sum(r => r.Values.Sum(v => v.PassedCount));
+        }
+        
+        public int GetTotalAssertionFailed()
+        {
+            return _allTestResults.Sum(r => r.Values.Sum(v => v.FailedCount));
+        }
+        
+           
+        public int GetTotalPassed()
+        {
+            return _allTestResults.Sum(r => r.Values.Sum(v => v.IsPassed() ? 1 : 0));
+        }     
+        public int GetTotalFailed()
+        {
+            return _allTestResults.Sum(r => r.Values.Sum(v => v.IsPassed() ? 0 : 1));
+        }
+        
+        public bool IsPassed()
+        {
+            return GetTotalAssertionFailed() == 0;
+        }
+        
+    }
+ 
 }

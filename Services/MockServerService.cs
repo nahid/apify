@@ -34,7 +34,7 @@ namespace Apify.Services
 
             if (port == 0)
             {
-                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 8080;
+                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 8088;
             }
             
             // Load all mock definitions
@@ -162,7 +162,7 @@ namespace Apify.Services
 
                         // Always show loaded API info
                         ConsoleHelper.WriteInfo(
-                            $"Loaded advanced mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
+                            $"Loaded mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
                     }
 
                 }
@@ -247,175 +247,6 @@ namespace Apify.Services
             
             response.Close();
         
-        }
-        
-        private MockCondition? FindMatchingCondition(MockApiDefinition mockDef, HttpListenerRequest request)
-        {
-            if (mockDef.Conditions == null || mockDef.Conditions.Count == 0)
-                return null;
-                
-            foreach (var condition in mockDef.Conditions)
-            {
-                bool matches = true;
-                
-                // Check query parameters
-                if (condition.QueryParams != null && condition.QueryParams.Count > 0)
-                {
-                    foreach (var param in condition.QueryParams)
-                    {
-                        if (request.QueryString[param.Key] != param.Value)
-                        {
-                            matches = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!matches) continue;
-                }
-                
-                // Check for exact header matches
-                if (condition.Headers != null && condition.Headers.Count > 0)
-                {
-                    foreach (var header in condition.Headers)
-                    {
-                        if (request.Headers[header.Key] != header.Value)
-                        {
-                            matches = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!matches) continue;
-                }
-                
-                // Check for header value contains 
-                if (condition.HeadersContain != null && condition.HeadersContain.Count > 0)
-                {
-                    foreach (var header in condition.HeadersContain)
-                    {
-                        string? headerValue = request.Headers[header.Key];
-                        if (string.IsNullOrEmpty(headerValue) || !headerValue.Contains(header.Value))
-                        {
-                            matches = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!matches) continue;
-                }
-                
-                // Check if specified headers exist
-                if (condition.HeaderExists != null && condition.HeaderExists.Count > 0)
-                {
-                    foreach (var headerName in condition.HeaderExists)
-                    {
-                        if (string.IsNullOrEmpty(request.Headers[headerName]))
-                        {
-                            matches = false;
-                            break;
-                        }
-                    }
-                    
-                    if (!matches) continue;
-                }
-                
-                // Check for body content if applicable
-                if (condition.Body != null || condition.BodyContains != null || condition.BodyMatches != null)
-                {
-                    // Try to read request body (if it has one)
-                    string requestBody = string.Empty;
-                    
-                    try
-                    {
-                        if (request.ContentLength64 > 0 && request.HasEntityBody)
-                        {
-                            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
-                            {
-                                requestBody = reader.ReadToEnd();
-                            }
-                            
-                            // Reset the stream position for further reads
-                            request.InputStream.Position = 0;
-                        }
-                        
-                        // Check for exact body match
-                        if (condition.Body != null)
-                        {
-                            string expectedBody = condition.Body is string strBody 
-                                ? strBody 
-                                : JsonConvert.SerializeObject(condition.Body);
-                                
-                            if (!string.Equals(requestBody, expectedBody, StringComparison.OrdinalIgnoreCase))
-                            {
-                                matches = false;
-                            }
-                            
-                            if (!matches) continue;
-                        }
-                        
-                        // Check if body contains specific strings
-                        if (condition.BodyContains != null && condition.BodyContains.Count > 0)
-                        {
-                            foreach (var fragment in condition.BodyContains)
-                            {
-                                if (!requestBody.Contains(fragment))
-                                {
-                                    matches = false;
-                                    break;
-                                }
-                            }
-                            
-                            if (!matches) continue;
-                        }
-                        
-                        // Check if body matches specific patterns (property values in JSON)
-                        if (condition.BodyMatches != null && condition.BodyMatches.Count > 0 &&
-                            !string.IsNullOrEmpty(requestBody) && IsJsonObject(requestBody))
-                        {
-                            try
-                            {
-                                var bodyObject = JsonConvert.DeserializeObject<JObject>(requestBody);
-                                
-                                foreach (var match in condition.BodyMatches)
-                                {
-                                    // Use JPath-like expressions to find values
-                                    var token = bodyObject?.SelectToken(match.Key);
-                                    
-                                    if (token == null || !token.ToString().Equals(match.Value))
-                                    {
-                                        matches = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                if (_debug)
-                                {
-                                    ConsoleHelper.WriteWarning($"Failed to parse JSON body for matching: {ex.Message}");
-                                }
-                                matches = false;
-                            }
-                            
-                            if (!matches) continue;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_debug)
-                        {
-                            ConsoleHelper.WriteWarning($"Error reading request body: {ex.Message}");
-                        }
-                        matches = false;
-                        continue;
-                    }
-                }
-                
-                if (matches)
-                    return condition;
-            }
-            
-            return null;
         }
         
         private bool IsJsonObject(string text)
@@ -544,12 +375,12 @@ namespace Apify.Services
                 catch (Exception e)
                 {
                     Console.WriteLine($"Error reading JSON body: {e.Message}");
-                    bodyContent = JToken.Parse("{}");
+                    bodyContent = JsonConvert.DeserializeObject<JToken>("{}");
                 }
             }
             else
             {
-                bodyContent = JToken.Parse("{}");
+                bodyContent = JsonConvert.DeserializeObject<JToken>("{}");
             }
             
             // First process the responses in two groups: defaults and non-defaults
@@ -582,7 +413,7 @@ namespace Apify.Services
                 bool conditionMet = _conditionEvaluator.EvaluateCondition(
                     resp.Condition, 
                     headers, 
-                    bodyContent ?? JToken.Parse("{}"), 
+                    bodyContent,
                     queryParams,
                     pathParams);
                     
@@ -678,7 +509,7 @@ namespace Apify.Services
                         {"headers", headers},
                         {"path", pathParams},
                         {"query", queryParams},
-                        {"body", bodyContent ?? new JObject()}
+                        {"body", bodyContent}
                     });
                     
                     response.Headers.Add(header.Key, headerValue);
@@ -715,27 +546,15 @@ namespace Apify.Services
                     {"headers", headers},
                     {"path", pathParams},
                     {"query", queryParams},
-                    {"body", bodyContent ?? new JObject()}
+                    {"body", bodyContent}
                 });
                 
                 // Process dynamic template expressions (e.g., {{$random:int:1000:1999}})
-                responseContent = ProcessDynamicTemplate(responseContent, request);
+                // responseContent = ProcessDynamicTemplate(responseContent, request);
                 
                 // Apply advanced template replacements
                 
                 // 1. Replace body.X references with actual body values
-                if (bodyContent != null && bodyContent.Type == JTokenType.Object)
-                {
-                    foreach (var prop in (JObject)bodyContent)
-                    {
-                        string placeholder = $"{{{{body.{prop.Key}}}}}";
-                        if (responseContent.Contains(placeholder))
-                        {
-                            string replacement = prop.Value?.ToString() ?? string.Empty;
-                            responseContent = responseContent.Replace(placeholder, replacement);
-                        }
-                    }
-                }
             }
             else
             {
@@ -774,312 +593,6 @@ namespace Apify.Services
             {
                 response.Close();
             }
-        }
-        
-        private async Task ProcessMultipartFormDataAsync(HttpListenerRequest request, 
-            Dictionary<string, string> formFields, 
-            Dictionary<string, (string FileName, byte[] Data)> files)
-        {
-            // Get the boundary from the Content-Type header
-            string boundary = GetBoundaryFromContentType(request.ContentType ?? string.Empty);
-            if (string.IsNullOrEmpty(boundary))
-            {
-                throw new ArgumentException("Content-Type header does not contain boundary");
-            }
-            
-            using (var memoryStream = new MemoryStream())
-            {
-                // Copy the request stream to a memory stream so we can read it multiple times
-                byte[] fileBuffer = new byte[4096];
-                int bytesRead;
-                
-                while ((bytesRead = await request.InputStream.ReadAsync(fileBuffer, 0, fileBuffer.Length)) > 0)
-                {
-                    await memoryStream.WriteAsync(fileBuffer, 0, bytesRead);
-                }
-                
-                // Reset the stream position so we can read from the beginning
-                memoryStream.Position = 0;
-                
-                // Parse the multipart form data
-                try
-                {
-                    string boundaryMarker = "--" + boundary;
-                    string endBoundaryMarker = boundaryMarker + "--";
-                    
-                    using (var reader = new StreamReader(memoryStream, request.ContentEncoding))
-                    {
-                        string? line;
-                        bool isFirstBoundary = true;
-                        
-                        while ((line = reader.ReadLine()) != null)
-                        {
-                            if (isFirstBoundary && line.StartsWith(boundaryMarker))
-                            {
-                                isFirstBoundary = false;
-                                continue;
-                            }
-                            
-                            if (line.StartsWith(boundaryMarker))
-                            {
-                                if (line.Equals(endBoundaryMarker))
-                                {
-                                    // End of form data
-                                    break;
-                                }
-                                
-                                // Parse headers
-                                string? contentDisposition = null;
-                                string? contentType = null;
-                                
-                                while ((line = reader.ReadLine()) != null && !string.IsNullOrEmpty(line))
-                                {
-                                    if (line.StartsWith("Content-Disposition:", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        contentDisposition = line.Substring("Content-Disposition:".Length).Trim();
-                                    }
-                                    else if (line.StartsWith("Content-Type:", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        contentType = line.Substring("Content-Type:".Length).Trim();
-                                    }
-                                }
-                                
-                                // Parse content disposition to get name and filename
-                                string? name = null;
-                                string? filename = null;
-                                
-                                if (contentDisposition != null)
-                                {
-                                    var parts = contentDisposition.Split(';');
-                                    foreach (var part in parts)
-                                    {
-                                        var trimmedPart = part.Trim();
-                                        
-                                        if (trimmedPart.StartsWith("name=", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            name = trimmedPart.Substring(5).Trim('"');
-                                        }
-                                        else if (trimmedPart.StartsWith("filename=", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            filename = trimmedPart.Substring(9).Trim('"');
-                                        }
-                                    }
-                                }
-                                
-                                // Read content
-                                var contentBuilder = new StringBuilder();
-                                MemoryStream? fileData = null;
-                                
-                                if (!string.IsNullOrEmpty(filename))
-                                {
-                                    fileData = new MemoryStream();
-                                }
-                                
-                                while ((line = reader.ReadLine()) != null)
-                                {
-                                    if (line.StartsWith(boundaryMarker))
-                                    {
-                                        break;
-                                    }
-                                    
-                                    if (fileData != null)
-                                    {
-                                        byte[] lineBytes = request.ContentEncoding.GetBytes(line + "\r\n");
-                                        await fileData.WriteAsync(lineBytes, 0, lineBytes.Length);
-                                    }
-                                    else
-                                    {
-                                        contentBuilder.AppendLine(line);
-                                    }
-                                }
-                                
-                                // Add to collection
-                                if (!string.IsNullOrEmpty(name))
-                                {
-                                    if (fileData != null && !string.IsNullOrEmpty(filename))
-                                    {
-                                        files[name] = (filename, fileData.ToArray());
-                                        fileData.Dispose();
-                                    }
-                                    else
-                                    {
-                                        formFields[name] = contentBuilder.ToString().Trim();
-                                    }
-                                }
-                                
-                                if (line?.Equals(endBoundaryMarker) == true)
-                                {
-                                    // End of form data
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Always show basic error
-                    ConsoleHelper.WriteError($"Error parsing multipart form data: {ex.Message}");
-                    
-                    // Show detailed stack trace only in debug mode
-                    if (_debug)
-                    {
-                        Console.WriteLine(ex.StackTrace);
-                    }
-                    throw;
-                }
-            }
-        }
-        
-        private string GetBoundaryFromContentType(string contentType)
-        {
-            if (string.IsNullOrEmpty(contentType))
-                return string.Empty;
-                
-            int index = contentType.IndexOf("boundary=");
-            if (index == -1)
-                return string.Empty;
-                
-            string boundary = contentType.Substring(index + 9); // 9 is the length of "boundary="
-            
-            if (boundary.StartsWith("\"") && boundary.EndsWith("\""))
-                boundary = boundary.Substring(1, boundary.Length - 2);
-                
-            return boundary;
-        }
-        
-        private string ProcessDynamicTemplate(string template, HttpListenerRequest request)
-        {
-            // Parse request parameters and populate template variables
-            var templateVars = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-            
-            // Add URL path parameters
-            if (request.Url != null)
-            {
-                string requestPath = request.Url.AbsolutePath;
-                
-                
-                // Add query parameters
-                foreach (string key in request.QueryString.Keys)
-                {
-                    if (key != null)
-                    {
-                        templateVars["query." + key] = request.QueryString[key];
-                    }
-                }
-            }
-            
-            // Add headers
-            foreach (string key in request.Headers.Keys)
-            {
-                if (key != null)
-                {
-                    templateVars["header." + key] = request.Headers[key];
-                }
-            }
-            
-            // Add request body (if any)
-            if (request.HasEntityBody)
-            {
-                using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
-                {
-                    string body = reader.ReadToEnd();
-                    templateVars["body"] = body;
-                    
-                    // Try to parse as JSON
-                    try
-                    {
-                        var jsonObj = JsonConvert.DeserializeObject<JObject>(body);
-                        if (jsonObj != null)
-                        {
-                            foreach (var prop in jsonObj.Properties())
-                            {
-                                templateVars["body." + prop.Name] = prop.Value?.ToString();
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // If not JSON, just use the raw body
-                    }
-                }
-            }
-            
-            // Generate random ID values
-            templateVars["random.id"] = Guid.NewGuid().ToString();
-            templateVars["random.number"] = new Random().Next(10000).ToString();
-            templateVars["timestamp"] = DateTimeOffset.Now.ToUnixTimeSeconds().ToString();
-            
-            // Replace template variables in the template
-            string result = template;
-            foreach (var kv in templateVars)
-            {
-                result = result.Replace($"{{{{{kv.Key}}}}}", kv.Value ?? string.Empty);
-            }
-            
-            return result;
-        }
-        
-        // Method to apply template variables to a string
-        private string ApplyTemplateVariables(string input, Dictionary<string, string>? pathParams = null)
-        {
-            if (string.IsNullOrEmpty(input))
-                return input;
-            
-            // Create combined dictionary with path parameters and environment variables
-            var allVariables = new Dictionary<string, string>();
-            
-            // Add path parameters (highest priority)
-            if (pathParams != null)
-            {
-                foreach (var param in pathParams)
-                {
-                    allVariables[param.Key] = param.Value;
-                }
-            }
-            
-            // Add random/built-in values
-            allVariables["random.id"] = Guid.NewGuid().ToString();
-            allVariables["random.number"] = new Random().Next(10000).ToString();
-            allVariables["timestamp"] = DateTimeOffset.Now.ToUnixTimeSeconds().ToString();
-            
-            // Add environment variables (lowest priority, won't override path params)
-            if (_configService.GetDefaultEnvironment()?.Variables != null)
-            {
-                foreach (var envVar in _configService.GetDefaultEnvironment()?.Variables ?? new Dictionary<string, string>())
-                {
-                    if (!allVariables.ContainsKey(envVar.Key))
-                    {
-                        allVariables[envVar.Key] = envVar.Value;
-                    }
-                }
-            }
-            
-            // First, process special templates like {{$random:int:1000:1999}}
-            var specialTemplatePattern = new Regex(@"{{(\$random:int:(\d+):(\d+))}}", RegexOptions.Compiled);
-            input = specialTemplatePattern.Replace(input, match =>
-            {
-                if (match.Groups.Count >= 4)
-                {
-                    int minValue = int.Parse(match.Groups[2].Value);
-                    int maxValue = int.Parse(match.Groups[3].Value);
-                    return new Random().Next(minValue, maxValue + 1).ToString();
-                }
-                return match.Value;
-            });
-            
-            // Then, use regex to find and replace standard {{variable}} patterns
-            var variablePattern = new Regex(@"{{(.+?)}}", RegexOptions.Compiled);
-            
-            return variablePattern.Replace(input, match =>
-            {
-                var variableName = match.Groups[1].Value.Trim();
-                if (allVariables.TryGetValue(variableName, out var value))
-                {
-                    return value;
-                }
-                return match.Value; // Keep the original {{variable}} if not found
-            });
         }
         
         // Extract path parameters from a URL
@@ -1131,56 +644,6 @@ namespace Apify.Services
                 }
                 
                 return pathParams.Count > 0;
-            }
-            
-            return false;
-        }
-        
-        private bool PatternMatchesPath(string pattern, string path, out Dictionary<string, string>? pathParams)
-        {
-            pathParams = null;
-            
-            if (!pattern.Contains("{") && !pattern.Contains("}"))
-            {
-                return string.Equals(pattern, path, StringComparison.OrdinalIgnoreCase);
-            }
-            
-            // Extract parameter names from pattern
-            var paramNames = new List<string>();
-            int paramIndex = 0;
-            while ((paramIndex = pattern.IndexOf('{', paramIndex)) != -1)
-            {
-                int endIndex = pattern.IndexOf('}', paramIndex);
-                if (endIndex == -1) break;
-                
-                string paramName = pattern.Substring(paramIndex + 1, endIndex - paramIndex - 1);
-                paramNames.Add(paramName);
-                paramIndex = endIndex + 1;
-            }
-            
-            // Convert pattern to regex
-            string regexPattern = "^" + Regex.Escape(pattern)
-                .Replace("\\{", "{")
-                .Replace("\\}", "}");
-                
-            for (int i = 0; i < paramNames.Count; i++)
-            {
-                regexPattern = regexPattern.Replace("{" + paramNames[i] + "}", "([^/]+)");
-            }
-            
-            regexPattern += "$";
-            
-            // Match against path
-            var match = Regex.Match(path, regexPattern);
-            if (match.Success)
-            {
-                pathParams = new Dictionary<string, string>();
-                for (int i = 0; i < paramNames.Count; i++)
-                {
-                    pathParams[paramNames[i]] = match.Groups[i + 1].Value;
-                }
-                
-                return true;
             }
             
             return false;

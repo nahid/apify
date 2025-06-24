@@ -23,6 +23,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Bogus" Version="35.6.3" />
     <PackageReference Include="ConsoleTableExt" Version="3.3.0" />
     <PackageReference Include="DynamicExpresso.Core" Version="2.19.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

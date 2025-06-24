@@ -58,11 +58,11 @@ namespace Apify.Services
                 
                 // Add special accessor objects for query parameters and headers
                 // For accessing query parameters in a more natural way (q.parameter)
-                _interpreter.SetVariable("q", MiscHelper.ToExpandoObject(queryParams ?? new Dictionary<string, string>()));
+                _interpreter.SetVariable("q", MiscHelper.DictionaryToExpandoObject(queryParams ?? new Dictionary<string, string>()));
                 
                 // For accessing headers in a more natural way (h.header)
-                _interpreter.SetVariable("h", MiscHelper.ToExpandoObject(headers ?? new Dictionary<string, string>()));
-                _interpreter.SetVariable("p", MiscHelper.ToExpandoObject(pathParams ?? new Dictionary<string, string>()));
+                _interpreter.SetVariable("h", MiscHelper.DictionaryToExpandoObject(headers ?? new Dictionary<string, string>()));
+                _interpreter.SetVariable("p", MiscHelper.DictionaryToExpandoObject(pathParams ?? new Dictionary<string, string>()));
 
                 // Evaluate the expression
                 var result = _interpreter.Eval<bool>(condition);

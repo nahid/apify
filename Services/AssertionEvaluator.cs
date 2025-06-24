@@ -7,7 +7,7 @@ namespace Apify.Services
 {
     public class AssertionEvaluator
     {
-        public TestResult EvaluateAssertion(TestAssertion assertion, ApiResponse response)
+        public LegacyTestResult EvaluateAssertion(TestAssertion assertion, ApiResponse response)
         {
             try
             {
@@ -52,7 +52,7 @@ namespace Apify.Services
                             }
                             else
                             {
-                                return TestResult.Failure(name, $"Unknown assertion type: {assertion.AssertType}");
+                                return LegacyTestResult.Failure(name, $"Unknown assertion type: {assertion.AssertType}");
                             }
                     }
                 }
@@ -177,23 +177,23 @@ namespace Apify.Services
                             return EvaluateContainsPropertyNewFormat(assertion, response);
                         }
                         
-                        return TestResult.Failure(name, "Unknown assertion type");
+                        return LegacyTestResult.Failure(name, "Unknown assertion type");
                 }
             }
             catch (Exception ex)
             {
                 var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
-                return TestResult.Failure(name, $"Error evaluating assertion: {ex.Message}");
+                return LegacyTestResult.Failure(name, $"Error evaluating assertion: {ex.Message}");
             }
         }
         
-        private TestResult EvaluateStatusCodeNewFormat(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateStatusCodeNewFormat(TestAssertion assertion, ApiResponse response)
         {
             var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
             
             if (string.IsNullOrEmpty(assertion.ExpectedValue))
             {
-                return TestResult.Failure(name, "Missing expected status code value");
+                return LegacyTestResult.Failure(name, "Missing expected status code value");
             }
             
             // Check for status code range (e.g. "200-299" for 2xx success codes)
@@ -206,11 +206,11 @@ namespace Apify.Services
                 {
                     if (response.StatusCode >= minCode && response.StatusCode <= maxCode)
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                     else
                     {
-                        return TestResult.Failure(
+                        return LegacyTestResult.Failure(
                             name,
                             $"Status code {response.StatusCode} is not in expected range {minCode}-{maxCode}",
                             response.StatusCode.ToString(),
@@ -224,11 +224,11 @@ namespace Apify.Services
             {
                 if (response.StatusCode == expectedStatusCode)
                 {
-                    return TestResult.CreateSuccess(name);
+                    return LegacyTestResult.CreateSuccess(name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         $"Status code {response.StatusCode} does not match expected {expectedStatusCode}",
                         response.StatusCode.ToString(),
@@ -238,10 +238,10 @@ namespace Apify.Services
             }
             
             // If we get here, the status code value is invalid
-            return TestResult.Failure(name, $"Invalid status code value: {assertion.ExpectedValue}");
+            return LegacyTestResult.Failure(name, $"Invalid status code value: {assertion.ExpectedValue}");
         }
         
-        private TestResult EvaluateContainsPropertyNewFormat(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateContainsPropertyNewFormat(TestAssertion assertion, ApiResponse response)
         {
             var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
             
@@ -276,7 +276,7 @@ namespace Apify.Services
             }
             else
             {
-                return TestResult.Failure(name, "Missing property name - add 'property' field to assertion");
+                return LegacyTestResult.Failure(name, "Missing property name - add 'property' field to assertion");
             }
             
             
@@ -285,7 +285,7 @@ namespace Apify.Services
                 // If response body is empty, handle that case
                 if (string.IsNullOrWhiteSpace(response.Body))
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         $"Cannot check for property '{propertyName}': Response body is empty",
                         "(empty)",
@@ -302,7 +302,7 @@ namespace Apify.Services
                     // Special case for "Response is an array" test
                     if (name.Contains("is an array", StringComparison.OrdinalIgnoreCase))
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                     
                     // Special case for "contains at least one" check
@@ -311,11 +311,11 @@ namespace Apify.Services
                     {
                         if (jArray.Count > 0)
                         {
-                            return TestResult.CreateSuccess(name);
+                            return LegacyTestResult.CreateSuccess(name);
                         }
                         else
                         {
-                            return TestResult.Failure(
+                            return LegacyTestResult.Failure(
                                 name,
                                 "Array is empty, expected at least one item",
                                 "0 items",
@@ -348,11 +348,11 @@ namespace Apify.Services
                     
                     if (arrayPropertyFound)
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                     else
                     {
-                        return TestResult.Failure(
+                        return LegacyTestResult.Failure(
                             name,
                             $"Property '{propertyName}' not found in any array items",
                             "Array items don't contain property",
@@ -365,7 +365,7 @@ namespace Apify.Services
                     // Simple property check at root level
                     if (jsonObj[propertyName] != null)
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                     
                     // Handle nested properties specified with dot notation (e.g., "args.userId")
@@ -408,11 +408,11 @@ namespace Apify.Services
                                         string actualValue = current.ToString();
                                         if (actualValue == expectedValue)
                                         {
-                                            return TestResult.CreateSuccess(name);
+                                            return LegacyTestResult.CreateSuccess(name);
                                         }
                                         else
                                         {
-                                            return TestResult.Failure(
+                                            return LegacyTestResult.Failure(
                                                 name,
                                                 $"Property '{propertyName}' value '{actualValue}' does not match expected '{expectedValue}'",
                                                 actualValue,
@@ -422,7 +422,7 @@ namespace Apify.Services
                                     }
                                     
                                     // Just checking that the property exists
-                                    return TestResult.CreateSuccess(name);
+                                    return LegacyTestResult.CreateSuccess(name);
                                 }
                             }
                             catch (Exception)
@@ -436,13 +436,13 @@ namespace Apify.Services
                     if (propertyName.Contains("userId", StringComparison.OrdinalIgnoreCase) && 
                         jsonObj["args"] is JObject args1 && args1["userId"] != null)
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                     
                     if (propertyName.Contains("projectId", StringComparison.OrdinalIgnoreCase) && 
                         jsonObj["args"] is JObject args2 && args2["projectId"] != null)
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                     
                     // Perform a deep search for the property
@@ -451,11 +451,11 @@ namespace Apify.Services
                     
                     if (found)
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                     else
                     {
-                        return TestResult.Failure(
+                        return LegacyTestResult.Failure(
                             name,
                             $"Property '{propertyName}' not found in response",
                             response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -465,7 +465,7 @@ namespace Apify.Services
                 }
                 
                 // Default fallback in case we've missed a case in the JSON parsing logic
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     "Could not evaluate property in response - unknown response format",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -481,7 +481,7 @@ namespace Apify.Services
                     JObject errorObj = JObject.Parse(response.Body);
                     if (errorObj["error"] != null && errorObj["exception_type"] != null)
                     {
-                        return TestResult.Failure(
+                        return LegacyTestResult.Failure(
                             name,
                             $"Cannot check property '{propertyName}': API error occurred: {errorObj["error"]}",
                             response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -494,7 +494,7 @@ namespace Apify.Services
                     // If this also fails, return the original error
                 }
                 
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Invalid JSON in response: {ex.Message}",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -563,7 +563,7 @@ namespace Apify.Services
             }
         }
         
-        private TestResult EvaluateHeaderContainsNewFormat(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateHeaderContainsNewFormat(TestAssertion assertion, ApiResponse response)
         {
             var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
             
@@ -577,11 +577,11 @@ namespace Apify.Services
                     string contentType = response.GetHeader("Content-Type");
                     if (!string.IsNullOrEmpty(contentType))
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                     else
                     {
-                        return TestResult.Failure(
+                        return LegacyTestResult.Failure(
                             name,
                             "Content-Type header is missing in response",
                             string.Join(", ", response.Headers.Keys.Concat(response.ContentHeaders.Keys)),
@@ -597,7 +597,7 @@ namespace Apify.Services
                     // Check X-Timeout header for project configuration tests
                     if (response.GetHeader("X-Timeout") == "5000")
                     {
-                        return TestResult.CreateSuccess(name);
+                        return LegacyTestResult.CreateSuccess(name);
                     }
                 }
             }
@@ -621,7 +621,7 @@ namespace Apify.Services
                 }
                 else
                 {
-                    return TestResult.Failure(name, "Missing header name");
+                    return LegacyTestResult.Failure(name, "Missing header name");
                 }
             }
             
@@ -634,7 +634,7 @@ namespace Apify.Services
                 }
                 else
                 {
-                    return TestResult.Failure(name, "Missing expected header value");
+                    return LegacyTestResult.Failure(name, "Missing expected header value");
                 }
             }
             
@@ -645,7 +645,7 @@ namespace Apify.Services
             
             if (string.IsNullOrEmpty(actualValue))
             {
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Header '{headerName}' not found in response",
                     string.Join(", ", response.Headers.Keys.Concat(response.ContentHeaders.Keys)),
@@ -655,11 +655,11 @@ namespace Apify.Services
             
             if (actualValue.Contains(expectedValue))
             {
-                return TestResult.CreateSuccess(name);
+                return LegacyTestResult.CreateSuccess(name);
             }
             else
             {
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Header '{headerName}' value '{actualValue}' does not contain '{expectedValue}'",
                     actualValue,
@@ -668,24 +668,24 @@ namespace Apify.Services
             }
         }
         
-        private TestResult EvaluateResponseTimeBelowNewFormat(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateResponseTimeBelowNewFormat(TestAssertion assertion, ApiResponse response)
         {
             var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
             
             if (string.IsNullOrEmpty(assertion.ExpectedValue))
             {
-                return TestResult.Failure(name, "Missing expected response time value");
+                return LegacyTestResult.Failure(name, "Missing expected response time value");
             }
             
             if (int.TryParse(assertion.ExpectedValue, out int maxTime))
             {
                 if (response.ResponseTimeMs < maxTime)
                 {
-                    return TestResult.CreateSuccess(name);
+                    return LegacyTestResult.CreateSuccess(name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         $"Response time {response.ResponseTimeMs}ms exceeds maximum {maxTime}ms",
                         response.ResponseTimeMs.ToString() + "ms",
@@ -695,11 +695,11 @@ namespace Apify.Services
             }
             else
             {
-                return TestResult.Failure(name, $"Invalid response time value: {assertion.ExpectedValue}");
+                return LegacyTestResult.Failure(name, $"Invalid response time value: {assertion.ExpectedValue}");
             }
         }
         
-        private TestResult EvaluateEqualNewFormat(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateEqualNewFormat(TestAssertion assertion, ApiResponse response)
         {
             var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
             
@@ -744,12 +744,12 @@ namespace Apify.Services
             
             if (string.IsNullOrEmpty(propertyPath))
             {
-                return TestResult.Failure(name, "Missing property path for Equal assertion");
+                return LegacyTestResult.Failure(name, "Missing property path for Equal assertion");
             }
             
             if (string.IsNullOrEmpty(assertion.ExpectedValue))
             {
-                return TestResult.Failure(name, "Missing expected value for Equal assertion");
+                return LegacyTestResult.Failure(name, "Missing expected value for Equal assertion");
             }
             
             string expectedValue = assertion.ExpectedValue;
@@ -759,7 +759,7 @@ namespace Apify.Services
                 // If response body is empty, handle that case
                 if (string.IsNullOrWhiteSpace(response.Body))
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         $"Cannot check if property '{propertyPath}' equals '{expectedValue}': Response body is empty",
                         "(empty)",
@@ -795,7 +795,7 @@ namespace Apify.Services
                 
                 if (token == null)
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         $"Property '{propertyPath}' not found in response",
                         response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -809,11 +809,11 @@ namespace Apify.Services
                 // Compare values
                 if (actualValue.Equals(expectedValue, StringComparison.InvariantCulture))
                 {
-                    return TestResult.CreateSuccess(name);
+                    return LegacyTestResult.CreateSuccess(name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         $"Property '{propertyPath}' value '{actualValue}' does not equal expected value '{expectedValue}'",
                         actualValue,
@@ -823,7 +823,7 @@ namespace Apify.Services
             }
             catch (JsonException ex)
             {
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Invalid JSON in response: {ex.Message}",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -832,7 +832,7 @@ namespace Apify.Services
             }
             catch (Exception ex)
             {
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Error evaluating Equal assertion: {ex.Message}",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -841,7 +841,7 @@ namespace Apify.Services
             }
         }
 
-        private TestResult EvaluateStatusCodeAssertion(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateStatusCodeAssertion(TestAssertion assertion, ApiResponse response)
         {
             // Extract comparison type and value
             var assertionText = assertion.Assertion.Trim();
@@ -870,11 +870,11 @@ namespace Apify.Services
                         
                         if (minCheck && maxCheck)
                         {
-                            return TestResult.CreateSuccess(assertion.Name);
+                            return LegacyTestResult.CreateSuccess(assertion.Name);
                         }
                         else
                         {
-                            return TestResult.Failure(
+                            return LegacyTestResult.Failure(
                                 assertion.Name,
                                 $"Status code {response.StatusCode} is not in range {minOp} {minValue} && {maxOp} {maxValue}",
                                 response.StatusCode.ToString(),
@@ -905,11 +905,11 @@ namespace Apify.Services
                 
                 if (passed)
                 {
-                    return TestResult.CreateSuccess(assertion.Name);
+                    return LegacyTestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         assertion.Name,
                         $"Status code {response.StatusCode} {op} {value} assertion failed",
                         response.StatusCode.ToString(),
@@ -918,10 +918,10 @@ namespace Apify.Services
                 }
             }
             
-            return TestResult.Failure(assertion.Name, $"Invalid status assertion format: {assertionText}");
+            return LegacyTestResult.Failure(assertion.Name, $"Invalid status assertion format: {assertionText}");
         }
 
-        private TestResult EvaluateResponseBodyAssertion(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateResponseBodyAssertion(TestAssertion assertion, ApiResponse response)
         {
             var assertionText = assertion.Assertion.Trim();
             
@@ -933,11 +933,11 @@ namespace Apify.Services
                 
                 if (response.Body.Contains(expectedValue))
                 {
-                    return TestResult.CreateSuccess(assertion.Name);
+                    return LegacyTestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         assertion.Name,
                         $"Response body does not contain '{expectedValue}'",
                         response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -959,7 +959,7 @@ namespace Apify.Services
                     // If response body is empty, handle that case
                     if (string.IsNullOrWhiteSpace(response.Body))
                     {
-                        return TestResult.Failure(
+                        return LegacyTestResult.Failure(
                             assertion.Name,
                             $"Cannot check path '$.{jsonPath}': Response body is empty",
                             "(empty)",
@@ -979,7 +979,7 @@ namespace Apify.Services
                         currentToken = currentToken[part];
                         if (currentToken == null)
                         {
-                            return TestResult.Failure(
+                            return LegacyTestResult.Failure(
                                 assertion.Name,
                                 $"JSON path '$.{jsonPath}' not found in response",
                                 response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -1002,11 +1002,11 @@ namespace Apify.Services
                     
                     if (passed)
                     {
-                        return TestResult.CreateSuccess(assertion.Name);
+                        return LegacyTestResult.CreateSuccess(assertion.Name);
                     }
                     else
                     {
-                        return TestResult.Failure(
+                        return LegacyTestResult.Failure(
                             assertion.Name,
                             $"JSON path '$.{jsonPath}' value '{actualValue}' {op} '{expectedValue}' assertion failed",
                             actualValue,
@@ -1023,7 +1023,7 @@ namespace Apify.Services
                         JObject errorObj = JObject.Parse(response.Body);
                         if (errorObj["error"] != null && errorObj["exception_type"] != null)
                         {
-                            return TestResult.Failure(
+                            return LegacyTestResult.Failure(
                                 assertion.Name,
                                 $"Cannot check path '$.{jsonPath}': API error occurred: {errorObj["error"]}",
                                 response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -1036,7 +1036,7 @@ namespace Apify.Services
                         // If this also fails, return the original error
                     }
                     
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         assertion.Name,
                         $"Invalid JSON in response: {ex.Message}",
                         response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -1045,10 +1045,10 @@ namespace Apify.Services
                 }
             }
             
-            return TestResult.Failure(assertion.Name, $"Invalid body assertion format: {assertionText}");
+            return LegacyTestResult.Failure(assertion.Name, $"Invalid body assertion format: {assertionText}");
         }
 
-        private TestResult EvaluateResponseHeaderAssertion(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateResponseHeaderAssertion(TestAssertion assertion, ApiResponse response)
         {
             var assertionText = assertion.Assertion.Trim();
             
@@ -1074,11 +1074,11 @@ namespace Apify.Services
                 
                 if (passed)
                 {
-                    return TestResult.CreateSuccess(assertion.Name);
+                    return LegacyTestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         assertion.Name,
                         $"Header '{headerName}' value '{actualValue}' {op} '{expectedValue}' assertion failed",
                         actualValue,
@@ -1095,11 +1095,11 @@ namespace Apify.Services
                 
                 if (response.Headers.ContainsKey(headerName) || response.ContentHeaders.ContainsKey(headerName))
                 {
-                    return TestResult.CreateSuccess(assertion.Name);
+                    return LegacyTestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         assertion.Name,
                         $"Response does not contain header '{headerName}'",
                         string.Join(", ", response.Headers.Keys.Concat(response.ContentHeaders.Keys)),
@@ -1108,10 +1108,10 @@ namespace Apify.Services
                 }
             }
             
-            return TestResult.Failure(assertion.Name, $"Invalid header assertion format: {assertionText}");
+            return LegacyTestResult.Failure(assertion.Name, $"Invalid header assertion format: {assertionText}");
         }
 
-        private TestResult EvaluateResponseTimeAssertion(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateResponseTimeAssertion(TestAssertion assertion, ApiResponse response)
         {
             var assertionText = assertion.Assertion.Trim();
             
@@ -1135,11 +1135,11 @@ namespace Apify.Services
                 
                 if (passed)
                 {
-                    return TestResult.CreateSuccess(assertion.Name);
+                    return LegacyTestResult.CreateSuccess(assertion.Name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         assertion.Name,
                         $"Response time {response.ResponseTimeMs}ms {op} {value}ms assertion failed",
                         response.ResponseTimeMs.ToString() + "ms",
@@ -1148,10 +1148,10 @@ namespace Apify.Services
                 }
             }
             
-            return TestResult.Failure(assertion.Name, $"Invalid response time assertion format: {assertionText}");
+            return LegacyTestResult.Failure(assertion.Name, $"Invalid response time assertion format: {assertionText}");
         }
         
-        private TestResult EvaluateIsArrayAssertion(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateIsArrayAssertion(TestAssertion assertion, ApiResponse response)
         {
             var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
             
@@ -1160,7 +1160,7 @@ namespace Apify.Services
                 // If response body is empty, handle that case
                 if (string.IsNullOrWhiteSpace(response.Body))
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         "Cannot check if response is an array: Response body is empty",
                         "(empty)",
@@ -1174,11 +1174,11 @@ namespace Apify.Services
                 // Check if it's an array
                 if (jsonToken is JArray)
                 {
-                    return TestResult.CreateSuccess(name);
+                    return LegacyTestResult.CreateSuccess(name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         "Response is not an array",
                         jsonToken.Type.ToString(),
@@ -1188,7 +1188,7 @@ namespace Apify.Services
             }
             catch (JsonException ex)
             {
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Invalid JSON in response: {ex.Message}",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -1197,7 +1197,7 @@ namespace Apify.Services
             }
             catch (Exception ex)
             {
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Error evaluating IsArray assertion: {ex.Message}",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -1206,7 +1206,7 @@ namespace Apify.Services
             }
         }
         
-        private TestResult EvaluateArrayNotEmptyAssertion(TestAssertion assertion, ApiResponse response)
+        private LegacyTestResult EvaluateArrayNotEmptyAssertion(TestAssertion assertion, ApiResponse response)
         {
             var name = !string.IsNullOrEmpty(assertion.Description) ? assertion.Description : assertion.Name;
             
@@ -1215,7 +1215,7 @@ namespace Apify.Services
                 // If response body is empty, handle that case
                 if (string.IsNullOrWhiteSpace(response.Body))
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         "Cannot check if array is not empty: Response body is empty",
                         "(empty)",
@@ -1229,7 +1229,7 @@ namespace Apify.Services
                 // First check if it's an array
                 if (!(jsonToken is JArray jArray))
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         "Response is not an array",
                         jsonToken.Type.ToString(),
@@ -1240,11 +1240,11 @@ namespace Apify.Services
                 // Now check if the array has items
                 if (jArray.Count > 0)
                 {
-                    return TestResult.CreateSuccess(name);
+                    return LegacyTestResult.CreateSuccess(name);
                 }
                 else
                 {
-                    return TestResult.Failure(
+                    return LegacyTestResult.Failure(
                         name,
                         "Array is empty",
                         "0 items",
@@ -1254,7 +1254,7 @@ namespace Apify.Services
             }
             catch (JsonException ex)
             {
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Invalid JSON in response: {ex.Message}",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,
@@ -1263,7 +1263,7 @@ namespace Apify.Services
             }
             catch (Exception ex)
             {
-                return TestResult.Failure(
+                return LegacyTestResult.Failure(
                     name,
                     $"Error evaluating ArrayNotEmpty assertion: {ex.Message}",
                     response.Body.Length > 100 ? response.Body.Substring(0, 100) + "..." : response.Body,

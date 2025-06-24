@@ -68,7 +68,15 @@ namespace Apify.Utils
             }
 
             string json = File.ReadAllText(filePath);
-            
+
+            return DeserializeString<T>(json);
+        }
+
+        public static T? DeserializeString<
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
+                                        DynamicallyAccessedMemberTypes.PublicProperties)]
+            T>(string json)
+        {
             var settings = new JsonSerializerSettings
             {
                 Error = (sender, args) => 
@@ -90,75 +98,11 @@ namespace Apify.Utils
             
             try
             {
-                // Add debug info for TestAssertion
-                if (typeof(T).Name == "ApiDefinition")
-                {
-                    Console.WriteLine($"DEBUG - Loading API definition JSON: {Path.GetFileName(filePath)}");
-                    // For debugging: try using JObject to check property names
-                    try {
-                        var jObj = JObject.Parse(json);
-                        if (jObj["Tests"] is JArray tests)
-                        {
-                            foreach (var test in tests)
-                            {
-                                if (test["AssertType"]?.ToString().ToLowerInvariant() == "equal")
-                                {
-                                    Console.WriteLine("DEBUG - Found Equal assertion:");
-                                    Console.WriteLine($"  Name: {test["Name"]}");
-                                    if (test["propertyPath"] != null)
-                                    {
-                                        Console.WriteLine($"  propertyPath: {test["propertyPath"]}");
-                                        Console.WriteLine($"  PropertyPath case-sensitive: {test["PropertyPath"]}");
-                                        // Just log the information here
-                                        Console.WriteLine($"  Found propertyPath in JSON");
-                                    }
-                                    Console.WriteLine($"  Property: {test["Property"]}");
-                                    Console.WriteLine($"  ExpectedValue: {test["ExpectedValue"]}");
-                                }
-                            }
-                        }
-                    } catch {}
-                }
-                
                 return JsonConvert.DeserializeObject<T>(json, settings);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing {filePath}: {ex.Message}");
-                
-                // This is a fallback for ApiDefinition to ensure something is returned
-                if (typeof(T).Name == "ApiDefinition")
-                {
-                    try
-                    {
-                        // Create a minimal model from the JSON using JObject
-                        var jObject = JObject.Parse(json);
-                        
-                        // Create a new instance directly
-                        var instance = Activator.CreateInstance<T>();
-                        
-                        // Apply basic properties that we can reasonably get
-                        var nameProperty = typeof(T).GetProperty("Name");
-                        var uriProperty = typeof(T).GetProperty("Uri");
-                        var methodProperty = typeof(T).GetProperty("Method");
-                        
-                        if (nameProperty != null && jObject["name"] != null)
-                            nameProperty.SetValue(instance, jObject["name"]?.ToString() ?? string.Empty);
-                        
-                        if (uriProperty != null && jObject["uri"] != null)
-                            uriProperty.SetValue(instance, jObject["uri"]?.ToString() ?? string.Empty);
-                        
-                        if (methodProperty != null && jObject["method"] != null)
-                            methodProperty.SetValue(instance, jObject["method"]?.ToString() ?? string.Empty);
-                        
-                        return instance;
-                    }
-                    catch (Exception innerEx)
-                    {
-                        Console.WriteLine($"Fallback also failed: {innerEx.Message}");
-                    }
-                }
-                
+                Console.WriteLine($"Error processing JSON: {ex.Message}");
                 return default;
             }
         }

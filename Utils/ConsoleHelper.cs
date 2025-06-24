@@ -22,31 +22,66 @@ namespace Apify.Utils
         private static readonly ConsoleColor TipColor = ConsoleColor.DarkCyan;
         private static readonly ConsoleColor PromptColor = ConsoleColor.Yellow;
         
-        public static void WriteError(string message)
+        public static void WriteError(string message, bool strong = false)
         {
             Console.ForegroundColor = StatusErrorColor;
+            if (strong)
+            {
+                Console.Write("\x1b[1m");
+            }
             Console.WriteLine(message);
+            if (strong)
+            {
+                Console.Write("\x1b[0m");
+            }
             Console.ResetColor();
         }
 
-        public static void WriteSuccess(string message)
+        public static void WriteSuccess(string message, bool strong = false)
         {
+            if (strong)
+            {
+                Console.Write("\x1b[1m");
+            }
             Console.ForegroundColor = StatusSuccessColor;
             Console.WriteLine(message);
+            if (strong)
+            {
+                Console.Write("\x1b[0m");
+            }
             Console.ResetColor();
         }
 
-        public static void WriteWarning(string message)
+        public static void WriteWarning(string message, bool strong = false)
         {
+            if (strong)
+            {
+                Console.Write("\x1b[1m");
+            }
             Console.ForegroundColor = StatusWarningColor;
             Console.WriteLine(message);
+            if (strong)
+            {
+                Console.Write("\x1b[0m");
+            }
             Console.ResetColor();
         }
 
-        public static void WriteInfo(string message)
+        public static void WriteInfo(string message, bool strong = false)
         {
+            if (strong)
+            {
+                Console.Write("\x1b[1m");
+            }
+            
             Console.ForegroundColor = SectionColor;
             Console.WriteLine(message);
+            
+            if (strong)
+            {
+                Console.Write("\x1b[0m");
+            }
+            
             Console.ResetColor();
         }
         
@@ -72,6 +107,15 @@ namespace Apify.Utils
             Console.WriteLine(value);
             Console.ResetColor();
         }
+        
+        
+        public static void WriteRepeatChar(char ch = '-', int repeats = 100, ConsoleColor color = ConsoleColor.Gray)
+        {
+            Console.ForegroundColor = color;
+            Console.WriteLine(new string(ch, repeats));
+            Console.ResetColor();
+        }
+        
 
         public static void WriteSection(string section)
         {

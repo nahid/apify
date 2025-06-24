@@ -26,7 +26,7 @@ namespace Apify.Services
             _apiExecutor = apiExecutor;
         }
 
-        public Task<List<TestResult>> RunTestsAsync(ApiDefinition apiDefinition, ApiResponse response)
+        /*public Task<List<TestResult>> RunTestsAsync(ApiDefinition apiDefinition, ApiResponse response)
         {
             var results = new List<TestResult>();
 
@@ -52,7 +52,7 @@ namespace Apify.Services
             }
 
             return Task.FromResult(results);
-        }
+        }*/
 
         /// <summary>
         /// Runs an API test and returns a comprehensive result object
@@ -60,7 +60,7 @@ namespace Apify.Services
         /// <param name="apiDefinition">The API definition to test</param>
         /// <param name="verbose">Whether to display detailed output</param>
         /// <returns>A comprehensive test result object</returns>
-        public async Task<ApiTestResult?> RunApiTestAsync(ApiDefinition apiDefinition, bool verbose = false)
+        /*public async Task<ApiTestResult?> RunApiTestAsync(ApiDefinition apiDefinition, bool verbose = false)
         {
             try
             {
@@ -157,7 +157,7 @@ namespace Apify.Services
                 }
                 return null;
             }
-        }
+        }*/
     }
 
     /// <summary>
@@ -170,7 +170,7 @@ namespace Apify.Services
         public string Method { get; set; } = string.Empty;
         public int StatusCode { get; set; }
         public long ResponseTimeMs { get; set; }
-        public List<TestResult> AssertionResults { get; set; } = new();
+        public List<LegacyTestResult> AssertionResults { get; set; } = new();
         
         public bool AllTestsPassed => AssertionResults.All(r => r.Success == true);
         public int PassedCount => AssertionResults.Count(r => r.Success == true);

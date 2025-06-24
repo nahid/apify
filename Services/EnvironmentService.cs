@@ -250,46 +250,9 @@ namespace Apify.Services
         }
         
         // Apply variables from all sources - project, environment, and request-specific
-        public string ApplyVariablesToString(string input)
-        {
-            if (string.IsNullOrEmpty(input))
-                return input;
-            
-            // Load config to access project-level variables
-            var config = LoadConfigurationProfile();
-            var mergedVariables = new Dictionary<string, string>();
-            
-            // Add project-level variables (lowest priority)
-            if (config.Variables != null)
-            {
-                foreach (var projectVar in config.Variables)
-                {
-                    mergedVariables[projectVar.Key] = projectVar.Value;
-                }
-            }
-            
-            // Add environment-specific variables (medium priority)
-            if (_currentEnvironment != null && _currentEnvironment.Variables != null)
-            {
-                foreach (var envVar in _currentEnvironment.Variables)
-                {
-                    mergedVariables[envVar.Key] = envVar.Value;
-                }
-            }
-            
-            // Apply all variables to the input string
-            return VariablePattern.Replace(input, match =>
-            {
-                var variableName = match.Groups[1].Value.Trim();
-                if (mergedVariables.TryGetValue(variableName, out var value))
-                {
-                    return value;
-                }
-                return match.Value; // Keep the original {{variable}} if not found
-            });
-        }
         
-        public ApiDefinition ApplyEnvironmentVariables(ApiDefinition apiDefinition)
+        
+        /*public ApiDefinition ApplyEnvironmentVariables(ApiDefinition apiDefinition)
         {
             // Create a merged dictionary of variables with updated priority:
             // 1. Request-specific variables (highest priority)
@@ -382,7 +345,7 @@ namespace Apify.Services
                 Payload = ProcessPayload(apiDefinition.Payload, mergedVariables),
                 PayloadType = apiDefinition.PayloadType,
                 Files = apiDefinition.Files, // Preserve file upload configurations
-                Tests = new List<TestAssertion>(),
+                Tests = new List<AssertionEntity>(),
                 Variables = apiDefinition.Variables // Keep the original variables for reference
             };
             
@@ -441,7 +404,7 @@ namespace Apify.Services
             CheckForMissingVariables(apiDefinition.Uri, mergedVariables);
             
             return modifiedApi;
-        }
+        }*/
         
         // Method to apply variable substitution using a provided dictionary
         private string ApplyVariables(string input, Dictionary<string, string> variables)

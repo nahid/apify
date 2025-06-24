@@ -32,6 +32,9 @@ namespace Apify.Models
 
         [JsonProperty("Environments")]
         public List<EnvironmentSchema> Environments { get; set; }
+        
+        [JsonProperty("Authorization")]
+        public Authorization? Authorization { get; set; } = null;
 
         [JsonProperty("DefaultEnvironment")]
         public string? DefaultEnvironment { get; set; }
@@ -44,6 +47,15 @@ namespace Apify.Models
         
     }
 
+    public class Authorization
+    {
+        [JsonProperty("Type")]
+        public string Type { get; set; }
+        
+        [JsonProperty("Token")]
+        public string Token { get; set; }
+    }
+
 
     public class MockServer
     {
@@ -51,7 +63,10 @@ namespace Apify.Models
         public int Port { get; set; } = 0;
         
         [JsonProperty("Verbose")]
-        public bool Verbose { get; set; } = false;
+        public bool Verbose { get; set; } = false; 
+        
+        [JsonProperty("EnableCors")]
+        public bool EnableCors { get; set; } = false;
         
         [JsonProperty("DefaultHeaders")]
         public Dictionary<string, string>? DefaultHeaders { get; set; } = null;
