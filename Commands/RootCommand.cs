@@ -1,3 +1,4 @@
+//TODO: Need to remove this file
 using System.CommandLine;
 using Apify.Services;
 using Apify.Utils;
@@ -38,7 +39,8 @@ namespace Apify.Commands
             var runCommand = new CallCommand();
             
             // Add the create command
-            var createCommand = new CreateRequestCommand();
+            var createRequestCommand = new CreateRequestCommand();
+            var createMockCommand = new CreateMockCommand();
             
             // Add the tests command
             var testsCommand = new TestsCommand();
@@ -50,7 +52,8 @@ namespace Apify.Commands
             Command.AddCommand(listEnvCommand);
             Command.AddCommand(initCommand);
             Command.AddCommand(runCommand.Command);
-            Command.AddCommand(createCommand);
+            Command.AddCommand(createMockCommand.Command);
+            Command.AddCommand(createRequestCommand.Command);
             Command.AddCommand(testsCommand.Command);
             Command.AddCommand(mockServerCommand);
         }

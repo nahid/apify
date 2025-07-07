@@ -4,44 +4,68 @@ using Apify.Utils;
 
 namespace Apify.Commands
 {
-    public class CreateRequestCommand : Command
+    public class CreateRequestCommand
     {
+        public Command Command { get; set; }
         private const string DefaultApiDirectory = ".apify";
 
-        public CreateRequestCommand() : base("create", "Create a new API request file or mock response")
+        public CreateRequestCommand()
         {
+            Command = new Command("create:request", "Create a new API request file or mock response");
             // Create a new API request command
-            var requestCommand = new Command("request", "Create a new API request file");
+            //var requestCommand = new Command("request", "Create a new API request file");
 
             var fileOption = new Option<string>(
                 "--file",
                 "The file path where the new request will be saved (e.g., users.all)"
             )
             { IsRequired = true };
+            
+            
+            var nameOption = new Option<string>(
+                "--name",
+                () => "",
+                "Name of the API request (optional, will be prompted if not provided)"
+            );       
+            
+            var methodOption = new Option<string>(
+                "--method",
+                () => "GET",
+                "HTTP method for the request (default: GET)"
+            );
+            
+            var urlOption = new Option<string>(
+                "--url",
+                () => "",
+                "URI for the request (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)"
+            );
 
             var forceOption = new Option<bool>(
                 "--force",
                 () => false,
                 "Force overwrite if the file already exists"
             );
-
-            requestCommand.AddOption(fileOption);
-            requestCommand.AddOption(forceOption);
             
-            requestCommand.SetHandler(
-                (file, force, debug) => ExecuteAsync(file, force, debug),
-                fileOption, forceOption, RootCommand.DebugOption
+            var promptOption = new Option<bool>(
+                "--prompt",
+                () => false,
+                "Prompt for required information interactively"
             );
 
-            // Add mock command
-            var mockCommand = new CreateMockCommand();
-
-            // Add subcommands
-            AddCommand(requestCommand);
-            AddCommand(mockCommand);
+            Command.AddOption(fileOption);
+            Command.AddOption(forceOption);
+            Command.AddOption(promptOption);
+            Command.AddOption(nameOption);
+            Command.AddOption(methodOption);
+            Command.AddOption(urlOption);
+            
+            Command.SetHandler(
+                (file, name, method, uri, force, debug, prompt) => ExecuteAsync(file, name, method, uri, force, debug, prompt),
+                fileOption, nameOption, methodOption, urlOption, forceOption, RootCommand.DebugOption, promptOption
+            );
         }
 
-        private async Task ExecuteAsync(string filePath, bool force, bool debug)
+        private async Task ExecuteAsync(string filePath, string name, string method, string uri, bool force, bool debug, bool prompt)
         {
             ConsoleHelper.WriteHeader("Creating New API Request");
 
@@ -76,13 +100,22 @@ namespace Apify.Commands
                 }
             }
 
-            // Prompt for required information
-            string name = ConsoleHelper.PromptInput<string>("API request name (e.g., Get User)");
-            string method = ConsoleHelper.PromptChoice("Choose HTTP Method?", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
-            string uri = ConsoleHelper.PromptInput<string>("URI (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)", required: true);
+            if (prompt)
+            {
+                // Prompt for required information
+                name = ConsoleHelper.PromptInput<string>("API request name (e.g., Get User)");
+                method = ConsoleHelper.PromptChoice("Choose HTTP Method?", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
+                uri = ConsoleHelper.PromptInput<string>("URI (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)", required: true);
+            }
 
+
+            bool addHeaders = false;
             // Optional inputs
-            bool addHeaders = ConsoleHelper.PromptYesNo("Add request headers?", false);
+            if (prompt)
+            {
+                addHeaders = ConsoleHelper.PromptYesNo("Add request headers?", false);
+            }
+
             Dictionary<string, string> headers = new Dictionary<string, string>();
             
             if (addHeaders)
@@ -104,7 +137,7 @@ namespace Apify.Commands
             PayloadType payloadType = PayloadType.None;
             object? payload = null;
             
-            if (needsPayload && ConsoleHelper.PromptYesNo("Add request payload?", false))
+            if (needsPayload && prompt && ConsoleHelper.PromptYesNo("Add request payload?", false))
             {
                 string[] payloadOptions = { "JSON", "Text", "FormData" };
                 int payloadOptionIndex = ConsoleHelper.PromptChoiceWithIndex("Payload type:", payloadOptions);
@@ -153,7 +186,7 @@ namespace Apify.Commands
 
             // Ask if user wants to add file uploads
             List<FileUpload> files = new List<FileUpload>();
-            if (needsPayload && ConsoleHelper.PromptYesNo("Add file uploads?", false))
+            if (needsPayload && prompt && ConsoleHelper.PromptYesNo("Add file uploads?", false))
             {
                 ConsoleHelper.WriteInfo("Enter file uploads (empty field name to finish):");
                 

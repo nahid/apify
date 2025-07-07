@@ -35,15 +35,6 @@ namespace Apify.Models
         [JsonProperty("dynamic")]
         public bool IsDynamic { get; set; } = false;
         
-        [JsonProperty("dynamicTemplate")]
-        public string? DynamicTemplate { get; set; }
-        
-        [JsonProperty("matchQuery")]
-        public Dictionary<string, string>? MatchQuery { get; set; }
-        
-        [JsonProperty("matchHeaders")]
-        public Dictionary<string, string>? MatchHeaders { get; set; }
-        
         [JsonProperty("acceptsFileUpload")]
         public bool AcceptsFileUpload { get; set; } = false;
         

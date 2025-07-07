@@ -6,12 +6,14 @@ using Newtonsoft.Json.Linq;
 
 namespace Apify.Commands
 {
-    public class CreateMockCommand : Command
+    public class CreateMockCommand
     {
+        public Command Command { get; set; }
         private const string DefaultApiDirectory = ".apify";
 
-        public CreateMockCommand() : base("mock", "Create a new mock API response")
+        public CreateMockCommand()
         {
+            Command = new Command("create:mock", "Create a new mock API response file");
             var fileOption = new Option<string>(
                 "--file",
                 "The file path where the new mock API will be saved (e.g., users.get)"
@@ -23,11 +25,14 @@ namespace Apify.Commands
                 "Force overwrite if the file already exists"
             );
 
-            AddOption(fileOption);
-            AddOption(forceOption);
+            Command.AddOption(fileOption);
+            Command.AddOption(forceOption);
             
-            this.SetHandler(
-                (file, force, debug) => ExecuteAsync(file, force, debug),
+            Command.SetHandler(
+                async(file, force, debug) => 
+                {
+                    await ExecuteAsync(file, force, debug);
+                },
                 fileOption, forceOption, RootCommand.DebugOption
             );
         }
@@ -74,7 +79,7 @@ namespace Apify.Commands
             }
 
             // Gather mock API information through interactive prompts
-            MockApiDefinition mockApi = await GatherMockApiInformation();
+            MockSchema mockApi = await GatherMockApiInformation();
 
             try
             {
@@ -92,7 +97,7 @@ namespace Apify.Commands
             }
         }
 
-        private Task<MockApiDefinition> GatherMockApiInformation()
+        private Task<MockSchema> GatherMockApiInformation()
         {
             // Basic mock API information
             string name = PromptForInput("Mock API name (e.g., Get User):");
@@ -220,19 +225,21 @@ namespace Apify.Commands
                     conditions.Add(condition);
                 }
             }
-            
-            // Create the mock API definition
-            return Task.FromResult(new MockApiDefinition
-            {
+
+            return Task.FromResult(new MockSchema {
                 Name = name,
                 Endpoint = endpoint,
                 Method = method,
-                StatusCode = statusCode,
-                ContentType = contentType,
-                Response = responseBody,
-                Headers = headers,
-                Delay = delay,
-                Conditions = conditions
+                Responses = new List<ConditionalResponse>
+                {
+                    new ConditionalResponse
+                    {
+                        Condition = "default", // Default condition for the main response
+                        StatusCode = statusCode,
+                        Headers = headers ?? new Dictionary<string, string>(),
+                        ResponseTemplate = responseBody,
+                    }
+                }
             });
         }
 
