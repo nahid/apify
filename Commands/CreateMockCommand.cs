@@ -3,13 +3,13 @@ using Apify.Models;
 using Apify.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.CommandLine.Invocation;
 
 namespace Apify.Commands
 {
     public class CreateMockCommand
     {
         public Command Command { get; set; }
-        private const string DefaultApiDirectory = ".apify";
 
         public CreateMockCommand()
         {
@@ -24,38 +24,111 @@ namespace Apify.Commands
                 () => false,
                 "Force overwrite if the file already exists"
             );
+            
+            var nameOption = new Option<string>(
+                "--name",
+                () => "",
+                "Name of the mock API (optional, will be prompted if not provided)"
+            );
+            
+            var methodOption = new Option<string>(
+                "--method",
+                () => "GET",
+                "HTTP method for the mock API (default: GET)"
+            );
+            
+            var endpointOption = new Option<string>(
+                "--endpoint",
+                () => "",
+                "Endpoint path for the mock API (e.g., /api/users/1 or /users)"
+            );
+            
+            var contentTypeOption = new Option<string>(
+                "--content-type",
+                () => "application/json",
+                "Content type for the mock API response (default: application/json)"
+            );
+            
+            var statusCodeOption = new Option<int>(
+                "--status-code",
+                () => 200,
+                "HTTP status code for the mock API response (default: 200)"
+            );
+            
+            var responseBodyOption = new Option<string>(
+                "--response-body",
+                () => "",
+                "Response body for the mock API (if not provided, will prompt for JSON input)"
+            );
+            
+                
+            var promptOption = new Option<bool>(
+                "--prompt",
+                () => false,
+                "Prompt for required information interactively"
+            );
 
             Command.AddOption(fileOption);
             Command.AddOption(forceOption);
+            Command.AddOption(nameOption);
+            Command.AddOption(methodOption);
+            Command.AddOption(endpointOption);
+            Command.AddOption(contentTypeOption);
+            Command.AddOption(statusCodeOption);
+            Command.AddOption(responseBodyOption);
+            Command.AddOption(promptOption);
             
-            Command.SetHandler(
-                async(file, force, debug) => 
-                {
-                    await ExecuteAsync(file, force, debug);
-                },
-                fileOption, forceOption, RootCommand.DebugOption
+            
+            Command.SetHandler(async (InvocationContext context) => {
+                    var file = context.ParseResult.GetValueForOption(fileOption);
+                var force = context.ParseResult.GetValueForOption(forceOption);
+                    var name = context.ParseResult.GetValueForOption(nameOption);
+                    var method = context.ParseResult.GetValueForOption(methodOption);
+                    var endpoint = context.ParseResult.GetValueForOption(endpointOption);
+                    var contentType = context.ParseResult.GetValueForOption(contentTypeOption);
+                    var statusCode = context.ParseResult.GetValueForOption(statusCodeOption);
+                    var responseBody = context.ParseResult.GetValueForOption(responseBodyOption);
+                    var prompt = context.ParseResult.GetValueForOption(promptOption);
+                    var debug = context.ParseResult.GetValueForOption(RootOption.DebugOption);
+
+                    var options = new CommandOptions(
+                        file,
+                        name,
+                        method,
+                        endpoint,
+                        statusCode,
+                        contentType,
+                        responseBody,
+                        force,
+                        prompt,
+                        debug
+                    );
+                    
+                    await ExecuteAsync(options);
+                }
+        
             );
         }
 
-        private async Task ExecuteAsync(string filePath, bool force, bool debug)
+        private async Task ExecuteAsync(CommandOptions options)
         {
             ConsoleHelper.WriteHeader("Creating New Mock API Response");
 
-            if (debug)
+            if (options.Debug)
             {
-                ConsoleHelper.WriteDebug($"Creating mock API response in file: {filePath}");
+                ConsoleHelper.WriteDebug($"Creating mock API response in file: {options.FilePath}");
             }
 
             // Process file path to add .mock.json extension and handle dot notation
-            string processedPath = ProcessFilePath(filePath);
+            string processedPath = ProcessFilePath(options.FilePath);
             
-            if (debug)
+            if (options.Debug)
             {
                 ConsoleHelper.WriteDebug($"Processed file path: {processedPath}");
             }
             
             // Check if file already exists
-            if (File.Exists(processedPath) && !force)
+            if (File.Exists(processedPath) && !options.Force)
             {
                 ConsoleHelper.WriteError($"File already exists: {processedPath}");
                 ConsoleHelper.WriteInfo("Use --force to overwrite the existing file.");
@@ -79,7 +152,7 @@ namespace Apify.Commands
             }
 
             // Gather mock API information through interactive prompts
-            MockSchema mockApi = await GatherMockApiInformation();
+            MockSchema mockApi = await GatherMockApiInformation(options);
 
             try
             {
@@ -97,12 +170,35 @@ namespace Apify.Commands
             }
         }
 
-        private Task<MockSchema> GatherMockApiInformation()
+        private Task<MockSchema> GatherMockApiInformation(CommandOptions options)
         {
-            // Basic mock API information
-            string name = PromptForInput("Mock API name (e.g., Get User):");
-            string endpoint = PromptForInput("Endpoint path (e.g., /api/users/1 or /users):");
-            string method = PromptForHttpMethod();
+            string name = options.Name;
+            string endpoint = options.Endpoint;
+            string method = options.Method;
+            
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = "New Mock API";
+            }
+            
+            if (string.IsNullOrWhiteSpace(endpoint))
+            {
+                endpoint = "/api/new-endpoint"; // Default endpoint if not provided
+            }
+            
+            if (string.IsNullOrWhiteSpace(method))
+            {
+                method = "GET"; // Default method if not provided
+            }
+            
+            if (options.Prompt)
+            {
+                // Basic mock API information
+                 name = PromptForInput("Mock API name (e.g., Get User):");
+                 endpoint = PromptForInput("Endpoint path (e.g., /api/users/1 or /users):");
+                 method = ConsoleHelper.PromptChoice<string>("HTTP method:", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
+            }
+
             
             // Ensure endpoint starts with /
             if (!endpoint.StartsWith("/"))
@@ -110,25 +206,47 @@ namespace Apify.Commands
                 endpoint = "/" + endpoint;
             }
             
-            // Response information
-            int statusCode = PromptForStatusCode();
-            string contentType = PromptForContentType();
+            // Response 
+            
+            int statusCode = options.StatusCode;
+            string contentType = options.ContentType;
+            
+            if (string.IsNullOrWhiteSpace(contentType))
+            {
+                contentType = "application/json"; // Default content type
+            }
+            
+            if (string.IsNullOrWhiteSpace(statusCode.ToString()))
+            {
+                statusCode = 200; // Default status code
+            }
+
+            if (options.Prompt)
+            {
+                statusCode = PromptForStatusCode();
+                contentType = PromptForContentType();
+            }
+      
             
             // Response body
             object? responseBody = null;
-            if (contentType.Contains("json"))
+            if (contentType.Contains("json") && options.Prompt)
             {
                 responseBody = PromptForJsonResponse();
             }
-            else
+            else if (options.Prompt)
             {
                 string textResponse = PromptForInput("Response body (plain text):");
                 responseBody = textResponse;
             }
+            else
+            {
+                responseBody = options.ResponseBody;
+            }
             
             // Headers
             Dictionary<string, string>? headers = null;
-            if (PromptYesNo("Add custom response headers?"))
+            if (options.Prompt && PromptYesNo("Add custom response headers?"))
             {
                 headers = new Dictionary<string, string>();
                 ConsoleHelper.WriteInfo("Enter headers (empty name to finish):");
@@ -145,7 +263,7 @@ namespace Apify.Commands
             
             // Advanced options
             int delay = 0;
-            if (PromptYesNo("Add response delay (simulates latency)?"))
+            if (options.Prompt && PromptYesNo("Add response delay (simulates latency)?"))
             {
                 while (true)
                 {
@@ -160,7 +278,7 @@ namespace Apify.Commands
             
             // Conditional responses
             List<MockCondition>? conditions = null;
-            if (PromptYesNo("Add conditional responses based on request parameters?"))
+            if (options.Prompt && PromptYesNo("Add conditional responses based on request parameters?"))
             {
                 conditions = new List<MockCondition>();
                 
@@ -302,15 +420,15 @@ namespace Apify.Commands
             }
             
             // Add .apify prefix if not already present
-            bool alreadyHasApiDirectory = processedPath.StartsWith(DefaultApiDirectory + Path.DirectorySeparatorChar) || 
-                                         processedPath.StartsWith(DefaultApiDirectory + Path.AltDirectorySeparatorChar);
+            bool alreadyHasApiDirectory = processedPath.StartsWith(RootOption.DefaultApiDirectory + Path.DirectorySeparatorChar) || 
+                                         processedPath.StartsWith(RootOption.DefaultApiDirectory + Path.AltDirectorySeparatorChar);
             
             if (!alreadyHasApiDirectory)
             {
                 // Ensure the .apify directory exists
                 EnsureApiDirectoryExists();
                 
-                processedPath = Path.Combine(DefaultApiDirectory, processedPath);
+                processedPath = Path.Combine(RootOption.DefaultApiDirectory, processedPath);
             }
             
             return processedPath;
@@ -318,16 +436,16 @@ namespace Apify.Commands
         
         private void EnsureApiDirectoryExists()
         {
-            if (!Directory.Exists(DefaultApiDirectory))
+            if (!Directory.Exists(RootOption.DefaultApiDirectory))
             {
                 try
                 {
-                    Directory.CreateDirectory(DefaultApiDirectory);
-                    ConsoleHelper.WriteInfo($"Created '{DefaultApiDirectory}' directory as it didn't exist.");
+                    Directory.CreateDirectory(RootOption.DefaultApiDirectory);
+                    ConsoleHelper.WriteInfo($"Created '{RootOption.DefaultApiDirectory}' directory as it didn't exist.");
                 }
                 catch (Exception ex)
                 {
-                    ConsoleHelper.WriteError($"Failed to create '{DefaultApiDirectory}' directory: {ex.Message}");
+                    ConsoleHelper.WriteError($"Failed to create '{RootOption.DefaultApiDirectory}' directory: {ex.Message}");
                 }
             }
         }
@@ -493,3 +611,16 @@ namespace Apify.Commands
         }
     }
 }
+
+public record CommandOptions(
+    string FilePath,
+    string Name,
+    string Method,
+    string Endpoint,
+    int StatusCode,
+    string ContentType,
+    string ResponseBody,
+    bool Force,
+    bool Prompt,
+    bool Debug
+);

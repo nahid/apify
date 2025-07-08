@@ -45,7 +45,7 @@ namespace Apify.Commands
             Command.SetHandler(async (file, verbose, variables, environment, debug) =>
             {
                 await ExecuteRunCommand(file, verbose, variables, environment, debug);
-            }, fileArgument, verboseOption, vars, environmentOption, RootCommand.DebugOption);
+            }, fileArgument, verboseOption, vars, environmentOption, RootOption.DebugOption);
         }
 
         private async Task ExecuteRunCommand(string filePath, bool verbose, string? varString, string? environmentName, bool debug)
@@ -57,7 +57,7 @@ namespace Apify.Commands
             var apiExecutor = new ApiExecutor();
 
             //var expandedPaths = ExpandWildcards(filePath);
-            var path = MiscHelper.HandlePath(filePath, DefaultApiDirectory);
+            var path = MiscHelper.HandlePath(filePath, RootOption.DefaultApiDirectory);
 
             try
             {
@@ -98,7 +98,6 @@ namespace Apify.Commands
             }
          
         }
-
-        private const string DefaultApiDirectory = ".apify";
+        
     }
 }

@@ -31,7 +31,7 @@ namespace Apify.Commands
             command.SetHandler(async (port, directory, verbose, debug) =>
             {
                 await RunMockServerAsync(port, directory, verbose, debug);
-            }, portOption, directoryOption, verboseOption, RootCommand.DebugOption);
+            }, portOption, directoryOption, verboseOption, RootOption.DebugOption);
             
             return command;
         }

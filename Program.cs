@@ -13,6 +13,7 @@ namespace Apify
             {
                 Description = "Apify - A CLI tool for testing APIs"
             };
+            rootCommand.AddGlobalOption(RootOption.DebugOption);
 
             // Add the list-env command directly to the root command
             var listEnvCommand = new Command("list-env", "List available environments");

@@ -8,9 +8,6 @@ namespace Apify.Commands
 {
     public class InitCommand : Command
     {
-        private const string DefaultConfigFileName = "apify-config.json";
-        private const string DefaultApiDirectoryName = ".apify";
-
         public InitCommand() : base("init", "Initialize a new API testing project in the current directory")
         {
             var projectName = new Option<string>(
@@ -46,13 +43,13 @@ namespace Apify.Commands
             ConsoleHelper.WriteHeader("Initializing API Testing Project");
 
             // Check if configuration file already exists
-            string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), DefaultConfigFileName);
+            string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), RootOption.DefaultConfigFileName);
             
             if (File.Exists(configFilePath) && force)
             {
-                if (Directory.Exists(DefaultApiDirectoryName))
+                if (Directory.Exists(RootOption.DefaultApiDirectory))
                 {
-                    Directory.Delete(DefaultApiDirectoryName, true);
+                    Directory.Delete(RootOption.DefaultApiDirectory, true);
                 }
 
                 File.Delete(configFilePath);
@@ -98,14 +95,14 @@ namespace Apify.Commands
                 }
 
                 // Create API directory if it doesn't exist
-                if (!Directory.Exists(DefaultApiDirectoryName))
+                if (!Directory.Exists(RootOption.DefaultApiDirectory))
                 {
-                    Directory.CreateDirectory(DefaultApiDirectoryName);
-                    ConsoleHelper.WriteSuccess($"Created API directory: {DefaultApiDirectoryName}");
+                    Directory.CreateDirectory(RootOption.DefaultApiDirectory);
+                    ConsoleHelper.WriteSuccess($"Created API directory: {RootOption.DefaultApiDirectory}");
                 }
                 else
                 {
-                    ConsoleHelper.WriteInfo($"Using existing API directory: {DefaultApiDirectoryName}");
+                    ConsoleHelper.WriteInfo($"Using existing API directory: {RootOption.DefaultApiDirectory}");
                 }
 
                 // Create environment configuration
@@ -216,7 +213,7 @@ namespace Apify.Commands
                 };
 
                 // Create an example API file in the apis directory
-                string sampleApiFilePath = Path.Combine(DefaultApiDirectoryName, "get.json");
+                string sampleApiFilePath = Path.Combine(RootOption.DefaultApiDirectory, "get.json");
                 await File.WriteAllTextAsync(sampleApiFilePath, JsonHelper.SerializeObject(sampleUserApi));
                 ConsoleHelper.WriteSuccess($"Created sample API test: {sampleApiFilePath}");
                 
@@ -247,7 +244,7 @@ namespace Apify.Commands
                     }
                 };
                 
-                string samplePostFilePath = Path.Combine(DefaultApiDirectoryName, "create.json");
+                string samplePostFilePath = Path.Combine(RootOption.DefaultApiDirectory, "create.json");
                 await File.WriteAllTextAsync(samplePostFilePath, JsonHelper.SerializeObject(samplePostTest));
                 ConsoleHelper.WriteSuccess($"Created sample POST API test: {samplePostFilePath}");
 
@@ -259,7 +256,7 @@ namespace Apify.Commands
                 if (mock)
                 {
                     // Create users directory for mock examples if it doesn't exist
-                    string usersDirPath = Path.Combine(DefaultApiDirectoryName, "users");
+                    string usersDirPath = Path.Combine(RootOption.DefaultApiDirectory, "users");
                     if (!Directory.Exists(usersDirPath))
                     {
                         Directory.CreateDirectory(usersDirPath);
@@ -317,7 +314,7 @@ namespace Apify.Commands
                     // Verify file was created
                     if (File.Exists(configFilePath))
                     {
-                        ConsoleHelper.WriteSuccess($"Created configuration file: {DefaultConfigFileName}");
+                        ConsoleHelper.WriteSuccess($"Created configuration file: {RootOption.DefaultConfigFileName}");
                         ConsoleHelper.WriteInfo($"Configuration file exists at: {configFilePath}");
                     }
                     else
@@ -342,7 +339,7 @@ namespace Apify.Commands
                 bool isCompiledExecutable = !exeName.Equals("dotnet", StringComparison.OrdinalIgnoreCase);
                 
                 // Display the interactive quick start guide
-                ConsoleHelper.DisplayQuickStartGuide(configFilePath, DefaultApiDirectoryName, isCompiledExecutable);
+                ConsoleHelper.DisplayQuickStartGuide(configFilePath, RootOption.DefaultApiDirectory, isCompiledExecutable);
             }
             catch (Exception ex)
             {

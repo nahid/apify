@@ -7,13 +7,11 @@ namespace Apify.Commands
     public class CreateRequestCommand
     {
         public Command Command { get; set; }
-        private const string DefaultApiDirectory = ".apify";
 
         public CreateRequestCommand()
         {
-            Command = new Command("create:request", "Create a new API request file or mock response");
             // Create a new API request command
-            //var requestCommand = new Command("request", "Create a new API request file");
+           Command = new Command("create:request", "Create a new API request file");
 
             var fileOption = new Option<string>(
                 "--file",
@@ -61,7 +59,7 @@ namespace Apify.Commands
             
             Command.SetHandler(
                 (file, name, method, uri, force, debug, prompt) => ExecuteAsync(file, name, method, uri, force, debug, prompt),
-                fileOption, nameOption, methodOption, urlOption, forceOption, RootCommand.DebugOption, promptOption
+                fileOption, nameOption, methodOption, urlOption, forceOption, RootOption.DebugOption, promptOption
             );
         }
 
@@ -75,7 +73,7 @@ namespace Apify.Commands
             }
 
             // Process file path to convert dot notation if needed
-            string processedPath = MiscHelper.HandlePath(filePath, DefaultApiDirectory);
+            string processedPath = MiscHelper.HandlePath(filePath, RootOption.DefaultApiDirectory);
             
             // Check if file already exists
             if (File.Exists(processedPath) && !force)
