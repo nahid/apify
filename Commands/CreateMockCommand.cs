@@ -120,7 +120,7 @@ namespace Apify.Commands
             }
 
             // Process file path to add .mock.json extension and handle dot notation
-            string processedPath = ProcessFilePath(options.FilePath);
+            string processedPath = MiscHelper.HandlePath(options.FilePath, ".mock.json");
             
             if (options.Debug)
             {

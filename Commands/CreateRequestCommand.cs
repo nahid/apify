@@ -73,7 +73,7 @@ namespace Apify.Commands
             }
 
             // Process file path to convert dot notation if needed
-            string processedPath = MiscHelper.HandlePath(filePath, RootOption.DefaultApiDirectory);
+            string processedPath = MiscHelper.HandlePath(filePath);
             
             // Check if file already exists
             if (File.Exists(processedPath) && !force)

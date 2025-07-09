@@ -57,7 +57,7 @@ namespace Apify.Commands
             var apiExecutor = new ApiExecutor();
 
             //var expandedPaths = ExpandWildcards(filePath);
-            var path = MiscHelper.HandlePath(filePath, RootOption.DefaultApiDirectory);
+            var path = MiscHelper.HandlePath(filePath);
 
             try
             {

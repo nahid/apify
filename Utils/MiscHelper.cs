@@ -1,3 +1,4 @@
+using Apify.Commands;
 using Newtonsoft.Json.Linq;
 using System.Dynamic;
 
@@ -60,8 +61,9 @@ public static class MiscHelper
     }
     
     
-    public static string HandlePath(string path, string defaultDirectory = ".apify")
+    public static string HandlePath(string path, string extension = ".json")
     {
+        string defaultDirectory = RootOption.DefaultApiDirectory;
         string processedPath = path;
             
         if (processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
@@ -87,7 +89,7 @@ public static class MiscHelper
         }
             
         var pathWithoutExtension = path.Replace(".", Path.DirectorySeparatorChar.ToString());
-        path = Path.Combine(defaultDirectory, pathWithoutExtension + ".json");
+        path = Path.Combine(defaultDirectory, pathWithoutExtension + extension);
 
         return path;
     }

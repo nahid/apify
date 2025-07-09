@@ -1,0 +1,16 @@
+{
+  "name": "My Mock",
+  "description": "",
+  "method": "GET",
+  "endpoint": "/users",
+  "responses": [
+    {
+      "condition": "default",
+      "statusCode": 200,
+      "headers": {},
+      "responseTemplate": {
+        "status": "success"
+      }
+    }
+  ]
+}
