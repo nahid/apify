@@ -7,7 +7,7 @@ namespace Apify.Commands
     {
         public static Command CreateCommand()
         {
-            var command = new Command("mock-server", "Start a mock API server based on mock files in the .apify directory");
+            var command = new Command("server:mock", "Start a mock API server based on mock files in the .apify directory");
             
             var portOption = new Option<int>(
                 name: "--port",

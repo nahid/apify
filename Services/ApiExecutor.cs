@@ -10,20 +10,15 @@ namespace Apify.Services
     public class ApiExecutor
     {
         private readonly HttpClient _httpClient;
-        private EnvironmentService? _environmentService;
+      
         private ConfigService _configService;
 
         public ApiExecutor()
         {
             _httpClient = new HttpClient();
-            _environmentService = null;
             _configService = new ConfigService();
         }
-        
-        public void SetEnvironmentService(EnvironmentService environmentService)
-        {
-            _environmentService = environmentService;
-        }
+
 
         public async Task<ApiResponse> ExecuteRequestAsync(ApiDefinition apiDefinition)
         {

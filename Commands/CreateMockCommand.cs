@@ -194,9 +194,9 @@ namespace Apify.Commands
             if (options.Prompt)
             {
                 // Basic mock API information
-                 name = PromptForInput("Mock API name (e.g., Get User):");
-                 endpoint = PromptForInput("Endpoint path (e.g., /api/users/1 or /users):");
-                 method = ConsoleHelper.PromptChoice<string>("HTTP method:", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
+                name = ConsoleHelper.PromptInput("Mock API name (e.g., Get User)");
+                endpoint = ConsoleHelper.PromptInput("Endpoint path (e.g., /api/users/1 or /users):");
+                method = ConsoleHelper.PromptChoice<string>("HTTP method:", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
             }
 
             
@@ -224,7 +224,16 @@ namespace Apify.Commands
             if (options.Prompt)
             {
                 statusCode = PromptForStatusCode();
-                contentType = PromptForContentType();
+
+                contentType = ConsoleHelper.PromptChoice("Content Type:", new[] {
+                    "application/json",
+                    "text/plain",
+                    "text/html",
+                    "application/xml",
+                    "text/csv",
+                    "application/octet-stream",
+                    "application/x-www-form-urlencoded"
+                });
             }
       
             
@@ -232,11 +241,11 @@ namespace Apify.Commands
             object? responseBody = null;
             if (contentType.Contains("json") && options.Prompt)
             {
-                responseBody = PromptForJsonResponse();
+                responseBody = ConsoleHelper.PromptMultiLineInput("Enter JSON Body(Plain Text):");
             }
             else if (options.Prompt)
             {
-                string textResponse = PromptForInput("Response body (plain text):");
+                string textResponse = ConsoleHelper.PromptInput("Response body (plain text):");
                 responseBody = textResponse;
             }
             else
@@ -246,28 +255,28 @@ namespace Apify.Commands
             
             // Headers
             Dictionary<string, string>? headers = null;
-            if (options.Prompt && PromptYesNo("Add custom response headers?"))
+            if (options.Prompt && ConsoleHelper.PromptYesNo("Add custom response headers?"))
             {
                 headers = new Dictionary<string, string>();
                 ConsoleHelper.WriteInfo("Enter headers (empty name to finish):");
                 
                 while (true)
                 {
-                    string headerName = PromptForInput("Header name (e.g., Cache-Control):", false);
+                    string headerName = ConsoleHelper.PromptInput<string>("Header name (e.g., Cache-Control):", required:false);
                     if (string.IsNullOrWhiteSpace(headerName)) break;
                     
-                    string headerValue = PromptForInput($"Value for {headerName}:");
+                    string headerValue = ConsoleHelper.PromptInput($"Value for {headerName}:");
                     headers[headerName] = headerValue;
                 }
             }
             
             // Advanced options
             int delay = 0;
-            if (options.Prompt && PromptYesNo("Add response delay (simulates latency)?"))
+            if (options.Prompt && ConsoleHelper.PromptYesNo("Add response delay (simulates latency)?"))
             {
                 while (true)
                 {
-                    string delayStr = PromptForInput("Delay in milliseconds (e.g., 500):");
+                    string delayStr = ConsoleHelper.PromptInput("Delay in milliseconds (e.g., 500):");
                     if (int.TryParse(delayStr, out delay) && delay >= 0)
                     {
                         break;
@@ -276,74 +285,6 @@ namespace Apify.Commands
                 }
             }
             
-            // Conditional responses
-            List<MockCondition>? conditions = null;
-            if (options.Prompt && PromptYesNo("Add conditional responses based on request parameters?"))
-            {
-                conditions = new List<MockCondition>();
-                
-                ConsoleHelper.WriteInfo("Enter conditions (empty name to finish):");
-                while (true)
-                {
-                    string conditionName = PromptForInput("Condition name (e.g., 'When id=1'):", false);
-                    if (string.IsNullOrWhiteSpace(conditionName)) break;
-                    
-                    var condition = new MockCondition { Name = conditionName };
-                    
-                    // Ask about query parameters
-                    if (PromptYesNo("Match query parameters?"))
-                    {
-                        condition.QueryParams = new Dictionary<string, string>();
-                        ConsoleHelper.WriteInfo("Enter query parameters (empty name to finish):");
-                        
-                        while (true)
-                        {
-                            string paramName = PromptForInput("Parameter name:", false);
-                            if (string.IsNullOrWhiteSpace(paramName)) break;
-                            
-                            string paramValue = PromptForInput($"Value for {paramName}:");
-                            condition.QueryParams[paramName] = paramValue;
-                        }
-                    }
-                    
-                    // Ask about headers to match
-                    if (PromptYesNo("Match request headers?"))
-                    {
-                        condition.Headers = new Dictionary<string, string>();
-                        ConsoleHelper.WriteInfo("Enter headers to match (empty name to finish):");
-                        
-                        while (true)
-                        {
-                            string headerName = PromptForInput("Header name:", false);
-                            if (string.IsNullOrWhiteSpace(headerName)) break;
-                            
-                            string headerValue = PromptForInput($"Value for {headerName}:");
-                            condition.Headers[headerName] = headerValue;
-                        }
-                    }
-                    
-                    // Response for this condition
-                    if (contentType.Contains("json"))
-                    {
-                        ConsoleHelper.WriteInfo("Enter JSON response for this condition:");
-                        condition.Response = PromptForJsonResponse();
-                    }
-                    else
-                    {
-                        string textResponse = PromptForInput("Response body for this condition (plain text):");
-                        condition.Response = textResponse;
-                    }
-                    
-                    // Status code for this condition
-                    if (PromptYesNo("Set a specific status code for this condition?"))
-                    {
-                        condition.StatusCode = PromptForStatusCode();
-                    }
-                    
-                    conditions.Add(condition);
-                }
-            }
-
             return Task.FromResult(new MockSchema {
                 Name = name,
                 Endpoint = endpoint,
@@ -359,137 +300,6 @@ namespace Apify.Commands
                     }
                 }
             });
-        }
-
-        private string ProcessFilePath(string filePath)
-        {
-            // Apply the same logic as in CreateRequestCommand to handle dot notation
-            // but ensure .mock.json extension
-            
-            // Start with original path
-            string processedPath = filePath;
-            
-            // Convert dot notation to directory separators if present
-            string filenameWithoutExt = Path.GetFileNameWithoutExtension(processedPath);
-            
-            // If there are dots in the filename part
-            if (filenameWithoutExt.Contains('.'))
-            {
-                // Only handle as dot notation if no directory separators already exist
-                bool hasDirectorySeparator = processedPath.Contains(Path.DirectorySeparatorChar) || 
-                                            processedPath.Contains(Path.AltDirectorySeparatorChar);
-                
-                if (!hasDirectorySeparator && !processedPath.StartsWith("."))
-                {
-                    string[] parts = filenameWithoutExt.Split('.');
-                    string filename = parts[parts.Length - 1]; // Last part becomes the filename
-                    string[] folderParts = parts.Take(parts.Length - 1).ToArray(); // Earlier parts become folders
-                    
-                    // Join with directory separators and add .mock.json extension
-                    processedPath = string.Join(Path.DirectorySeparatorChar.ToString(), folderParts) + 
-                                   Path.DirectorySeparatorChar + filename + ".mock.json";
-                    
-                    ConsoleHelper.WriteInfo($"Converted dot notation: {filePath} → {processedPath}");
-                }
-                else
-                {
-                    // Ensure .mock.json extension
-                    if (!processedPath.EndsWith(".mock.json", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Remove .json extension if present
-                        if (processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                        {
-                            processedPath = processedPath.Substring(0, processedPath.Length - 5);
-                        }
-                        processedPath += ".mock.json";
-                    }
-                }
-            }
-            else
-            {
-                // Simple filename without dots, ensure .mock.json extension
-                if (!processedPath.EndsWith(".mock.json", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Remove .json extension if present
-                    if (processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                    {
-                        processedPath = processedPath.Substring(0, processedPath.Length - 5);
-                    }
-                    processedPath += ".mock.json";
-                }
-            }
-            
-            // Add .apify prefix if not already present
-            bool alreadyHasApiDirectory = processedPath.StartsWith(RootOption.DefaultApiDirectory + Path.DirectorySeparatorChar) || 
-                                         processedPath.StartsWith(RootOption.DefaultApiDirectory + Path.AltDirectorySeparatorChar);
-            
-            if (!alreadyHasApiDirectory)
-            {
-                // Ensure the .apify directory exists
-                EnsureApiDirectoryExists();
-                
-                processedPath = Path.Combine(RootOption.DefaultApiDirectory, processedPath);
-            }
-            
-            return processedPath;
-        }
-        
-        private void EnsureApiDirectoryExists()
-        {
-            if (!Directory.Exists(RootOption.DefaultApiDirectory))
-            {
-                try
-                {
-                    Directory.CreateDirectory(RootOption.DefaultApiDirectory);
-                    ConsoleHelper.WriteInfo($"Created '{RootOption.DefaultApiDirectory}' directory as it didn't exist.");
-                }
-                catch (Exception ex)
-                {
-                    ConsoleHelper.WriteError($"Failed to create '{RootOption.DefaultApiDirectory}' directory: {ex.Message}");
-                }
-            }
-        }
-
-        private string PromptForInput(string prompt, bool required = true)
-        {
-            while (true)
-            {
-                Console.Write($"{prompt} ");
-                string? input = Console.ReadLine();
-                
-                if (string.IsNullOrWhiteSpace(input))
-                {
-                    if (!required) return string.Empty;
-                    ConsoleHelper.WriteWarning("This field is required. Please try again.");
-                }
-                else
-                {
-                    return input;
-                }
-            }
-        }
-
-        private string PromptForHttpMethod()
-        {
-            string[] methods = { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" };
-            int selectedIndex = PromptChoice("HTTP method:", methods);
-            return methods[selectedIndex];
-        }
-
-        private string PromptForContentType()
-        {
-            string[] contentTypes = { 
-                "application/json", 
-                "text/plain", 
-                "text/html", 
-                "application/xml",
-                "text/csv", 
-                "application/octet-stream",
-                "application/x-www-form-urlencoded"
-            };
-            
-            int selectedIndex = PromptChoice("Content Type:", contentTypes);
-            return contentTypes[selectedIndex];
         }
 
         private int PromptForStatusCode()
@@ -508,15 +318,15 @@ namespace Apify.Commands
             
             int[] statusCodes = { 200, 201, 204, 400, 401, 403, 404, 500, 0 };
             
-            int selectedIndex = PromptChoice("Status Code:", statusOptions);
+            int selectedIndex = ConsoleHelper.PromptChoiceWithIndex("Status Code:", statusOptions);
             
             // If custom status code selected
             if (selectedIndex == statusOptions.Length - 1)
             {
                 while (true)
                 {
-                    string statusCodeStr = PromptForInput("Enter custom status code (100-599):");
-                    if (int.TryParse(statusCodeStr, out int customCode) && customCode >= 100 && customCode <= 599)
+                    int customCode = ConsoleHelper.PromptInput<int>("Enter custom status code (100-599):");
+                    if (customCode >= 100 && customCode <= 599)
                     {
                         return customCode;
                     }
@@ -525,89 +335,6 @@ namespace Apify.Commands
             }
             
             return statusCodes[selectedIndex];
-        }
-
-        private object? PromptForJsonResponse()
-        {
-            ConsoleHelper.WriteInfo("Enter JSON response (enter on a blank line to finish):");
-            
-            // Collect multi-line input
-            var lines = new List<string>();
-            string? line;
-            Console.WriteLine("Enter JSON (end with blank line):");
-            while (!string.IsNullOrWhiteSpace(line = Console.ReadLine()))
-            {
-                lines.Add(line);
-            }
-            
-            string jsonInput = string.Join("\n", lines);
-            
-            // If empty, return null
-            if (string.IsNullOrWhiteSpace(jsonInput))
-            {
-                return null;
-            }
-            
-            try
-            {
-                // Try to parse as JObject or JArray
-                if (jsonInput.TrimStart().StartsWith("{"))
-                {
-                    return JsonConvert.DeserializeObject<JObject>(jsonInput);
-                }
-                else if (jsonInput.TrimStart().StartsWith("["))
-                {
-                    return JsonConvert.DeserializeObject<JArray>(jsonInput);
-                }
-                else
-                {
-                    // Parse as generic object
-                    return JsonConvert.DeserializeObject(jsonInput);
-                }
-            }
-            catch (JsonException ex)
-            {
-                ConsoleHelper.WriteWarning($"Invalid JSON format: {ex.Message}");
-                ConsoleHelper.WriteInfo("Storing as raw text instead.");
-                return jsonInput;
-            }
-        }
-
-        private bool PromptYesNo(string prompt)
-        {
-            while (true)
-            {
-                Console.Write($"{prompt} (y/n): ");
-                string? input = Console.ReadLine()?.Trim().ToLower();
-                
-                if (input == "y" || input == "yes") return true;
-                if (input == "n" || input == "no") return false;
-                
-                ConsoleHelper.WriteWarning("Please enter 'y' or 'n'.");
-            }
-        }
-
-        private int PromptChoice(string prompt, string[] options)
-        {
-            Console.WriteLine(prompt);
-            
-            for (int i = 0; i < options.Length; i++)
-            {
-                Console.WriteLine($"{i+1}. {options[i]}");
-            }
-            
-            while (true)
-            {
-                Console.Write($"Enter selection (1-{options.Length}): ");
-                string? input = Console.ReadLine();
-                
-                if (int.TryParse(input, out int selection) && selection >= 1 && selection <= options.Length)
-                {
-                    return selection - 1; // Return zero-based index
-                }
-                
-                ConsoleHelper.WriteWarning($"Please enter a number between 1 and {options.Length}.");
-            }
         }
     }
 }

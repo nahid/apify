@@ -217,6 +217,28 @@ namespace Apify.Utils
                 }
             }
         }
+        public static string PromptMultiLineInput(string message, string? defaultValue = null)
+        {
+            Console.WriteLine(message);
+            Console.WriteLine("(Press Enter on an empty line to finish input)");
+            StringBuilder sb = new StringBuilder();
+
+            while (true)
+            {
+                string? line = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    if (sb.Length == 0 && defaultValue != null)
+                    {
+                        return defaultValue;
+                    }
+                    break;
+                }
+                sb.AppendLine(line);
+            }
+
+            return sb.ToString().TrimEnd();
+        }
         
         public static T PromptChoice<T>(string question, IEnumerable<T> options)
         {

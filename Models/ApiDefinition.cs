@@ -140,11 +140,6 @@ namespace Apify.Models
         [JsonPropertyName("tests")]
         public List<AssertionEntity>? Tests { get; set; }
         
-        // For supporting the legacy test format that uses nested test definitions
-        [JsonPropertyName("testGroups")]
-        [Newtonsoft.Json.JsonProperty("testGroups")]
-        private List<TestGroup>? LegacyTestGroups { get; set; }
-        
         // Convert legacy format tests if needed
         /*public void ProcessTestFormats()
         {
