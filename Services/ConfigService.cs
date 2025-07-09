@@ -30,11 +30,6 @@ public class ConfigService
 
     public void SetConfigFilePath(string path)
     {
-        if (!File.Exists(path))
-        {
-            throw new FileNotFoundException($"Configuration file not found at {path}");
-        }
-        
         _configFilePath = path;
     }
     
@@ -50,8 +45,6 @@ public class ConfigService
         // Only use the current working directory (where the command is executed from)
         string currentDir = Directory.GetCurrentDirectory();
         string currentPath = Path.Combine(currentDir, ConfigFileName);
-        
-        SetConfigFilePath(currentPath);
         
         // Always use the current directory path
         return _configFilePath = currentPath;

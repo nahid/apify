@@ -39,4 +39,10 @@
     <None Include="bin\Debug\net8.0\apify-config.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Apify.Tests\**" />
+    <EmbeddedResource Remove="Apify.Tests\**" />
+    <None Remove="Apify.Tests\**" />
+  </ItemGroup>
+
 </Project>
