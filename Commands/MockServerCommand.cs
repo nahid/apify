@@ -3,12 +3,10 @@ using Apify.Services;
 
 namespace Apify.Commands
 {
-    public class MockServerCommand
+    public class MockServerCommand: Command
     {
-        public static Command CreateCommand()
+        public MockServerCommand(): base("server:mock", "Start a mock API server based on mock files in the .apify directory")
         {
-            var command = new Command("server:mock", "Start a mock API server based on mock files in the .apify directory");
-            
             var portOption = new Option<int>(
                 name: "--port",
                 description: "The port on which to run the mock server (on Windows, ports above 1024 may not require admin rights)",
@@ -24,19 +22,18 @@ namespace Apify.Commands
                 description: "Show detailed output",
                 getDefaultValue: () => false);
             
-            command.AddOption(portOption);
-            command.AddOption(directoryOption);
-            command.AddOption(verboseOption);
+            AddOption(portOption);
+            AddOption(directoryOption);
+            AddOption(verboseOption);
             
-            command.SetHandler(async (port, directory, verbose, debug) =>
+            this.SetHandler(async (port, directory, verbose, debug) =>
             {
                 await RunMockServerAsync(port, directory, verbose, debug);
             }, portOption, directoryOption, verboseOption, RootOption.DebugOption);
             
-            return command;
         }
         
-        private static async Task RunMockServerAsync(int port, string directory, bool verbose, bool debug)
+        private async Task RunMockServerAsync(int port, string directory, bool verbose, bool debug)
         {
             var mockServer = new MockServerService(directory, debug);
             await mockServer.StartAsync(port, verbose);

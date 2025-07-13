@@ -20,13 +20,13 @@ namespace Apify
             rootCommand.AddCommand(listEnvCommand);
 
             // Add subcommands
-            rootCommand.AddCommand(new CallCommand().Command);
+            rootCommand.AddCommand(new CallCommand());
             rootCommand.AddCommand(new AboutCommand());
             rootCommand.AddCommand(new InitCommand());
-            rootCommand.AddCommand(new CreateRequestCommand().Command);
-            rootCommand.AddCommand(new CreateMockCommand().Command);
-            rootCommand.AddCommand(new TestsCommand().Command);
-            rootCommand.AddCommand(MockServerCommand.CreateCommand());
+            rootCommand.AddCommand(new CreateRequestCommand());
+            rootCommand.AddCommand(new CreateMockCommand());
+            rootCommand.AddCommand(new TestsCommand());
+            rootCommand.AddCommand(new MockServerCommand());
 
             // Parse and execute
             return await rootCommand.InvokeAsync(args);

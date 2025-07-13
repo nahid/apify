@@ -10,8 +10,6 @@ namespace Apify.Commands
 {
     public class AboutCommand : Command
     {
-        private const string DefaultConfigFileName = "apify-config.json";
-        private const string DefaultApiDirectoryName = ".apify";
         private ConfigService _env;
 
         public AboutCommand() : base("about", "Getting application information")

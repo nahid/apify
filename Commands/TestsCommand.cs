@@ -8,15 +8,12 @@ using System.Security.Cryptography;
 
 namespace Apify.Commands
 {
-    public class TestsCommand
+    public class TestsCommand: Command
     {
-        public Command Command { get; }
         private const string DefaultApiDirectoryName = ".apify";
         
-        public TestsCommand()
+        public TestsCommand(): base("tests", "Run all tests in the .apify directory")
         {
-            Command = new Command("tests", "Run all tests in the .apify directory");
-            
             var verboseOption = new Option<bool>(
                 "--verbose",
                 () => false,
@@ -33,23 +30,23 @@ namespace Apify.Commands
                 name: "--env",
                 description: "EnvironmentSchema to use from the configuration profile");
             environmentOption.AddAlias("-e");
-            Command.AddOption(environmentOption);    
+            AddOption(environmentOption);    
             
             var varsOption = new Option<string?>(
                 name: "--vars",
                 description: "Runtime variables for configurations");
-            Command.AddOption(varsOption);
+            AddOption(varsOption);
             
             var tagOption = new Option<string>(
                 "--tag",
                 "Filter tests by tag"
             );
             
-            Command.AddOption(verboseOption);
-            Command.AddOption(dirOption);
-            Command.AddOption(tagOption);
+            AddOption(verboseOption);
+            AddOption(dirOption);
+            AddOption(tagOption);
             
-            Command.SetHandler(
+            this.SetHandler(
                 (verbose, dir, envName, vars, tag, debug) => RunAllTestsAsync(verbose, dir, envName, vars, tag, debug),
                 verboseOption, dirOption, environmentOption, varsOption, tagOption, RootOption.DebugOption
             );

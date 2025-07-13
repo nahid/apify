@@ -4,15 +4,11 @@ using Apify.Utils;
 
 namespace Apify.Commands
 {
-    public class CreateRequestCommand
+    public class CreateRequestCommand: Command
     {
-        public Command Command { get; set; }
 
-        public CreateRequestCommand()
+        public CreateRequestCommand(): base("create:request", "Create a new API request file")
         {
-            // Create a new API request command
-           Command = new Command("create:request", "Create a new API request file");
-
             var fileOption = new Option<string>(
                 "--file",
                 "The file path where the new request will be saved (e.g., users.all)"
@@ -50,14 +46,14 @@ namespace Apify.Commands
                 "Prompt for required information interactively"
             );
 
-            Command.AddOption(fileOption);
-            Command.AddOption(forceOption);
-            Command.AddOption(promptOption);
-            Command.AddOption(nameOption);
-            Command.AddOption(methodOption);
-            Command.AddOption(urlOption);
+            AddOption(fileOption);
+            AddOption(forceOption);
+            AddOption(promptOption);
+            AddOption(nameOption);
+            AddOption(methodOption);
+            AddOption(urlOption);
             
-            Command.SetHandler(
+            this.SetHandler(
                 (file, name, method, uri, force, debug, prompt) => ExecuteAsync(file, name, method, uri, force, debug, prompt),
                 fileOption, nameOption, methodOption, urlOption, forceOption, RootOption.DebugOption, promptOption
             );

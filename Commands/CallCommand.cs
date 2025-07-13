@@ -5,14 +5,10 @@ using System.CommandLine;
 
 namespace Apify.Commands
 {
-    public class CallCommand
+    public class CallCommand: Command
     {
-        public Command Command { get; }
-
-        public CallCommand()
+        public CallCommand(): base("call", "Call API from the .apify directory (uses simplified path format)")
         {
-            Command = new Command("call", "Call API from the .apify directory (uses simplified path format)");
-
             // Add arguments
             var fileArgument = new Argument<string>(
                 name: "file",
@@ -20,32 +16,33 @@ namespace Apify.Commands
             {
                 Arity = ArgumentArity.ExactlyOne
             };
-            Command.AddArgument(fileArgument);
+            AddArgument(fileArgument);
 
             // Add options
             var verboseOption = new Option<bool>(
                 name: "--verbose",
                 description: "Display detailed output including request/response details");
             verboseOption.AddAlias("-v");
-            Command.AddOption(verboseOption);
+            AddOption(verboseOption);
 
             var environmentOption = new Option<string?>(
                 name: "--env",
                 description: "EnvironmentSchema to use from the configuration profile");
             environmentOption.AddAlias("-e");
-            Command.AddOption(environmentOption);
+            AddOption(environmentOption);
 
             var vars = new Option<string?>(
                 name: "--vars",
                 description: "Runtime variables for the configuration");
             
-            Command.AddOption(vars);
+            AddOption(vars);
 
             // Set the handler
-            Command.SetHandler(async (file, verbose, variables, environment, debug) =>
+            this.SetHandler(async (file, verbose, variables, environment, debug) =>
             {
                 await ExecuteRunCommand(file, verbose, variables, environment, debug);
             }, fileArgument, verboseOption, vars, environmentOption, RootOption.DebugOption);
+            
         }
 
         private async Task ExecuteRunCommand(string filePath, bool verbose, string? varString, string? environmentName, bool debug)

@@ -7,13 +7,11 @@ using System.CommandLine.Invocation;
 
 namespace Apify.Commands
 {
-    public class CreateMockCommand
+    public class CreateMockCommand: Command
     {
-        public Command Command { get; set; }
 
-        public CreateMockCommand()
+        public CreateMockCommand(): base("create:mock", "Create a new mock API response file")
         {
-            Command = new Command("create:mock", "Create a new mock API response file");
             var fileOption = new Option<string>(
                 "--file",
                 "The file path where the new mock API will be saved (e.g., users.get)"
@@ -68,18 +66,18 @@ namespace Apify.Commands
                 "Prompt for required information interactively"
             );
 
-            Command.AddOption(fileOption);
-            Command.AddOption(forceOption);
-            Command.AddOption(nameOption);
-            Command.AddOption(methodOption);
-            Command.AddOption(endpointOption);
-            Command.AddOption(contentTypeOption);
-            Command.AddOption(statusCodeOption);
-            Command.AddOption(responseBodyOption);
-            Command.AddOption(promptOption);
+            AddOption(fileOption);
+            AddOption(forceOption);
+            AddOption(nameOption);
+            AddOption(methodOption);
+            AddOption(endpointOption);
+            AddOption(contentTypeOption);
+            AddOption(statusCodeOption);
+            AddOption(responseBodyOption);
+            AddOption(promptOption);
             
             
-            Command.SetHandler(async (InvocationContext context) => {
+            this.SetHandler(async (InvocationContext context) => {
                     var file = context.ParseResult.GetValueForOption(fileOption);
                 var force = context.ParseResult.GetValueForOption(forceOption);
                     var name = context.ParseResult.GetValueForOption(nameOption);
