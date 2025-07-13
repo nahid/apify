@@ -28,12 +28,12 @@ namespace Apify.Commands
             _env = new ConfigService();
 
             this.SetHandler(
-                (force) => ExecuteAsync(force),
-                forceOption
+                (force, debug) => ExecuteAsync(force, debug),
+                forceOption, RootOption.DebugOption
             );
         }
 
-        private async Task ExecuteAsync(bool force)
+        private async Task ExecuteAsync(bool force, bool debug)
         {
             ConsoleHelper.WriteHeader("About API Testing Project");
 

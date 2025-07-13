@@ -50,12 +50,12 @@ namespace Apify.Commands
             Command.AddOption(tagOption);
             
             Command.SetHandler(
-                (verbose, dir, envName, vars, tag) => RunAllTestsAsync(verbose, dir, envName, vars, tag),
-                verboseOption, dirOption, environmentOption, varsOption, tagOption
+                (verbose, dir, envName, vars, tag, debug) => RunAllTestsAsync(verbose, dir, envName, vars, tag, debug),
+                verboseOption, dirOption, environmentOption, varsOption, tagOption, RootOption.DebugOption
             );
         }
         
-        private async Task RunAllTestsAsync(bool verbose, string directory, string? envName, string? vars, string? tag)
+        private async Task RunAllTestsAsync(bool verbose, string directory, string? envName, string? vars, string? tag, bool debug = false)
         {
             var configService = new ConfigService();
             envName = envName ?? configService.LoadConfiguration()?.DefaultEnvironment ?? "Development";

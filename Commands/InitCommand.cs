@@ -31,12 +31,12 @@ namespace Apify.Commands
             AddOption(forceOption);
 
             this.SetHandler(
-                (name, mock, force) => ExecuteAsync(name, mock, force),
-                projectName, mockConfigOption, forceOption
+                (name, mock, force, debug) => ExecuteAsync(name, mock, force, debug),
+                projectName, mockConfigOption, forceOption, RootOption.DebugOption
             );
         }
 
-        private async Task ExecuteAsync(string? name, bool mock, bool force)
+        private async Task ExecuteAsync(string? name, bool mock, bool force, bool debug)
         {
             bool hasAnyOptions = name != null || mock || force;
             
