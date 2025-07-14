@@ -93,5 +93,10 @@ public static class MiscHelper
 
         return path;
     }
+    
+    public static bool IsLikelyPath(string input)
+    {
+        return Path.IsPathRooted(input) && input.IndexOfAny(Path.GetInvalidPathChars()) == -1;
+    }
 
 }

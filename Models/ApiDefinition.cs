@@ -38,146 +38,14 @@ namespace Apify.Models
         [JsonPropertyName("headers")]
         public Dictionary<string, string>? Headers { get; set; }
 
-        [JsonPropertyName("payload")]
-        [System.Text.Json.Serialization.JsonIgnore] // This is ignored in system.text.json serialization
-        private string? _payloadString;
-
-        [JsonPropertyName("payloadObject")]
-        [System.Text.Json.Serialization.JsonIgnore] // This is ignored in system.text.json serialization
-        private object? _payloadObject;
-
-        // This property is used by Newtonsoft.Json for serialization/deserialization
-        [Newtonsoft.Json.JsonProperty("payload")]
-        public object? Payload 
-        { 
-            get => PayloadType == PayloadType.Json ? (object?)_payloadObject : _payloadString;
-            set 
-            {
-                if (value is JObject || value is JArray)
-                {
-                    _payloadObject = value;
-                    PayloadType = PayloadType.Json;
-                }
-                else if (value is string str)
-                {
-                    _payloadString = str;
-                    
-                    // Try to parse as JSON if payloadType is set to JSON
-                    if (PayloadType == PayloadType.Json)
-                    {
-                        try
-                        {
-                            _payloadObject = JToken.Parse(str);
-                        }
-                        catch
-                        {
-                            // If not valid JSON, keep as string
-                            _payloadString = str;
-                        }
-                    }
-                }
-                else if (value != null)
-                {
-                    _payloadObject = value;
-                    PayloadType = PayloadType.Json;
-                }
-            }
-        }
-
-        // Methods to get the payload in different formats
-        public string? GetPayloadAsString()
-        {
-            if (_payloadString != null)
-                return _payloadString;
-            
-            if (_payloadObject != null)
-                return Newtonsoft.Json.JsonConvert.SerializeObject(_payloadObject);
-            
-            return null;
-        }
-
-        public T? GetPayloadAsObject<T>()
-        {
-            if (_payloadObject != null)
-            {
-                if (_payloadObject is JToken jToken)
-                {
-                    return jToken.ToObject<T>();
-                }
-                
-                try
-                {
-                    return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(
-                        Newtonsoft.Json.JsonConvert.SerializeObject(_payloadObject));
-                }
-                catch
-                {
-                    return default;
-                }
-            }
-            
-            if (_payloadString != null)
-            {
-                try
-                {
-                    return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(_payloadString);
-                }
-                catch
-                {
-                    return default;
-                }
-            }
-            
-            return default;
-        }
-
+        [JsonPropertyName("body")]
+        public Body? Body { get; set; } = null;
+        
         [JsonPropertyName("payloadType")]
-        public PayloadType PayloadType { get; set; } = PayloadType.Json;
-
-        [JsonPropertyName("files")]
-        public List<FileUpload>? Files { get; set; }
+        public PayloadContentType? PayloadType { get; set; } = null;
 
         [JsonPropertyName("tests")]
         public List<AssertionEntity>? Tests { get; set; }
-        
-        // Convert legacy format tests if needed
-        /*public void ProcessTestFormats()
-        {
-            // If we have no tests but have legacy test groups, convert them
-            if ((Tests == null || Tests.Count == 0) && LegacyTestGroups != null && LegacyTestGroups.Count > 0)
-            {
-                Tests = new List<AssertionEntity>();
-                foreach (var group in LegacyTestGroups)
-                {
-                    if (group.Assertions != null)
-                    {
-                        foreach (var assertion in group.Assertions)
-                        {
-                            var testAssertion = new AssertionEntity
-                            {
-                                Name = group.Name,
-                                Assertion = group.Assertions,
-                                // Combine group name with assertion type for better debugging
-                                Description = $"{group.Name}: {assertion.Type ?? "check"} {assertion.Property ?? string.Empty}",
-                                AssertType = assertion.Type ?? string.Empty,
-                                Property = assertion.Property, // Preserve the original property
-                                ExpectedValue = assertion.Value
-                            };
-                            Tests.Add(testAssertion);
-                        }
-                    }
-                }
-            }
-            
-            // Convert legacy format assertions to new format
-            if (Tests != null)
-            {
-                foreach (var test in Tests)
-                {
-                    test.ConvertLegacyFormat();
-                }
-            }
-        }*/
 
         [JsonPropertyName("timeout")]
         public int Timeout { get; set; } = 30000; // 30 seconds default timeout
@@ -187,9 +55,98 @@ namespace Apify.Models
         
         [JsonPropertyName("tags")]
         public List<string>? Tags { get; set; }
+        
+        public string? GetPayloadAsString()
+        {
+            var payload = GetBodyPayload();
+
+            if (payload == null)
+                return null;
+            
+     
+            return Newtonsoft.Json.JsonConvert.SerializeObject(payload);
+        }
+        public PayloadContentType GetPayloadType()
+        {
+            if (PayloadType == null)
+            {
+                return  PayloadContentType.None ;
+            }
+            
+            if (Body == null)
+            {
+                return PayloadContentType.None;
+            }
+            
+            if (Body.Binary != null)
+            {
+                return PayloadContentType.Binary;
+            }
+            
+            if (Body.FormData != null)
+            {
+                return PayloadContentType.FormData;
+            }
+            
+            if (Body.Json != null)
+            {
+                return PayloadContentType.Json;
+            }
+            
+            if (Body.Multipart != null)
+            {
+                return PayloadContentType.Multipart;
+            }
+            
+            if (Body.Text != null)
+            {
+                return PayloadContentType.Text;
+            }
+            
+
+            return PayloadContentType.None;
+        }
+        
+        
+        public object? GetBodyPayload()
+        {
+            if (PayloadType == PayloadContentType.Json)
+            {
+                return Body?.Json;
+            }
+            
+            if (PayloadType == PayloadContentType.Text)
+            {
+                return Body?.Text;
+            }
+            
+            if (PayloadType == PayloadContentType.FormData)
+            {
+                return Body?.FormData;
+            }
+            
+            if (PayloadType == PayloadContentType.Multipart)
+            {
+                return Body?.Multipart;
+            } 
+            
+            if (PayloadType == PayloadContentType.Binary)
+            {
+                return Body?.Binary;
+            }
+            
+            if (PayloadType == PayloadContentType.None)
+            {
+                // If no payload type is set, return null
+                return "";
+            }
+       
+            
+            return null;
+        }
     }
 
-    public enum PayloadType
+    public enum PayloadContentType
     {
         [JsonPropertyName("none")]
         None,
@@ -201,7 +158,13 @@ namespace Apify.Models
         Json,
         
         [JsonPropertyName("formData")]
-        FormData
+        FormData,
+        
+        [JsonPropertyName("multipart")]
+        Multipart,
+        
+        [JsonPropertyName("binary")]
+        Binary
     }
 
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
@@ -230,5 +193,33 @@ namespace Apify.Models
 
         [JsonPropertyName("contentType")]
         public string ContentType { get; set; } = "application/octet-stream";
+    }
+    
+    public class MultipartData
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+        
+        [JsonPropertyName("content")]
+        public string Content { get; set; }
+    }
+
+    public class Body
+    {
+        [JsonPropertyName("json")]
+        public JToken? Json { get; set; } = null;
+        
+        [JsonPropertyName("text")]
+        public string? Text { get; set; } = null;
+        
+        [JsonPropertyName("formData")]
+        public Dictionary<string, string>? FormData { get; set; } = null;
+        
+        [JsonPropertyName("multipart")]
+        public List<MultipartData>? Multipart { get; set; } = null;
+        
+        [JsonPropertyName("binary")]
+        public string? Binary { get; set; } = null;
+        
     }
 }

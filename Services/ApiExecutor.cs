@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Apify.Services
 {
@@ -46,8 +47,8 @@ namespace Apify.Services
                     foreach (var header in apiDefinition.Headers)
                     {
                         if (header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) && 
-                            (apiDefinition.PayloadType != PayloadType.None || 
-                             apiDefinition.Files?.Count > 0))
+                            (apiDefinition.PayloadType != PayloadContentType.None || 
+                             apiDefinition.Body?.Multipart != null))
                         {
                             // Content-Type will be set with the content
                             continue;
@@ -64,12 +65,12 @@ namespace Apify.Services
                 if (isMethodWithBody)
                 {
                     // Check for file uploads first (takes precedence if files are present)
-                    if (apiDefinition.Files?.Count > 0)
+                    if (apiDefinition.PayloadType == PayloadContentType.Multipart && apiDefinition.Body?.Multipart != null)
                     {
-                        await AddMultipartFormDataContentAsync(request, apiDefinition);
+                        await AddMultipartContentAsync(request, apiDefinition);
                     }
                     // Then check for payload
-                    else if (apiDefinition.Payload != null)
+                    else if (apiDefinition.Body != null)
                     {
                         AddPayloadContent(request, apiDefinition);
                     }
@@ -90,6 +91,24 @@ namespace Apify.Services
                 response.Body = await httpResponse.Content.ReadAsStringAsync();
                 response.ResponseTimeMs = stopwatch.ElapsedMilliseconds;
                 response.IsSuccessful = true;
+                
+                if (httpResponse.Content.Headers.ContentType?.MediaType == "application/json")
+                {
+                    try
+                    {
+                        // Try to parse the response body as JSON
+                        response.Json = JToken.Parse(response.Body);
+                    }
+                    catch (JsonReaderException)
+                    {
+                        // If parsing fails, keep Json as null
+                        response.Json = null;
+                    }
+                }
+                else
+                {
+                    response.Json = null; // Not a JSON response
+                }
             }
             catch (Exception ex)
             {
@@ -121,56 +140,43 @@ namespace Apify.Services
                 // Set appropriate content type based on payload type
                 contentType = apiDefinition.PayloadType switch
                 {
-                    PayloadType.Json => "application/json",
-                    PayloadType.Text => "text/plain",
-                    PayloadType.FormData => "application/x-www-form-urlencoded",
+                    PayloadContentType.Json => "application/json",
+                    PayloadContentType.Text => "text/plain",
+                    PayloadContentType.FormData => "application/x-www-form-urlencoded",
                     _ => "application/json" // Default to JSON
                 };
             }
-
-            // Get the payload as a string or object depending on the type
-            string? payloadString = apiDefinition.GetPayloadAsString();
             
             // Process payload based on type
             StringContent content;
             switch (apiDefinition.PayloadType)
             {
-                case PayloadType.Json:
+                case PayloadContentType.Json:
                     // Payload is already an object, just serialize it with indentation
-                    string formattedJson = JsonConvert.SerializeObject(apiDefinition.Payload, Formatting.Indented);
+                    string formattedJson = JsonConvert.SerializeObject(apiDefinition.Body?.Json ?? new object(), Formatting.Indented);
                     content = new StringContent(formattedJson, Encoding.UTF8);
                     break;
 
-                case PayloadType.FormData:
+                case PayloadContentType.FormData:
                     // For form data, we need to format as key=value&key2=value2...
                     try
                     {
-                        // Use the GetPayloadAsObject method to get the form fields
-                        var formFields = apiDefinition.GetPayloadAsObject<Dictionary<string, string>>();
-                        if (formFields != null)
-                        {
-                            var formData = new FormUrlEncodedContent(formFields);
-                            request.Content = formData;
-                            return; // Skip the content-type setting below as FormUrlEncodedContent sets it
-                        }
-                        else
-                        {
-                            // Fall back to string if conversion fails
-                            content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
-                        }
+                        var formData = new FormUrlEncodedContent(apiDefinition.Body?.FormData ?? new Dictionary<string, string>());
+                        request.Content = formData;
+                        return; // Skip the content-type setting below as FormUrlEncodedContent sets it
                     }
                     catch
                     {
                         // Error is already handled by falling back to string content
-                        content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
+                        content = new StringContent(string.Empty, Encoding.UTF8);
                     }
                     break;
 
-                case PayloadType.Text:
-                    content = new StringContent(payloadString ?? string.Empty, Encoding.UTF8);
+                case PayloadContentType.Text:
+                    content = new StringContent(apiDefinition.Body?.Text ?? string.Empty, Encoding.UTF8);
                     break;
                     
-                case PayloadType.None:
+                case PayloadContentType.None:
                 default:
                     // For "none" payload type, create an empty content
                     content = new StringContent(string.Empty, Encoding.UTF8);
@@ -180,22 +186,35 @@ namespace Apify.Services
             content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
             request.Content = content;
         }
-
-        private async Task AddMultipartFormDataContentAsync(HttpRequestMessage request, ApiDefinition apiDefinition)
+        
+        private async Task AddMultipartContentAsync(HttpRequestMessage request, ApiDefinition apiDefinition)
         {
-            var multipartContent = new MultipartFormDataContent();
+            var formData = new MultipartFormDataContent();
 
             // Add text fields from payload if specified and if it's a form data payload
-            if (apiDefinition.Payload != null && apiDefinition.PayloadType == PayloadType.FormData)
+            if (apiDefinition.Body != null && apiDefinition.PayloadType == PayloadContentType.Multipart)
             {
                 try
                 {
-                    var formFields = apiDefinition.GetPayloadAsObject<Dictionary<string, string>>();
-                    if (formFields != null)
+                    foreach (var field in apiDefinition.Body?.Multipart ?? new List<MultipartData>())
                     {
-                        foreach (var field in formFields)
+                        if (string.IsNullOrEmpty(field.Name))
                         {
-                            multipartContent.Add(new StringContent(field.Value), field.Key);
+                            continue;
+                        }
+                        
+                        if (MiscHelper.IsLikelyPath(field.Content) && File.Exists(field.Content))
+                        {
+                            // If the content is a file path, read the file and add it as a byte array
+                            var fileBytes = await File.ReadAllBytesAsync(field.Content);
+                            var fileContent = new ByteArrayContent(fileBytes);
+                            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                            formData.Add(fileContent, field.Name, Path.GetFileName(field.Content));
+                        }
+                        else
+                        {
+                            // Otherwise, treat it as a regular string content
+                            formData.Add(new StringContent(field.Content), field.Name);
                         }
                     }
                 }
@@ -205,39 +224,7 @@ namespace Apify.Services
                 }
             }
 
-            // Add files
-            foreach (var file in apiDefinition.Files!)
-            {
-                try
-                {
-                    if (!File.Exists(file.FilePath))
-                    {
-                        ConsoleHelper.WriteWarning($"File not found: {file.FilePath}");
-                        continue;
-                    }
-
-                    // Read file as byte array
-                    var fileBytes = await File.ReadAllBytesAsync(file.FilePath);
-                    var fileContent = new ByteArrayContent(fileBytes);
-                    
-                    // Set the content type for the file
-                    fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-                    
-                    // Set the filename in the Content-Disposition header
-                    string fileName = Path.GetFileName(file.FilePath);
-                    multipartContent.Add(fileContent, file.FieldName, fileName);
-                }
-                catch
-                {
-                    // Only show file errors when they're critical to the request
-                    if (!File.Exists(file.FilePath))
-                    {
-                        ConsoleHelper.WriteWarning($"File not found: {file.FilePath}");
-                    }
-                }
-            }
-
-            request.Content = multipartContent;
+            request.Content = formData;
         }
         
         public ApiDefinition ApplyEnvToApiDefinition(ApiDefinition apiDefinition, string environment, params Dictionary<string, Dictionary<string, string>>[]? variables)
@@ -379,13 +366,13 @@ namespace Apify.Services
                 }
             }
 
-            if (apiDefinition.Payload != null)
+            if (apiDefinition.Body != null)
             {
-                ConsoleHelper.WriteKeyValue("Payload Type", apiDefinition.PayloadType.ToString());
+                ConsoleHelper.WriteKeyValue("Payload Type", apiDefinition.PayloadType.ToString() ?? "None");
                 ConsoleHelper.WriteInfo("Payload:");
                 Console.Write("  ");
                 
-                if (apiDefinition.PayloadType == PayloadType.Json)
+                if (apiDefinition.PayloadType == PayloadContentType.Json)
                 {
                     try
                     {
@@ -403,7 +390,7 @@ namespace Apify.Services
                     catch
                     {
                         // If it's not valid JSON or formatting fails, display as-is
-                        Console.WriteLine(apiDefinition.Payload);
+                        Console.WriteLine(apiDefinition.GetBodyPayload());
                     }
                 }
                 else
@@ -411,23 +398,6 @@ namespace Apify.Services
                     // For non-JSON payloads, display as-is
                     var payloadString = apiDefinition.GetPayloadAsString();
                     Console.WriteLine(payloadString ?? "[null payload]");
-                }
-            }
-            
-            // Display file upload information if present
-            if (apiDefinition.Files?.Count > 0)
-            {
-                ConsoleHelper.WriteInfo($"Files to Upload ({apiDefinition.Files.Count}):");
-                foreach (var file in apiDefinition.Files)
-                {
-                    Console.Write("  ");
-                    ConsoleHelper.WriteLineColored($"- {file.Name}", ConsoleColor.Cyan);
-                    Console.Write("    ");
-                    ConsoleHelper.WriteKeyValue("Field Name", file.FieldName);
-                    Console.Write("    ");
-                    ConsoleHelper.WriteKeyValue("Path", file.FilePath);
-                    Console.Write("    ");
-                    ConsoleHelper.WriteKeyValue("Content Type", file.ContentType);
                 }
             }
 
@@ -445,6 +415,7 @@ namespace Apify.Services
         public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
         public Dictionary<string, string> ContentHeaders { get; set; } = new Dictionary<string, string>();
         public string Body { get; set; } = string.Empty;
+        public JToken? Json { get; set; } = null;
         public long ResponseTimeMs { get; set; }
         public string? ErrorMessage { get; set; }
 

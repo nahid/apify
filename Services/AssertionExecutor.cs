@@ -1,17 +1,20 @@
 using Apify.Models;
 using DynamicExpresso;
+using Newtonsoft.Json.Linq;
 
 namespace Apify.Services;
 
 public class AssertionExecutor
 {
     public ApiResponse Response;
+    public ApiDefinition ApiDefinition;
 
     
     
-    public AssertionExecutor(ApiResponse response)
+    public AssertionExecutor(ApiResponse response, ApiDefinition apiDefinition)
     {
         Response = response;
+        ApiDefinition = apiDefinition;
 
     }
     
@@ -23,6 +26,7 @@ public class AssertionExecutor
         
         interpreter.SetVariable("Assert", new Assert(Response, assertionTracker));
         interpreter.SetVariable("Response", Response);
+        interpreter.SetVariable("Request", ApiDefinition);
         
         foreach (var assertion in assertions)
         {
@@ -244,6 +248,21 @@ public class Assert
         }
 
         return _assertionTracker.AddResult(false, $"Actual: {actual}, Lower Bound: {lowerBound}, Upper Bound: {upperBound}. " + message);
+    }
+    
+    public bool Contains(object actual, object expected, string message = "")
+    {
+        message = string.IsNullOrEmpty(message) ? "String contains expected substring." : message;
+
+        var heystack = actual.ToString();
+        string needle = expected.ToString();
+        
+        if (heystack.Contains(needle))
+        {
+            return _assertionTracker.AddResult(true, message);
+        }
+
+        return _assertionTracker.AddResult(false, $"Actual: '{actual}', Expected Substring: '{expected}'. " + message);
     }
     
     

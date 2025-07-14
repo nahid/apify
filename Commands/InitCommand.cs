@@ -3,6 +3,7 @@ using System.Text.Json;
 using Apify.Models;
 using Apify.Utils;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Apify.Commands
 {
@@ -202,7 +203,7 @@ namespace Apify.Commands
                         { "Accept", "application/json" },
                         { "x-api-key", "{{env.apiToken}}" }
                     },
-                    PayloadType = PayloadType.None,
+                    PayloadType = PayloadContentType.None,
                     Tests = new List<AssertionEntity>
                     {
                         new AssertionEntity { 
@@ -229,12 +230,15 @@ namespace Apify.Commands
                         { "Content-Type", "application/json" },
                         { "x-api-key", "{{env.apiToken}}" }
                     },
-                    Payload = new Dictionary<string, object>
+                    Body = new Body
                     {
-                        { "name", "{{expr|> Faker.Name.FirstName()}}" },
-                        { "job", "{{expr|> Faker.Name.JobTitle()}}" }
+                        Json = new JObject
+                        {
+                            { "name", "{{expr|> Faker.Name.FirstName()}}" },
+                            { "job", "{{expr|> Faker.Name.JobTitle()}}" }
+                        }
                     },
-                    PayloadType = PayloadType.Json,
+                    PayloadType = PayloadContentType.Json,
                     Tests = new List<AssertionEntity>
                     {
                         new AssertionEntity { 

@@ -1,6 +1,8 @@
 using System.CommandLine;
 using Apify.Models;
 using Apify.Utils;
+using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 namespace Apify.Commands
 {
@@ -128,7 +130,7 @@ namespace Apify.Commands
 
             // Determine if a payload is needed
             bool needsPayload = method == "POST" || method == "PUT" || method == "PATCH";
-            PayloadType payloadType = PayloadType.None;
+            PayloadContentType payloadContentType = PayloadContentType.None;
             object? payload = null;
             
             if (needsPayload && prompt && ConsoleHelper.PromptYesNo("Add request payload?", false))
@@ -139,7 +141,7 @@ namespace Apify.Commands
                 switch (payloadOptionIndex)
                 {
                     case 0: // JSON
-                        payloadType = PayloadType.Json;
+                        payloadContentType = PayloadContentType.Json;
                         string jsonPayload = ConsoleHelper.PromptInput("Enter JSON payload:");
                         try
                         {
@@ -155,12 +157,12 @@ namespace Apify.Commands
                         break;
                     
                     case 1: // Text
-                        payloadType = PayloadType.Text;
+                        payloadContentType = PayloadContentType.Text;
                         payload = ConsoleHelper.PromptInput("Enter text payload");
                         break;
                     
                     case 2: // FormData
-                        payloadType = PayloadType.FormData;
+                        payloadContentType = PayloadContentType.FormData;
                         var formData = new Dictionary<string, string>();
                         
                         ConsoleHelper.WriteInfo("Enter form fields (empty name to finish)");
@@ -177,30 +179,6 @@ namespace Apify.Commands
                         break;
                 }
             }
-
-            // Ask if user wants to add file uploads
-            List<FileUpload> files = new List<FileUpload>();
-            if (needsPayload && prompt && ConsoleHelper.PromptYesNo("Add file uploads?", false))
-            {
-                ConsoleHelper.WriteInfo("Enter file uploads (empty field name to finish):");
-                
-                while (true)
-                {
-                    string fieldName = ConsoleHelper.PromptInput("Field name for the file", "");
-                    if (string.IsNullOrWhiteSpace(fieldName)) break;
-                    
-                    string fileLocation = ConsoleHelper.PromptInput("Path to file");
-                    string contentType = ConsoleHelper.PromptInput("Content type (e.g., image/jpeg)");
-                    
-                    files.Add(new FileUpload
-                    {
-                        Name = Path.GetFileName(fileLocation),
-                        FieldName = fieldName,
-                        FilePath = fileLocation,
-                        ContentType = contentType
-                    });
-                }
-            }
             
             // Create the API definition
             var apiDefinition = new ApiDefinition
@@ -209,11 +187,11 @@ namespace Apify.Commands
                 Uri = uri,
                 Method = method,
                 Headers = headers.Count > 0 ? headers : null,
-                PayloadType = payloadType,
-                Payload = payload,
-                Files = files.Count > 0 ? files : null,
+                PayloadType = payloadContentType,
+                Body = ProcessBody(payloadContentType, payload),
                 Tests = new List<AssertionEntity>(), // Start with empty tests
             };
+            
 
             try
             {
@@ -229,5 +207,24 @@ namespace Apify.Commands
                 ConsoleHelper.WriteError($"Failed to save API request: {ex.Message}");
             }
         }
+        
+        private Body? ProcessBody(PayloadContentType payloadContentType, object? payload)
+        {
+            var body = payloadContentType switch
+            {
+                PayloadContentType.None => null,
+                PayloadContentType.Json => new Body { Json = payload as JToken },
+                PayloadContentType.Text => new Body { Text = payload?.ToString() },
+                PayloadContentType.Binary => new Body { Binary = payload?.ToString() },
+                PayloadContentType.FormData => new Body { FormData = payload as Dictionary<string, string> },
+                PayloadContentType.Multipart => new Body { Multipart = payload as List<MultipartData> },
+                
+                _ => throw new InvalidOperationException("Unsupported payload type")
+            };
+            
+            return body;
+        }
     }
+    
+    
 }

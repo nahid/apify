@@ -128,7 +128,7 @@ namespace Apify.Commands
                     apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, runtimeVars);
                     var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
                     
-                    var assertionExecutor = new AssertionExecutor(response);
+                    var assertionExecutor = new AssertionExecutor(response, apiDefinition);
                     
                     var testResults = await assertionExecutor.RunAsync(apiDefinition.Tests ?? new List<AssertionEntity>());
                     totalTestResults.AddTestResults(apiDefinition.Uri, testResults);

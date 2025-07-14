@@ -1,6 +1,7 @@
 using Apify.Models;
 using Apify.Services;
 using Apify.Utils;
+using Newtonsoft.Json.Linq;
 using System.CommandLine;
 
 namespace Apify.Commands
@@ -61,6 +62,8 @@ namespace Apify.Commands
                 ConsoleHelper.WriteSection($"Processing {path}...");
                 
                 var apiDefinition = JsonHelper.DeserializeFromFile<ApiDefinition>(path);
+                
+
                 if (apiDefinition == null)
                 {
                     ConsoleHelper.WriteError($"Failed to parse {path}");
@@ -68,10 +71,10 @@ namespace Apify.Commands
                 }
 
                 var variables = MiscHelper.ParseArgsVariables(varString ?? "");
-                var pathVars = new Dictionary<string, Dictionary<string, string>>();
-                pathVars.Add("vars", variables);
+                var argVars = new Dictionary<string, Dictionary<string, string>>();
+                argVars.Add("vars", variables);
                 
-                apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, pathVars);
+                apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, argVars);
                 if (verbose)
                 {
                     apiExecutor.DisplayApiDefinition(apiDefinition);
@@ -83,7 +86,7 @@ namespace Apify.Commands
                     apiExecutor.DisplayApiResponse(response);
                 }
 
-                var assertionExecutor = new AssertionExecutor(response);
+                var assertionExecutor = new AssertionExecutor(response, apiDefinition);
                 var testResults = await assertionExecutor.RunAsync(apiDefinition.Tests ?? new List<AssertionEntity>());
                 
                 apiExecutor.DisplayTestStats(testResults, verbose);
