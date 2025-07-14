@@ -154,7 +154,7 @@ namespace Apify.Services
                 case PayloadContentType.Json:
                     // Payload is already an object, just serialize it with indentation
                     string formattedJson = JsonConvert.SerializeObject(apiDefinition.Body?.Json ?? new object(), Formatting.Indented);
-                    content = new StringContent(formattedJson, Encoding.UTF8);
+                    request.Content = new StringContent(formattedJson, Encoding.UTF8);
                     break;
 
                 case PayloadContentType.FormData:
@@ -168,23 +168,35 @@ namespace Apify.Services
                     catch
                     {
                         // Error is already handled by falling back to string content
-                        content = new StringContent(string.Empty, Encoding.UTF8);
+                        request.Content = new StringContent(string.Empty, Encoding.UTF8);
                     }
                     break;
 
                 case PayloadContentType.Text:
-                    content = new StringContent(apiDefinition.Body?.Text ?? string.Empty, Encoding.UTF8);
+                    request.Content = new StringContent(apiDefinition.Body?.Text ?? string.Empty, Encoding.UTF8);
+                    break;
+                
+                case PayloadContentType.Binary:
+                    if (!MiscHelper.IsLikelyPath(apiDefinition.Body?.Binary ?? ""))
+                    {
+                        request.Content = new StringContent(apiDefinition.Body?.Binary ?? string.Empty, Encoding.UTF8);
+                        contentType = "text/plain"; // Fallback to text/plain for binary content
+                        break;
+                    }
+                    
+                    byte[] binaryData = File.ReadAllBytes(apiDefinition.Body?.Binary ?? string.Empty);
+                    contentType = "application/octet-stream"; // Default binary content type
+                    request.Content = new ByteArrayContent(binaryData);
                     break;
                     
                 case PayloadContentType.None:
                 default:
                     // For "none" payload type, create an empty content
-                    content = new StringContent(string.Empty, Encoding.UTF8);
+                    request.Content = new StringContent(string.Empty, Encoding.UTF8);
                     break;
             }
-
-            content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-            request.Content = content;
+            
+            request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         }
         
         private async Task AddMultipartContentAsync(HttpRequestMessage request, ApiDefinition apiDefinition)
