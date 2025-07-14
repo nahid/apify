@@ -7,7 +7,7 @@ namespace Apify
 {
     public class Program
     {
-        public static async Task<int> Main(string[] args)
+        public async static Task<int> Main(string[] args)
         {
             var rootCommand = new System.CommandLine.RootCommand
             {

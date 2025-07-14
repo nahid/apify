@@ -32,24 +32,16 @@ A powerful C# CLI application for comprehensive API testing and mocking, enablin
 
 ### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/nahid/apify.git # Replace with actual URL
-cd apify
+The easiest way to get Apify is to download the pre-built executable from the [GitHub Releases](https://github.com/nahid/apify/releases) page.
 
-# Build the project
-dotnet build
+1.  Go to the [latest release](https://github.com/nahid/apify/releases/latest).
+2.  Download the appropriate `.zip` file for your operating system and architecture (e.g., `apify-win-x64.zip` for Windows 64-bit, `apify-linux-x64.zip` for Linux 64-bit, `apify-osx-arm64.zip` for macOS ARM64).
+3.  Extract the contents of the `.zip` file to a directory of your choice (e.g., `C:\Program Files\Apify` on Windows, `/opt/apify` on Linux/macOS).
+4.  Add the directory where you extracted Apify to your system's PATH environment variable. This allows you to run `apify` from any terminal.
 
-# Run the application (from the project directory)
-dotnet run -- [command] [options]
-# Example:
-dotnet run -- --help
-dotnet run -- init --name "My API Project" --base-url "https://api.example.com"
-```
+Alternatively, you can build Apify from source:
 
-For global installation or easier access, build as a single file and place it in your PATH:
-
-### Single File Build
+### Build from Source
 
 For simplified deployment, you can build a single executable file:
 
@@ -312,13 +304,13 @@ Structure (`AdvancedMockApiDefinition`):
 
 ## Commands
 
-Apify commands are run as `apify <command> [subcommand] [options]` if installed globally, or `dotnet run -- <command> [subcommand] [options]` if run from the project directory.
+Apify commands are run as `apify <command> [subcommand] [options]` if installed globally, or `apify [command] [options]` if run from the project directory.
 
 ### `apify init`
 Initializes a new API testing project in the current directory.
 
 ```bash
-apify init --name "My API" --base-url "https://api.example.com" [--environment "CustomDev"] [--force]
+apify init --name "My API Project" --base-url "https://api.example.com"
 ```
 - `--name`: (Required) The name of the API testing project.
 - `--base-url`: (Required) The base URL for API endpoints.
