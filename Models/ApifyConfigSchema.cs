@@ -30,6 +30,8 @@ namespace Apify.Models
         [JsonProperty("Description")]
         public string? Description { get; set; }
 
+        public ApiCallDisplayOptions? Options { get; set; } = new ApiCallDisplayOptions();
+
         [JsonProperty("Environments")]
         public List<EnvironmentSchema> Environments { get; set; }
         
@@ -54,6 +56,24 @@ namespace Apify.Models
         
         [JsonProperty("Token")]
         public string Token { get; set; }
+    }
+
+    public class ApiCallDisplayOptions
+    {
+        [JsonProperty("Verbose")]
+        public bool Verbose { get; set; } = false;
+        
+        [JsonProperty("Tests")]
+        public bool Tests { get; set; } = false;
+        
+        [JsonProperty("ShowRequest")]
+        public bool ShowRequest { get; set; } = false;
+        
+        [JsonProperty("ShowResponse")]
+        public bool ShowResponse { get; set; } = false;
+        
+        [JsonProperty("ShowOnlyResponse")]
+        public bool ShowOnlyResponse { get; set; } = true;
     }
 
 
