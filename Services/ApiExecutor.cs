@@ -1,3 +1,4 @@
+using Apify.Commands;
 using Apify.Models;
 using Apify.Utils;
 using System.Diagnostics;
@@ -13,11 +14,14 @@ namespace Apify.Services
         private readonly HttpClient _httpClient;
       
         private ConfigService _configService;
+        private ApiExecutorOptions? __options;
 
-        public ApiExecutor()
+        public ApiExecutor(ApiExecutorOptions? options = null)
         {
             _httpClient = new HttpClient();
             _configService = new ConfigService();
+            __options = options;
+            
         }
 
 
@@ -91,6 +95,7 @@ namespace Apify.Services
                 response.Body = await httpResponse.Content.ReadAsStringAsync();
                 response.ResponseTimeMs = stopwatch.ElapsedMilliseconds;
                 response.IsSuccessful = true;
+                response.ContentType = httpResponse.Content.Headers.ContentType?.MediaType;
                 
                 if (httpResponse.Content.Headers.ContentType?.MediaType == "application/json")
                 {
@@ -121,7 +126,8 @@ namespace Apify.Services
                 // so we don't need to log anything here
                 
                 // Include the error message in the response body for test assertion context
-                response.Body = $"{{\"error\": \"{ex.Message.Replace("\"", "\\\"")}\", \"exception_type\": \"{ex.GetType().Name}\"}}";
+                response.Body = ex.ToString();
+                //response.Body = $"{{\"error\": \"{ex.Message.Replace("\"", "\\\"")}\", \"exception_type\": \"{ex.GetType().Name}\"}}";
             }
 
             return response;
@@ -280,18 +286,26 @@ namespace Apify.Services
             return apiDefinition;
         }
         
-        public void DisplayTestStats(TestResults testResults, bool verbose = false)
+        public void DisplayTestStats(TestResults testResults)
         {
-            if (!verbose) return;
-            
-            ConsoleHelper.WriteSection("===============================");
-            ConsoleHelper.WriteKeyValue("Test Summary", $"{testResults.Results.Count}/{testResults.PassedCount} tests passed");
-            ConsoleHelper.WriteLineColored("===============================\n", ConsoleColor.Cyan);
+            if (!__options.Verbose && !__options.Tests) return;
+
+            if (__options.Tests)
+            {
+                ConsoleHelper.WriteSection("===============================");
+                ConsoleHelper.WriteKeyValue("Test Summary", $"{testResults.Results.Count}/{testResults.PassedCount} tests passed");
+                ConsoleHelper.WriteLineColored("===============================\n", ConsoleColor.Cyan);
+            }
+
         }
-        public void DisplayTestResults(TestResults testResults, bool verbose = false)
+        public void DisplayTestResults(TestResults testResults)
         {
-            if (!verbose) return;
+            if (!__options.Verbose && !__options.Tests) return;
             
+            if (!__options.Tests)
+            {
+                return; // No need to display test results if tests are not enabled
+            }
             
             foreach (var testResult in testResults.Results)
             {
@@ -318,30 +332,60 @@ namespace Apify.Services
             }
         }
         
+        private string GetStatusByCode(int statusCode)
+        {
+            return statusCode switch
+            {
+                >= 200 and < 300 => "Success",
+                >= 300 and < 400 => "Redirection",
+                >= 400 and < 500 => "Client Error",
+                >= 500 and < 600 => "Server Error",
+                _ => "Unknown Status"
+            };
+        }
+        
         public void DisplayApiResponse(ApiResponse response)
         {
-            ConsoleHelper.WriteSection("API Response:");
-            ConsoleHelper.WriteStatusCode(response.StatusCode);
-            ConsoleHelper.WriteTiming(response.ResponseTimeMs);
+            var status = GetStatusByCode(response.StatusCode);
+            var color = response.StatusCode >= 200 && response.StatusCode < 300 ? ConsoleColor.Green : 
+                        response.StatusCode >= 300 && response.StatusCode < 400 ? ConsoleColor.Cyan :
+                        response.StatusCode >= 400 && response.StatusCode < 500 ? ConsoleColor.Yellow : 
+                        response.StatusCode >= 500 && response.StatusCode < 600 ? ConsoleColor.Red :
+                        ConsoleColor.DarkRed;
             
-            if (response.Headers.Count > 0)
+            ConsoleHelper.WriteColored("Response: ", ConsoleColor.White);
+            ConsoleHelper.WriteColored(status, color);
+            Console.WriteLine("");
+            ConsoleHelper.WriteFeatures("Status Code", response.StatusCode);
+            ConsoleHelper.WriteFeatures("Content Type", response.ContentType);
+            ConsoleHelper.WriteFeatures("Response Time", $"{response.ResponseTimeMs} ms");
+
+            if (__options.ShowResponse || __options.Verbose)
             {
-                ConsoleHelper.WriteSection("Response Headers:");
-                foreach (var header in response.Headers)
+                if (response.Headers.Count > 0)
                 {
-                    Console.Write("  ");
-                    ConsoleHelper.WriteKeyValue(header.Key, header.Value);
+                    ConsoleHelper.WriteSection("Response Headers:");
+                    foreach (var header in response.Headers)
+                    {
+                        Console.Write("  ");
+                        ConsoleHelper.WriteKeyValue(header.Key, header.Value);
+                    }
+                }
+            
+                if (response.ContentHeaders.Count > 0)
+                {
+                    ConsoleHelper.WriteSection("Content Headers:");
+                    foreach (var header in response.ContentHeaders)
+                    {
+                        Console.Write("  ");
+                        ConsoleHelper.WriteKeyValue(header.Key, header.Value);
+                    }
                 }
             }
             
-            if (response.ContentHeaders.Count > 0)
+            if (!__options.ShowOnlyResponse && !__options.Verbose)
             {
-                ConsoleHelper.WriteSection("Content Headers:");
-                foreach (var header in response.ContentHeaders)
-                {
-                    Console.Write("  ");
-                    ConsoleHelper.WriteKeyValue(header.Key, header.Value);
-                }
+                return;
             }
             
             ConsoleHelper.WriteSection("Response Body:");
@@ -359,6 +403,11 @@ namespace Apify.Services
         
         public void DisplayApiDefinition(ApiDefinition apiDefinition)
         {
+            if (!__options.ShowRequest && !__options.Verbose)
+            {
+                return;
+            }
+            
             ConsoleHelper.WriteSection("API Definition:");
             ConsoleHelper.WriteKeyValue("Name", apiDefinition.Name);
             
@@ -419,34 +468,13 @@ namespace Apify.Services
             }
         }
     }
-
-    public class ApiResponse
-    {
-        public bool IsSuccessful { get; set; }
-        public int StatusCode { get; set; }
-        public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
-        public Dictionary<string, string> ContentHeaders { get; set; } = new Dictionary<string, string>();
-        public string Body { get; set; } = string.Empty;
-        public JToken? Json { get; set; } = null;
-        public long ResponseTimeMs { get; set; }
-        public string? ErrorMessage { get; set; }
-
-        public string GetHeader(string name)
-        {
-            if (Headers.TryGetValue(name, out string? value))
-                return value;
-            
-            if (ContentHeaders.TryGetValue(name, out string? contentValue))
-                return contentValue;
-            
-            return string.Empty;
-        }
-
-        public bool HasHeader(string name)
-        {
-            return Headers.ContainsKey(name) || ContentHeaders.ContainsKey(name);
-        }
-        
-        
-    }
+    
+    public record ApiExecutorOptions(
+        bool Tests,
+        bool ShowRequest,
+        bool ShowResponse,
+        bool ShowOnlyResponse,
+        bool Verbose,
+        bool Debug
+    );
 }

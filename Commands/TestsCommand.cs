@@ -185,7 +185,15 @@ namespace Apify.Commands
             Console.WriteLine();
             ConsoleHelper.WriteRepeatChar('=', 20);
 
-            var apiExec = new ApiExecutor();
+            var apiExec = new ApiExecutor(new ApiExecutorOptions (
+                Tests: true,
+                ShowRequest: false,
+                ShowResponse: false,
+                ShowOnlyResponse: false,
+                Verbose: verbose,
+                Debug: debug
+            ));
+            
             foreach (var testResult in totalTestResults.GetAllResults())
             {
                 foreach (var tResult in testResult)
@@ -194,7 +202,7 @@ namespace Apify.Commands
                     ConsoleHelper.WriteColored(tResult.Key, ConsoleColor.Cyan);
                     Console.WriteLine();
                     ConsoleHelper.WriteRepeatChar('-', tResult.Key.Length);
-                    apiExec.DisplayTestResults(tResult.Value, true);
+                    apiExec.DisplayTestResults(tResult.Value);
                 }
 
                 

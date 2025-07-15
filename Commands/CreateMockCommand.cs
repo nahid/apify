@@ -89,7 +89,7 @@ namespace Apify.Commands
                     var prompt = context.ParseResult.GetValueForOption(promptOption);
                     var debug = context.ParseResult.GetValueForOption(RootOption.DebugOption);
 
-                    var options = new CommandOptions(
+                    var options = new CreateMockCommandOptions(
                         file,
                         name,
                         method,
@@ -103,12 +103,10 @@ namespace Apify.Commands
                     );
                     
                     await ExecuteAsync(options);
-                }
-        
-            );
+                });
         }
 
-        private async Task ExecuteAsync(CommandOptions options)
+        private async Task ExecuteAsync(CreateMockCommandOptions options)
         {
             ConsoleHelper.WriteHeader("Creating New Mock API Response");
 
@@ -168,7 +166,7 @@ namespace Apify.Commands
             }
         }
 
-        private Task<MockSchema> GatherMockApiInformation(CommandOptions options)
+        private Task<MockSchema> GatherMockApiInformation(CreateMockCommandOptions options)
         {
             string name = options.Name;
             string endpoint = options.Endpoint;
@@ -337,7 +335,7 @@ namespace Apify.Commands
     }
 }
 
-public record CommandOptions(
+public record CreateMockCommandOptions(
     string FilePath,
     string Name,
     string Method,

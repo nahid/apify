@@ -103,6 +103,7 @@ namespace Apify.Utils
         {
             Console.ForegroundColor = KeyColor;
             Console.Write($"{key}: ");
+            Console.ResetColor();
             Console.ForegroundColor = ValueColor;
             Console.WriteLine(value);
             Console.ResetColor();
@@ -144,6 +145,14 @@ namespace Apify.Utils
             Console.Write("Response Time: ");
             Console.ForegroundColor = TimingColor;
             Console.WriteLine($"{milliseconds}ms");
+            Console.ResetColor();
+        }
+        
+        public static void WriteFeatures(string key, object value)
+        {
+            Console.Write($"{key}: ");
+            Console.ForegroundColor = JsonKeyColor;
+            Console.WriteLine(value.ToString());
             Console.ResetColor();
         }
 
@@ -464,7 +473,7 @@ namespace Apify.Utils
                 string content = trimmedLine.TrimStart();
                 
                 // Handle braces and brackets
-                if (content == "{" || content == "}" || content == "[" || content == "]" || content == "," || content.EndsWith(","))
+                if (content == "{" || content == "}" || content == "[" || content == "]" || content == ",")
                 {
                     WriteLineColored(content, JsonPunctuationColor);
                     continue;
