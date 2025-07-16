@@ -39,7 +39,7 @@ namespace Apify.Commands
 
         private async Task ExecuteAsync(string? name, bool mock, bool force, bool debug)
         {
-            bool hasAnyOptions = name != null || mock || force;
+            bool hasRunWithoutPrompt = name != null || mock || force;
             
             ConsoleHelper.WriteHeader("Initializing API Testing Project");
 
@@ -60,13 +60,13 @@ namespace Apify.Commands
             {
                 string projectName;
 
-                if (hasAnyOptions && string.IsNullOrWhiteSpace(name))
+                if (hasRunWithoutPrompt && string.IsNullOrWhiteSpace(name))
                 {
                     ConsoleHelper.WriteWarning("Project name is required when using options. Please provide a name.");
                     return;
                 }
                 // Prompt for required information
-                if (hasAnyOptions)
+                if (hasRunWithoutPrompt)
                 {
                     projectName = name;
                 }
@@ -75,13 +75,13 @@ namespace Apify.Commands
                     projectName = ConsoleHelper.PromptInput<string>("Enter project name", required: true);
                 }
                 
-                string defaultEnvironment = hasAnyOptions ? "Development" : ConsoleHelper.PromptInput<string>("Enter default environment name", "Development", true);
+                string defaultEnvironment = hasRunWithoutPrompt ? "Development" : ConsoleHelper.PromptInput<string>("Enter default environment name", "Development", true);
 
                 // Advanced options
-                bool configureAdditionalVariables = !hasAnyOptions && ConsoleHelper.PromptYesNo("Configure additional environment variables?");
+                bool configureAdditionalVariables = !hasRunWithoutPrompt && ConsoleHelper.PromptYesNo("Configure additional environment variables?");
                 Dictionary<string, string> additionalVariables = new Dictionary<string, string>();
                 
-                if (!hasAnyOptions && configureAdditionalVariables)
+                if (!hasRunWithoutPrompt && configureAdditionalVariables)
                 {
                     ConsoleHelper.WriteInfo("Enter environment variables (empty name to finish):");
                     
@@ -141,7 +141,7 @@ namespace Apify.Commands
                 // Ask if user wants to add additional environments
                 List<EnvironmentSchema> environments = new List<EnvironmentSchema> { defaultEnv, productionEnvironment };
                 
-                if (!hasAnyOptions && ConsoleHelper.PromptYesNo("Add additional environments?", false))
+                if (!hasRunWithoutPrompt && ConsoleHelper.PromptYesNo("Add additional environments?", false))
                 {
                     while (true)
                     {
@@ -182,8 +182,9 @@ namespace Apify.Commands
                     },
                     DefaultEnvironment = defaultEnvironment,
                     Environments = environments,
+                    RequestOptions = new ApiCallDisplayOptions(),
                     MockServer = new MockServer() {
-                        Port = 8088,
+                        Port = 1988,
                         Verbose = true,
                         EnableCors = false,
                         DefaultHeaders = new Dictionary<string, string>() {
@@ -252,7 +253,7 @@ namespace Apify.Commands
                 await File.WriteAllTextAsync(samplePostFilePath, JsonHelper.SerializeObject(samplePostTest));
                 ConsoleHelper.WriteSuccess($"Created sample POST API test: {samplePostFilePath}");
 
-                if (!hasAnyOptions)
+                if (!hasRunWithoutPrompt)
                 {
                     mock = ConsoleHelper.PromptYesNo("Create sample mock API definitions?");
                 }
@@ -279,18 +280,18 @@ namespace Apify.Commands
         ""X-Apify-Version"": ""{{env.apiKey}}""
       },
       ""ResponseTemplate"": {
-        ""id"": 1,
-        ""name"": ""{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}"",
-        ""email"": ""{{expr|> Faker.Internet.Email()}}""
+            ""id"": 2,
+            ""name"": ""Nahid Bin Azhar"",
+            ""email"": ""nahid@jouleslabs.com""
       }
     },
     {
       ""Condition"": ""true"", 
       ""StatusCode"": 200,
       ""ResponseTemplate"": {
-        ""id"": 1,
-        ""name"": ""Nahid Bin Azhar"",
-        ""email"": ""nahid@jouleslabs.com""
+        ""id"": 123,
+        ""name"": ""{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}"",
+        ""email"": ""{{expr|> Faker.Internet.Email()}}""
       }
     }
   ]

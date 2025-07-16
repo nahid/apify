@@ -12,10 +12,14 @@ namespace Apify.Commands
 
         public CreateMockCommand(): base("create:mock", "Create a new mock API response file")
         {
-            var fileOption = new Option<string>(
-                "--file",
-                "The file path where the new mock API will be saved (e.g., users.get)"
-            ) { IsRequired = true };
+            
+            var fileArgument = new Argument<string>(
+                name: "file",
+                description: "The file path where the new mock API will be saved (e.g., users.get)")
+            {
+                Arity = ArgumentArity.ExactlyOne
+            };
+            AddArgument(fileArgument);
 
             var forceOption = new Option<bool>(
                 "--force",
@@ -65,8 +69,7 @@ namespace Apify.Commands
                 () => false,
                 "Prompt for required information interactively"
             );
-
-            AddOption(fileOption);
+            
             AddOption(forceOption);
             AddOption(nameOption);
             AddOption(methodOption);
@@ -78,7 +81,7 @@ namespace Apify.Commands
             
             
             this.SetHandler(async (InvocationContext context) => {
-                    var file = context.ParseResult.GetValueForOption(fileOption);
+                    var file = context.ParseResult.GetValueForArgument(fileArgument);
                 var force = context.ParseResult.GetValueForOption(forceOption);
                     var name = context.ParseResult.GetValueForOption(nameOption);
                     var method = context.ParseResult.GetValueForOption(methodOption);
@@ -123,7 +126,7 @@ namespace Apify.Commands
                 ConsoleHelper.WriteDebug($"Processed file path: {processedPath}");
             }
             
-            // Check if file already exists
+            // Check if a file already exists
             if (File.Exists(processedPath) && !options.Force)
             {
                 ConsoleHelper.WriteError($"File already exists: {processedPath}");

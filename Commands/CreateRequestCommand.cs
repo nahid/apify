@@ -11,11 +11,13 @@ namespace Apify.Commands
 
         public CreateRequestCommand(): base("create:request", "Create a new API request file")
         {
-            var fileOption = new Option<string>(
-                "--file",
-                "The file path where the new request will be saved (e.g., users.all)"
-            )
-            { IsRequired = true };
+            var fileArgument = new Argument<string>(
+                name: "file",
+                description: "The file path where the new request will be saved (e.g., users.all)")
+            {
+                Arity = ArgumentArity.ExactlyOne
+            };
+            AddArgument(fileArgument);
             
             
             var nameOption = new Option<string>(
@@ -47,8 +49,7 @@ namespace Apify.Commands
                 () => false,
                 "Prompt for required information interactively"
             );
-
-            AddOption(fileOption);
+            
             AddOption(forceOption);
             AddOption(promptOption);
             AddOption(nameOption);
@@ -57,7 +58,7 @@ namespace Apify.Commands
             
             this.SetHandler(
                 (file, name, method, uri, force, debug, prompt) => ExecuteAsync(file, name, method, uri, force, debug, prompt),
-                fileOption, nameOption, methodOption, urlOption, forceOption, RootOption.DebugOption, promptOption
+                fileArgument, nameOption, methodOption, urlOption, forceOption, RootOption.DebugOption, promptOption
             );
         }
 
@@ -135,18 +136,18 @@ namespace Apify.Commands
             
             if (needsPayload && prompt && ConsoleHelper.PromptYesNo("Add request payload?", false))
             {
-                string[] payloadOptions = { "JSON", "Text", "FormData" };
+                string[] payloadOptions = { "JSON", "Text", "FormData", "Binary" };
                 int payloadOptionIndex = ConsoleHelper.PromptChoiceWithIndex("Payload type:", payloadOptions);
                 
                 switch (payloadOptionIndex)
                 {
                     case 0: // JSON
                         payloadContentType = PayloadContentType.Json;
-                        string jsonPayload = ConsoleHelper.PromptInput("Enter JSON payload:");
+                        string jsonPayload = ConsoleHelper.PromptInput("Enter JSON payload");
                         try
                         {
                             // Attempt to parse as JSON using Newtonsoft
-                            payload = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonPayload);
+                            payload = Newtonsoft.Json.JsonConvert.DeserializeObject<JToken>(jsonPayload);
                         }
                         catch
                         {
@@ -176,6 +177,14 @@ namespace Apify.Commands
                         }
                         
                         payload = formData;
+                        break;
+                    
+                    case 3:
+                        payloadContentType = PayloadContentType.Binary;
+                        string binaryPayload = ConsoleHelper.PromptInput("Enter binary payload (file path or plain text)");
+                        if (string.IsNullOrWhiteSpace(binaryPayload)) break;
+                        
+                        payload = binaryPayload;
                         break;
                 }
             }

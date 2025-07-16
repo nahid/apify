@@ -45,4 +45,8 @@
     <None Remove="Apify.Tests\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="bin\Debug\net8.0\" />
+  </ItemGroup>
+
 </Project>

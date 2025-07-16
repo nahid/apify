@@ -288,9 +288,9 @@ namespace Apify.Services
         
         public void DisplayTestStats(TestResults testResults)
         {
-            if (!__options.Verbose && !__options.Tests) return;
+            if (__options.Verbose == false && __options.Tests == false) return;
 
-            if (__options.Tests)
+            if (__options.Tests == true)
             {
                 ConsoleHelper.WriteSection("===============================");
                 ConsoleHelper.WriteKeyValue("Test Summary", $"{testResults.Results.Count}/{testResults.PassedCount} tests passed");
@@ -300,9 +300,9 @@ namespace Apify.Services
         }
         public void DisplayTestResults(TestResults testResults)
         {
-            if (!__options.Verbose && !__options.Tests) return;
+            if (__options.Verbose == false && __options.Tests == false) return;
             
-            if (!__options.Tests)
+            if (__options.Tests == true)
             {
                 return; // No need to display test results if tests are not enabled
             }
@@ -356,11 +356,11 @@ namespace Apify.Services
             ConsoleHelper.WriteColored("Response: ", ConsoleColor.White);
             ConsoleHelper.WriteColored(status, color);
             Console.WriteLine("");
-            ConsoleHelper.WriteFeatures("Status Code", response.StatusCode);
+            ConsoleHelper.WriteFeatures("Status Code", $"{response.StatusCode} ({MiscHelper.GetHttpStatusCodeName(response.StatusCode)})");
             ConsoleHelper.WriteFeatures("Content Type", response.ContentType);
             ConsoleHelper.WriteFeatures("Response Time", $"{response.ResponseTimeMs} ms");
 
-            if (__options.ShowResponse || __options.Verbose)
+            if (__options.ShowResponse == true || __options.Verbose == true)
             {
                 if (response.Headers.Count > 0)
                 {
@@ -383,7 +383,7 @@ namespace Apify.Services
                 }
             }
             
-            if (!__options.ShowOnlyResponse && !__options.Verbose)
+            if (__options.ShowOnlyResponse == false && __options.Verbose == false)
             {
                 return;
             }
@@ -403,7 +403,7 @@ namespace Apify.Services
         
         public void DisplayApiDefinition(ApiDefinition apiDefinition)
         {
-            if (!__options.ShowRequest && !__options.Verbose)
+            if (__options.ShowRequest == false && __options.Verbose == false)
             {
                 return;
             }
@@ -470,11 +470,11 @@ namespace Apify.Services
     }
     
     public record ApiExecutorOptions(
-        bool Tests,
-        bool ShowRequest,
-        bool ShowResponse,
-        bool ShowOnlyResponse,
-        bool Verbose,
+        bool? Tests,
+        bool? ShowRequest,
+        bool? ShowResponse,
+        bool? ShowOnlyResponse,
+        bool? Verbose,
         bool Debug
     );
 }

@@ -28,6 +28,11 @@ public class ConfigService
         _debug = debug;
     }
 
+    public void SetDebug(bool debug)
+    {
+        _debug = debug;
+    }
+
     public void SetConfigFilePath(string path)
     {
         _configFilePath = path;

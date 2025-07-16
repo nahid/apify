@@ -1,6 +1,7 @@
 using Apify.Models;
 using Apify.Services;
 using Apify.Utils;
+using Bogus;
 using Newtonsoft.Json.Linq;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -35,39 +36,37 @@ namespace Apify.Commands
                 name: "--vars",
                 description: "Runtime variables for the configuration");
             
-            var tests = new Option<bool>(
+            var testsOption = new Option<bool>(
                 name: "--tests",
-                () => false,
                 description: "Run tests defined in the API definition");
-            tests.AddAlias("-t");
+            testsOption.AddAlias("-t");
             
-            var showRequest = new Option<bool>(
+            var showRequestOption = new Option<bool>(
                 name: "--show-request",
-                () => false,
                 description: "Display the request details");
-            showRequest.AddAlias("-sr");
+            showRequestOption.AddAlias("-sr");
             
-            var showResponse = new Option<bool>(
+            var showResponseOption = new Option<bool>(
                 name: "--show-response",
-                () => false,
                 description: "Display the response details");
-            showResponse.AddAlias("-srp");
+            showResponseOption.AddAlias("-srp");
             
-            var showOnlyResponse = new Option<bool>(
+            var showOnlyResponseOption = new Option<bool>(
                 name: "--show-only-response",
-                () => false,
                 description: "Display only the response details without request");
-            showOnlyResponse.AddAlias("-r");
+            showOnlyResponseOption.AddAlias("-r");
             
             
 
             AddOption(verboseOption);
             AddOption(environmentOption);
             AddOption(vars);
-            AddOption(tests);
-            AddOption(showRequest);
-            AddOption(showResponse);
-            AddOption(showOnlyResponse);
+            AddOption(testsOption);
+            AddOption(showRequestOption);
+            AddOption(showResponseOption);
+            AddOption(showOnlyResponseOption);
+            
+            
             
             this.SetHandler(async (InvocationContext context) =>
             {
@@ -77,16 +76,21 @@ namespace Apify.Commands
                 var environment = context.ParseResult.GetValueForOption(environmentOption);
                 var variables = context.ParseResult.GetValueForOption(vars);
                 var debug = context.ParseResult.GetValueForOption(RootOption.DebugOption);
-                
-                var options = new CallCommandOptions(
+               var tests = context.ParseResult.GetValueForOption(testsOption);
+               var showResponse = context.ParseResult.GetValueForOption(showResponseOption);
+               var showOnlyResponse = context.ParseResult.GetValueForOption(showOnlyResponseOption);
+               var showRequest = context.ParseResult.GetValueForOption(showRequestOption);
+
+               
+               var options = new CallCommandOptions(
                     FilePath: file,
                     Vars: variables,
                     Environment: environment,
-                    Tests: context.ParseResult.GetValueForOption(tests),
-                    ShowRequest: context.ParseResult.GetValueForOption(showRequest),
-                    ShowResponse: context.ParseResult.GetValueForOption(showResponse),
-                    ShowOnlyResponse: context.ParseResult.GetValueForOption(showOnlyResponse),
-                    Verbose: verbose,
+                    Tests: context.ParseResult.FindResultFor(testsOption) != null ? tests : null,
+                    ShowRequest: context.ParseResult.FindResultFor(showRequestOption) != null ? showRequest : null,
+                    ShowResponse: context.ParseResult.FindResultFor(showResponseOption) != null ? showResponse : null,
+                    ShowOnlyResponse: context.ParseResult.FindResultFor(showOnlyResponseOption) != null ? showOnlyResponse : null,
+                    Verbose: context.ParseResult.FindResultFor(verboseOption) != null ? verbose : null,
                     Debug: debug
                 );
                 
@@ -98,8 +102,7 @@ namespace Apify.Commands
         private async Task ExecuteRunCommand(CallCommandOptions options)
         {
            // ConsoleHelper.DisplayTitle("Apify - API Request Runner");
-
-            var configService = new ConfigService(options.Debug);
+           var configService = new ConfigService(options.Debug);;
             var envName = options.Environment ?? configService.LoadConfiguration()?.DefaultEnvironment ?? "Development";
             var apiExecutor = new ApiExecutor(new ApiExecutorOptions (
                 Tests: options.Tests,
@@ -129,14 +132,14 @@ namespace Apify.Commands
                 argVars.Add("vars", variables);
                 
                 apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, argVars);
-            
-                apiExecutor.DisplayApiDefinition(apiDefinition);
-        
+
+
 
                 var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
-              
+
                 apiExecutor.DisplayApiResponse(response);
-                
+                apiExecutor.DisplayApiDefinition(apiDefinition);
+
 
                 var assertionExecutor = new AssertionExecutor(response, apiDefinition);
                 var testResults = await assertionExecutor.RunAsync(apiDefinition.Tests ?? new List<AssertionEntity>());
@@ -157,11 +160,11 @@ namespace Apify.Commands
         string FilePath,
         string? Vars,
         string? Environment,
-        bool Tests,
-        bool ShowRequest,
-        bool ShowResponse,
-        bool ShowOnlyResponse,
-        bool Verbose,
+        bool? Tests,
+        bool? ShowRequest,
+        bool? ShowResponse,
+        bool? ShowOnlyResponse,
+        bool? Verbose,
         bool Debug
     );
 }

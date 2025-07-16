@@ -34,7 +34,7 @@ namespace Apify.Services
 
             if (port == 0)
             {
-                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 8088;
+                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 1988;
             }
             
             // Load all mock definitions
@@ -507,7 +507,7 @@ namespace Apify.Services
                     {
                         {"env", envVars},
                         {"headers", headers},
-                        {"path", pathParams},
+                        {"params", pathParams},
                         {"query", queryParams},
                         {"body", bodyContent}
                     });
