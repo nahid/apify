@@ -86,11 +86,11 @@ namespace Apify.Commands
                     FilePath: file,
                     Vars: variables,
                     Environment: environment,
-                    Tests: context.ParseResult.FindResultFor(testsOption) != null ? tests : null,
-                    ShowRequest: context.ParseResult.FindResultFor(showRequestOption) != null ? showRequest : null,
-                    ShowResponse: context.ParseResult.FindResultFor(showResponseOption) != null ? showResponse : null,
-                    ShowOnlyResponse: context.ParseResult.FindResultFor(showOnlyResponseOption) != null ? showOnlyResponse : null,
-                    Verbose: context.ParseResult.FindResultFor(verboseOption) != null ? verbose : null,
+                    Tests: context.ParseResult.FindResultFor(testsOption) != null && tests,
+                    ShowRequest: context.ParseResult.FindResultFor(showRequestOption) != null && showRequest,
+                    ShowResponse: context.ParseResult.FindResultFor(showResponseOption) != null && showResponse,
+                    ShowOnlyResponse: context.ParseResult.FindResultFor(showOnlyResponseOption) == null || showOnlyResponse,
+                    Verbose: context.ParseResult.FindResultFor(verboseOption) != null && verbose,
                     Debug: debug
                 );
                 

@@ -34,11 +34,6 @@ namespace Apify.Commands
         private async Task ExecuteAsync(bool force, bool debug)
         {
             ConsoleHelper.WriteHeader("About API Testing Project");
-
-
-            var result = DynamicExpression.Execute("Faker.Email()");
-            // var result = funcs["RandomString()"]() as string;
-            ConsoleHelper.WriteSection($"Result: {result}: {result?.Length}");
             
 
             var config = _env.LoadConfiguration();

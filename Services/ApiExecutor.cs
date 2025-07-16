@@ -302,7 +302,7 @@ namespace Apify.Services
         {
             if (__options.Verbose == false && __options.Tests == false) return;
             
-            if (__options.Tests == true)
+            if (__options.Tests == false)
             {
                 return; // No need to display test results if tests are not enabled
             }
@@ -383,7 +383,7 @@ namespace Apify.Services
                 }
             }
             
-            if (__options.ShowOnlyResponse == false && __options.Verbose == false)
+            if (__options.ShowOnlyResponse == false && __options.Verbose == false && __options.ShowResponse == false)
             {
                 return;
             }

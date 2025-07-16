@@ -119,7 +119,14 @@ namespace Apify.Commands
                     ConsoleHelper.WriteLineColored($"▶ TESTING: {apiDefinition.Name}", ConsoleColor.Cyan);
                     
                     
-                    var apiExecutor = new ApiExecutor();
+                    var apiExecutor = new ApiExecutor(new ApiExecutorOptions (
+                        Tests: true,
+                        ShowRequest: false,
+                        ShowResponse: false,
+                        ShowOnlyResponse: false,
+                        Verbose: verbose,
+                        Debug: debug
+                    ));
                     
                     var variables = MiscHelper.ParseArgsVariables(vars ?? "");
                     var runtimeVars = new Dictionary<string, Dictionary<string, string>>();

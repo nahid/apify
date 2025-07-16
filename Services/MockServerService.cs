@@ -542,7 +542,7 @@ namespace Apify.Services
                 var envVars = _configService.GetDefaultEnvironment();
                 responseContent = StubManager.Replace(responseContent, new System.Collections.Generic.Dictionary<string, object>
                 {
-                    {"env", envVars},
+                    {"env", envVars.Variables},
                     {"headers", headers},
                     {"path", pathParams},
                     {"query", queryParams},
