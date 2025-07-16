@@ -43,6 +43,8 @@ jobs:
             artifact_extension: ''
 
     runs-on: ${{ matrix.os }}
+    outputs:
+      version: ${{ steps.set_version.outputs.VERSION }}
     
     steps:
     - uses: actions/checkout@v4
@@ -56,28 +58,11 @@ jobs:
       run: dotnet restore
       
     - name: Build Single File
-      run: dotnet publish -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true
+      run: dotnet publish Apify.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true
     
-    - name: Get Version (from tag)
-      id: get_version_tag
-      if: startsWith(github.ref, 'refs/tags/')
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      shell: bash
-    
-    - name: Get Version (from input)
-      id: get_version_input
-      if: github.event_name == 'workflow_dispatch'
-      run: echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-      shell: bash
-    
-    - name: Set version
-      id: set_version
-      run: |
-        if [ "${{ steps.get_version_tag.outputs.VERSION }}" != "" ]; then
-          echo "VERSION=${{ steps.get_version_tag.outputs.VERSION }}" >> $GITHUB_OUTPUT
-        else
-          echo "VERSION=${{ steps.get_version_input.outputs.VERSION }}" >> $GITHUB_OUTPUT
-        fi
+    - name: Set version from build job
+      id: set_version_from_build
+      run: echo "VERSION=${{ needs.build-single-file.outputs.version }}" >> $GITHUB_OUTPUT
       shell: bash
       
     - name: Rename Artifact
@@ -98,26 +83,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Get Version (from tag)
-      id: get_version_tag
-      if: startsWith(github.ref, 'refs/tags/')
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      shell: bash
-    
-    - name: Get Version (from input)
-      id: get_version_input
-      if: github.event_name == 'workflow_dispatch'
-      run: echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-      shell: bash
-    
-    - name: Set version
-      id: set_version
-      run: |
-        if [ "${{ steps.get_version_tag.outputs.VERSION }}" != "" ]; then
-          echo "VERSION=${{ steps.get_version_tag.outputs.VERSION }}" >> $GITHUB_OUTPUT
-        else
-          echo "VERSION=${{ steps.get_version_input.outputs.VERSION }}" >> $GITHUB_OUTPUT
-        fi
+    - name: Set version from build job
+      id: set_version_from_build
+      run: echo "VERSION=${{ needs.build-single-file.outputs.version }}" >> $GITHUB_OUTPUT
       shell: bash
     
     # Download individual artifacts separately to avoid directories
@@ -153,8 +121,8 @@ jobs:
       id: create_release
       uses: ncipollo/release-action@v1
       with:
-        tag: v${{ steps.set_version.outputs.VERSION }}
-        name: Release v${{ steps.set_version.outputs.VERSION }}
+        tag: v${{ steps.set_version_from_build.outputs.VERSION }}
+        name: Release v${{ steps.set_version_from_build.outputs.VERSION }}
         draft: false
         prerelease: false
         artifacts: "./release-artifacts/*"
