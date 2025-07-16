@@ -118,10 +118,10 @@ namespace Apify.Commands
 
             try
             {
-                var apiDefinition = JsonHelper.DeserializeFromFile<ApiDefinition>(path);
+                var requestSchema = JsonHelper.DeserializeFromFile<RequestDefinitionSchema>(path);
                 
 
-                if (apiDefinition == null)
+                if (requestSchema == null)
                 {
                     ConsoleHelper.WriteError($"Failed to parse {path}");
                     return;
@@ -131,18 +131,18 @@ namespace Apify.Commands
                 var argVars = new Dictionary<string, Dictionary<string, string>>();
                 argVars.Add("vars", variables);
                 
-                apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, argVars);
+                requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, argVars);
 
 
 
-                var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
+                var response = await apiExecutor.ExecuteRequestAsync(requestSchema);
 
                 apiExecutor.DisplayApiResponse(response);
-                apiExecutor.DisplayApiDefinition(apiDefinition);
+                apiExecutor.DisplayApiDefinition(requestSchema);
 
 
-                var assertionExecutor = new AssertionExecutor(response, apiDefinition);
-                var testResults = await assertionExecutor.RunAsync(apiDefinition.Tests ?? new List<AssertionEntity>());
+                var assertionExecutor = new AssertionExecutor(response, requestSchema);
+                var testResults = await assertionExecutor.RunAsync(requestSchema.Tests ?? new List<AssertionEntity>());
                 
                 apiExecutor.DisplayTestStats(testResults);
                 apiExecutor.DisplayTestResults(testResults);

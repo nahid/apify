@@ -25,34 +25,34 @@ namespace Apify.Services
         }
 
 
-        public async Task<ApiResponse> ExecuteRequestAsync(ApiDefinition apiDefinition)
+        public async Task<ResponseDefinitionSchema> ExecuteRequestAsync(RequestDefinitionSchema requestDefinitionSchema)
         {
             var stopwatch = new Stopwatch();
-            var response = new ApiResponse();
+            var response = new ResponseDefinitionSchema();
             
             try
             {
                 // Create request message
-                // Check if URI has a valid scheme (http:// or https://)
-                var uri = apiDefinition.Uri;
+                // Check if URL has a valid scheme (http:// or https://)
+                var url = requestDefinitionSchema.Url;
                 
-                // If URI doesn't start with http:// or https://, add https:// prefix
-                if (!uri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && 
-                    !uri.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                // If URL doesn't start with http:// or https://, add https:// prefix
+                if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && 
+                    !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
-                    uri = "https://" + uri;
+                    url = "https://" + url;
                 }
                 
-                var request = new HttpRequestMessage(new HttpMethod(apiDefinition.Method), uri);
+                var request = new HttpRequestMessage(new HttpMethod(requestDefinitionSchema.Method), url);
 
                 // Add headers
-                if (apiDefinition.Headers != null)
+                if (requestDefinitionSchema.Headers != null)
                 {
-                    foreach (var header in apiDefinition.Headers)
+                    foreach (var header in requestDefinitionSchema.Headers)
                     {
                         if (header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) && 
-                            (apiDefinition.PayloadType != PayloadContentType.None || 
-                             apiDefinition.Body?.Multipart != null))
+                            (requestDefinitionSchema.PayloadType != PayloadContentType.None || 
+                             requestDefinitionSchema.Body?.Multipart != null))
                         {
                             // Content-Type will be set with the content
                             continue;
@@ -62,26 +62,26 @@ namespace Apify.Services
                 }
 
                 // Add content for appropriate methods
-                bool isMethodWithBody = apiDefinition.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) || 
-                                       apiDefinition.Method.Equals("PUT", StringComparison.OrdinalIgnoreCase) || 
-                                       apiDefinition.Method.Equals("PATCH", StringComparison.OrdinalIgnoreCase);
+                bool isMethodWithBody = requestDefinitionSchema.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) || 
+                                       requestDefinitionSchema.Method.Equals("PUT", StringComparison.OrdinalIgnoreCase) || 
+                                       requestDefinitionSchema.Method.Equals("PATCH", StringComparison.OrdinalIgnoreCase);
                 
                 if (isMethodWithBody)
                 {
                     // Check for file uploads first (takes precedence if files are present)
-                    if (apiDefinition.PayloadType == PayloadContentType.Multipart && apiDefinition.Body?.Multipart != null)
+                    if (requestDefinitionSchema.PayloadType == PayloadContentType.Multipart && requestDefinitionSchema.Body?.Multipart != null)
                     {
-                        await AddMultipartContentAsync(request, apiDefinition);
+                        await AddMultipartContentAsync(request, requestDefinitionSchema);
                     }
                     // Then check for payload
-                    else if (apiDefinition.Body != null)
+                    else if (requestDefinitionSchema.Body != null)
                     {
-                        AddPayloadContent(request, apiDefinition);
+                        AddPayloadContent(request, requestDefinitionSchema);
                     }
                 }
 
                 // Set timeout
-                _httpClient.Timeout = TimeSpan.FromMilliseconds(apiDefinition.Timeout);
+                _httpClient.Timeout = TimeSpan.FromMilliseconds(requestDefinitionSchema.Timeout);
 
                 // Send request and measure time
                 stopwatch.Start();
@@ -133,18 +133,18 @@ namespace Apify.Services
             return response;
         }
 
-        private void AddPayloadContent(HttpRequestMessage request, ApiDefinition apiDefinition)
+        private void AddPayloadContent(HttpRequestMessage request, RequestDefinitionSchema requestDefinitionSchema)
         {
             string contentType = "application/json";
-            if (apiDefinition.Headers != null && 
-                apiDefinition.Headers.TryGetValue("Content-Type", out string? headerContentType))
+            if (requestDefinitionSchema.Headers != null && 
+                requestDefinitionSchema.Headers.TryGetValue("Content-Type", out string? headerContentType))
             {
                 contentType = headerContentType;
             }
             else
             {
                 // Set appropriate content type based on payload type
-                contentType = apiDefinition.PayloadType switch
+                contentType = requestDefinitionSchema.PayloadType switch
                 {
                     PayloadContentType.Json => "application/json",
                     PayloadContentType.Text => "text/plain",
@@ -155,11 +155,11 @@ namespace Apify.Services
             
             // Process payload based on type
             StringContent content;
-            switch (apiDefinition.PayloadType)
+            switch (requestDefinitionSchema.PayloadType)
             {
                 case PayloadContentType.Json:
                     // Payload is already an object, just serialize it with indentation
-                    string formattedJson = JsonConvert.SerializeObject(apiDefinition.Body?.Json ?? new object(), Formatting.Indented);
+                    string formattedJson = JsonConvert.SerializeObject(requestDefinitionSchema.Body?.Json ?? new object(), Formatting.Indented);
                     request.Content = new StringContent(formattedJson, Encoding.UTF8);
                     break;
 
@@ -167,7 +167,7 @@ namespace Apify.Services
                     // For form data, we need to format as key=value&key2=value2...
                     try
                     {
-                        var formData = new FormUrlEncodedContent(apiDefinition.Body?.FormData ?? new Dictionary<string, string>());
+                        var formData = new FormUrlEncodedContent(requestDefinitionSchema.Body?.FormData ?? new Dictionary<string, string>());
                         request.Content = formData;
                         return; // Skip the content-type setting below as FormUrlEncodedContent sets it
                     }
@@ -179,18 +179,18 @@ namespace Apify.Services
                     break;
 
                 case PayloadContentType.Text:
-                    request.Content = new StringContent(apiDefinition.Body?.Text ?? string.Empty, Encoding.UTF8);
+                    request.Content = new StringContent(requestDefinitionSchema.Body?.Text ?? string.Empty, Encoding.UTF8);
                     break;
                 
                 case PayloadContentType.Binary:
-                    if (!MiscHelper.IsLikelyPath(apiDefinition.Body?.Binary ?? ""))
+                    if (!MiscHelper.IsLikelyPath(requestDefinitionSchema.Body?.Binary ?? ""))
                     {
-                        request.Content = new StringContent(apiDefinition.Body?.Binary ?? string.Empty, Encoding.UTF8);
+                        request.Content = new StringContent(requestDefinitionSchema.Body?.Binary ?? string.Empty, Encoding.UTF8);
                         contentType = "text/plain"; // Fallback to text/plain for binary content
                         break;
                     }
                     
-                    byte[] binaryData = File.ReadAllBytes(apiDefinition.Body?.Binary ?? string.Empty);
+                    byte[] binaryData = File.ReadAllBytes(requestDefinitionSchema.Body?.Binary ?? string.Empty);
                     contentType = "application/octet-stream"; // Default binary content type
                     request.Content = new ByteArrayContent(binaryData);
                     break;
@@ -205,16 +205,16 @@ namespace Apify.Services
             request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         }
         
-        private async Task AddMultipartContentAsync(HttpRequestMessage request, ApiDefinition apiDefinition)
+        private async Task AddMultipartContentAsync(HttpRequestMessage request, RequestDefinitionSchema requestDefinitionSchema)
         {
             var formData = new MultipartFormDataContent();
 
             // Add text fields from payload if specified and if it's a form data payload
-            if (apiDefinition.Body != null && apiDefinition.PayloadType == PayloadContentType.Multipart)
+            if (requestDefinitionSchema.Body != null && requestDefinitionSchema.PayloadType == PayloadContentType.Multipart)
             {
                 try
                 {
-                    foreach (var field in apiDefinition.Body?.Multipart ?? new List<MultipartData>())
+                    foreach (var field in requestDefinitionSchema.Body?.Multipart ?? new List<MultipartData>())
                     {
                         if (string.IsNullOrEmpty(field.Name))
                         {
@@ -245,18 +245,18 @@ namespace Apify.Services
             request.Content = formData;
         }
         
-        public ApiDefinition ApplyEnvToApiDefinition(ApiDefinition apiDefinition, string environment, params Dictionary<string, Dictionary<string, string>>[]? variables)
+        public RequestDefinitionSchema ApplyEnvToApiDefinition(RequestDefinitionSchema requestDefinitionSchema, string environment, params Dictionary<string, Dictionary<string, string>>[]? variables)
         {
-            var apiDefContent = JsonHelper.SerializeToJson(apiDefinition);
+            var apiDefContent = JsonHelper.SerializeToJson(requestDefinitionSchema);
             
             if (string.IsNullOrEmpty(apiDefContent))
             {
-                return apiDefinition;
+                return requestDefinitionSchema;
             }
 
             var conf = _configService.LoadConfiguration();
             var vars = MiscHelper.MergeDictionaries(conf.Variables, _configService.LoadEnvironment(environment)?.Variables ?? new Dictionary<string, string>());
-            vars = MiscHelper.MergeDictionaries(vars, apiDefinition.Variables ?? new Dictionary<string, string>());
+            vars = MiscHelper.MergeDictionaries(vars, requestDefinitionSchema.Variables ?? new Dictionary<string, string>());
             
 
             var stubReplacor = new Dictionary<string, object>();
@@ -278,12 +278,12 @@ namespace Apify.Services
             
             if (string.IsNullOrEmpty(apiDefContent))
             {
-                return apiDefinition;
+                return requestDefinitionSchema;
             }
 
-            apiDefinition = JsonHelper.DeserializeString<ApiDefinition>(apiDefContent) ?? new ApiDefinition();
+            requestDefinitionSchema = JsonHelper.DeserializeString<RequestDefinitionSchema>(apiDefContent) ?? new RequestDefinitionSchema();
 
-            return apiDefinition;
+            return requestDefinitionSchema;
         }
         
         public void DisplayTestStats(TestResults testResults)
@@ -344,38 +344,38 @@ namespace Apify.Services
             };
         }
         
-        public void DisplayApiResponse(ApiResponse response)
+        public void DisplayApiResponse(ResponseDefinitionSchema responseDefinitionSchema)
         {
-            var status = GetStatusByCode(response.StatusCode);
-            var color = response.StatusCode >= 200 && response.StatusCode < 300 ? ConsoleColor.Green : 
-                        response.StatusCode >= 300 && response.StatusCode < 400 ? ConsoleColor.Cyan :
-                        response.StatusCode >= 400 && response.StatusCode < 500 ? ConsoleColor.Yellow : 
-                        response.StatusCode >= 500 && response.StatusCode < 600 ? ConsoleColor.Red :
+            var status = GetStatusByCode(responseDefinitionSchema.StatusCode);
+            var color = responseDefinitionSchema.StatusCode >= 200 && responseDefinitionSchema.StatusCode < 300 ? ConsoleColor.Green : 
+                        responseDefinitionSchema.StatusCode >= 300 && responseDefinitionSchema.StatusCode < 400 ? ConsoleColor.Cyan :
+                        responseDefinitionSchema.StatusCode >= 400 && responseDefinitionSchema.StatusCode < 500 ? ConsoleColor.Yellow : 
+                        responseDefinitionSchema.StatusCode >= 500 && responseDefinitionSchema.StatusCode < 600 ? ConsoleColor.Red :
                         ConsoleColor.DarkRed;
             
             ConsoleHelper.WriteColored("Response: ", ConsoleColor.White);
             ConsoleHelper.WriteColored(status, color);
             Console.WriteLine("");
-            ConsoleHelper.WriteFeatures("Status Code", $"{response.StatusCode} ({MiscHelper.GetHttpStatusCodeName(response.StatusCode)})");
-            ConsoleHelper.WriteFeatures("Content Type", response.ContentType);
-            ConsoleHelper.WriteFeatures("Response Time", $"{response.ResponseTimeMs} ms");
+            ConsoleHelper.WriteFeatures("Status Code", $"{responseDefinitionSchema.StatusCode} ({MiscHelper.GetHttpStatusCodeName(responseDefinitionSchema.StatusCode)})");
+            ConsoleHelper.WriteFeatures("Content Type", responseDefinitionSchema.ContentType);
+            ConsoleHelper.WriteFeatures("Response Time", $"{responseDefinitionSchema.ResponseTimeMs} ms");
 
             if (__options.ShowResponse == true || __options.Verbose == true)
             {
-                if (response.Headers.Count > 0)
+                if (responseDefinitionSchema.Headers.Count > 0)
                 {
                     ConsoleHelper.WriteSection("Response Headers:");
-                    foreach (var header in response.Headers)
+                    foreach (var header in responseDefinitionSchema.Headers)
                     {
                         Console.Write("  ");
                         ConsoleHelper.WriteKeyValue(header.Key, header.Value);
                     }
                 }
             
-                if (response.ContentHeaders.Count > 0)
+                if (responseDefinitionSchema.ContentHeaders.Count > 0)
                 {
                     ConsoleHelper.WriteSection("Content Headers:");
-                    foreach (var header in response.ContentHeaders)
+                    foreach (var header in responseDefinitionSchema.ContentHeaders)
                     {
                         Console.Write("  ");
                         ConsoleHelper.WriteKeyValue(header.Key, header.Value);
@@ -392,16 +392,16 @@ namespace Apify.Services
             try
             {
                 // Try to format and colorize JSON for better readability
-                ConsoleHelper.WriteColoredJson(response.Body);
+                ConsoleHelper.WriteColoredJson(responseDefinitionSchema.Body);
             }
             catch
             {
                 // If formatting fails, display raw response
-                Console.WriteLine(response.Body);
+                Console.WriteLine(responseDefinitionSchema.Body);
             }
         }
         
-        public void DisplayApiDefinition(ApiDefinition apiDefinition)
+        public void DisplayApiDefinition(RequestDefinitionSchema requestDefinitionSchema)
         {
             if (__options.ShowRequest == false && __options.Verbose == false)
             {
@@ -409,36 +409,36 @@ namespace Apify.Services
             }
             
             ConsoleHelper.WriteSection("API Definition:");
-            ConsoleHelper.WriteKeyValue("Name", apiDefinition.Name);
+            ConsoleHelper.WriteKeyValue("Name", requestDefinitionSchema.Name);
             
-            Console.Write("URI: ");
-            ConsoleHelper.WriteUrl(apiDefinition.Uri);
+            Console.Write("URL: ");
+            ConsoleHelper.WriteUrl(requestDefinitionSchema.Url);
             
             Console.Write("Method: ");
-            ConsoleHelper.WriteMethod(apiDefinition.Method);
+            ConsoleHelper.WriteMethod(requestDefinitionSchema.Method);
             
-            if (apiDefinition.Headers?.Count > 0)
+            if (requestDefinitionSchema.Headers?.Count > 0)
             {
                 ConsoleHelper.WriteInfo("Headers:");
-                foreach (var header in apiDefinition.Headers)
+                foreach (var header in requestDefinitionSchema.Headers)
                 {
                     Console.Write("  ");
                     ConsoleHelper.WriteKeyValue(header.Key, header.Value);
                 }
             }
 
-            if (apiDefinition.Body != null)
+            if (requestDefinitionSchema.Body != null)
             {
-                ConsoleHelper.WriteKeyValue("Payload Type", apiDefinition.PayloadType.ToString() ?? "None");
+                ConsoleHelper.WriteKeyValue("Payload Type", requestDefinitionSchema.PayloadType.ToString() ?? "None");
                 ConsoleHelper.WriteInfo("Payload:");
                 Console.Write("  ");
                 
-                if (apiDefinition.PayloadType == PayloadContentType.Json)
+                if (requestDefinitionSchema.PayloadType == PayloadContentType.Json)
                 {
                     try
                     {
                         // Try to format and colorize JSON payload
-                        var jsonString = apiDefinition.GetPayloadAsString();
+                        var jsonString = requestDefinitionSchema.GetPayloadAsString();
                         if (jsonString != null)
                         {
                             ConsoleHelper.WriteColoredJson(jsonString);
@@ -451,20 +451,20 @@ namespace Apify.Services
                     catch
                     {
                         // If it's not valid JSON or formatting fails, display as-is
-                        Console.WriteLine(apiDefinition.GetBodyPayload());
+                        Console.WriteLine(requestDefinitionSchema.GetBodyPayload());
                     }
                 }
                 else
                 {
                     // For non-JSON payloads, display as-is
-                    var payloadString = apiDefinition.GetPayloadAsString();
+                    var payloadString = requestDefinitionSchema.GetPayloadAsString();
                     Console.WriteLine(payloadString ?? "[null payload]");
                 }
             }
 
-            if (apiDefinition.Tests?.Count > 0)
+            if (requestDefinitionSchema.Tests?.Count > 0)
             {
-                ConsoleHelper.WriteKeyValue("Tests", $"{apiDefinition.Tests.Count} defined");
+                ConsoleHelper.WriteKeyValue("Tests", $"{requestDefinitionSchema.Tests.Count} defined");
             }
         }
     }

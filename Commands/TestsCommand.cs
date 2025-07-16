@@ -1,10 +1,8 @@
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using Apify.Models;
 using Apify.Services;
 using Apify.Utils;
 using Newtonsoft.Json;
-using System.Security.Cryptography;
 
 namespace Apify.Commands
 {
@@ -98,9 +96,9 @@ namespace Apify.Commands
                 try
                 {
                     string json = await File.ReadAllTextAsync(apiFile);
-                    var apiDefinition = JsonConvert.DeserializeObject<ApiDefinition>(json);
+                    var requestSchema = JsonConvert.DeserializeObject<RequestDefinitionSchema>(json);
                     
-                    if (apiDefinition == null)
+                    if (requestSchema == null)
                     {
                         Console.WriteLine();
                         ConsoleHelper.WriteError($"Failed to parse API definition from {apiFile}");
@@ -109,14 +107,14 @@ namespace Apify.Commands
                     
                     // Skip if tag filtering is enabled and this API doesn't match
                     if (!string.IsNullOrEmpty(tag) && 
-                        (apiDefinition.Tags == null || !apiDefinition.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)))
+                        (requestSchema.Tags == null || !requestSchema.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
                     
                     Console.SetCursorPosition(0, cursorPosition);
                     // Show current API being processed with highlighted box
-                    ConsoleHelper.WriteLineColored($"▶ TESTING: {apiDefinition.Name}", ConsoleColor.Cyan);
+                    ConsoleHelper.WriteLineColored($"▶ TESTING: {requestSchema.Name}", ConsoleColor.Cyan);
                     
                     
                     var apiExecutor = new ApiExecutor(new ApiExecutorOptions (
@@ -132,22 +130,22 @@ namespace Apify.Commands
                     var runtimeVars = new Dictionary<string, Dictionary<string, string>>();
                     runtimeVars.Add("vars", variables);
                     
-                    apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, runtimeVars);
-                    var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
+                    requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, runtimeVars);
+                    var response = await apiExecutor.ExecuteRequestAsync(requestSchema);
                     
-                    var assertionExecutor = new AssertionExecutor(response, apiDefinition);
+                    var assertionExecutor = new AssertionExecutor(response, requestSchema);
                     
-                    var testResults = await assertionExecutor.RunAsync(apiDefinition.Tests ?? new List<AssertionEntity>());
-                    totalTestResults.AddTestResults(apiDefinition.Uri, testResults);
+                    var testResults = await assertionExecutor.RunAsync(requestSchema.Tests ?? new List<AssertionEntity>());
+                    totalTestResults.AddTestResults(requestSchema.Url, testResults);
                     
                     Console.SetCursorPosition(0, cursorPosition);
                     if (testResults.FailedCount > 0)
                     {
-                        ConsoleHelper.WriteError($"✗ FAILED: {apiDefinition.Name} ({response.ResponseTimeMs:F2} ms)");
+                        ConsoleHelper.WriteError($"✗ FAILED: {requestSchema.Name} ({response.ResponseTimeMs:F2} ms)");
                     }
                     else
                     {
-                        ConsoleHelper.WriteSuccess($"✓ PASSED: {apiDefinition.Name} ({response.ResponseTimeMs:F2} ms)");
+                        ConsoleHelper.WriteSuccess($"✓ PASSED: {requestSchema.Name} ({response.ResponseTimeMs:F2} ms)");
                     }
                     
                     //apiExecutor.DisplayTestResults(testResults, verbose);

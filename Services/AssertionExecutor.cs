@@ -6,15 +6,15 @@ namespace Apify.Services;
 
 public class AssertionExecutor
 {
-    public ApiResponse Response;
-    public ApiDefinition ApiDefinition;
+    public ResponseDefinitionSchema ResponseDefinitionSchema;
+    public RequestDefinitionSchema RequestDefinitionSchema;
 
     
     
-    public AssertionExecutor(ApiResponse response, ApiDefinition apiDefinition)
+    public AssertionExecutor(ResponseDefinitionSchema responseDefinitionSchema, RequestDefinitionSchema requestDefinitionSchema)
     {
-        Response = response;
-        ApiDefinition = apiDefinition;
+        ResponseDefinitionSchema = responseDefinitionSchema;
+        RequestDefinitionSchema = requestDefinitionSchema;
 
     }
     
@@ -24,9 +24,9 @@ public class AssertionExecutor
         var assertionTracker = new AssertionTracker();
         var testResults = new TestResults();
         
-        interpreter.SetVariable("Assert", new Assert(Response, assertionTracker));
-        interpreter.SetVariable("Response", Response);
-        interpreter.SetVariable("Request", ApiDefinition);
+        interpreter.SetVariable("Assert", new Assert(ResponseDefinitionSchema, assertionTracker));
+        interpreter.SetVariable("Response", ResponseDefinitionSchema);
+        interpreter.SetVariable("Request", RequestDefinitionSchema);
         
         foreach (var assertion in assertions)
         {
@@ -66,9 +66,9 @@ public class Assert
     private AssertionTracker _assertionTracker;
     
     
-    public Assert(ApiResponse apiResponse, AssertionTracker assertionTracker)
+    public Assert(ResponseDefinitionSchema responseDefinitionSchema, AssertionTracker assertionTracker)
     {
-        Response = new AssertResponse(apiResponse, assertionTracker);
+        Response = new AssertResponse(responseDefinitionSchema, assertionTracker);
         _assertionTracker = assertionTracker ?? throw new ArgumentNullException(nameof(assertionTracker), "Assertion tracker cannot be null.");
     }
     
@@ -310,12 +310,12 @@ public class TestResults
 
 public class AssertResponse
 {
-    private ApiResponse? _apiResponse;
+    private ResponseDefinitionSchema? _apiResponse;
     private AssertionTracker _assertionTracker;
     
-    public AssertResponse(ApiResponse apiResponse, AssertionTracker tracker)
+    public AssertResponse(ResponseDefinitionSchema responseDefinitionSchema, AssertionTracker tracker)
     {
-        _apiResponse = apiResponse ?? throw new ArgumentNullException(nameof(apiResponse), "API response cannot be null.");
+        _apiResponse = responseDefinitionSchema ?? throw new ArgumentNullException(nameof(responseDefinitionSchema), "API response cannot be null.");
         _assertionTracker = tracker ?? throw new ArgumentNullException(nameof(tracker), "Assertion tracker cannot be null.");
     }
 

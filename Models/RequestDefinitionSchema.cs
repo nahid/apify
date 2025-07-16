@@ -10,14 +10,14 @@ namespace Apify.Models
                                DynamicallyAccessedMemberTypes.PublicFields | 
                                DynamicallyAccessedMemberTypes.PublicMethods |
                                DynamicallyAccessedMemberTypes.PublicConstructors)]
-    public class ApiDefinition
+    public class RequestDefinitionSchema
     {
         // Constructor for JSON deserialization
         [Newtonsoft.Json.JsonConstructor]
-        public ApiDefinition()
+        public RequestDefinitionSchema()
         {
             Name = string.Empty;
-            Uri = string.Empty;
+            Url = string.Empty;
             Method = "GET";
             Timeout = 30000;
             Variables = new Dictionary<string, string>();
@@ -29,8 +29,8 @@ namespace Apify.Models
         [JsonPropertyName("description")]
         public string? Description { get; set; }
 
-        [JsonPropertyName("uri")]
-        public string Uri { get; set; } = string.Empty;
+        [JsonPropertyName("url")]
+        public string Url { get; set; } = string.Empty;
 
         [JsonPropertyName("method")]
         public string Method { get; set; } = "GET";

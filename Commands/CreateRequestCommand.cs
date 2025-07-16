@@ -35,7 +35,7 @@ namespace Apify.Commands
             var urlOption = new Option<string>(
                 "--url",
                 () => "",
-                "URI for the request (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)"
+                "URL for the request (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)"
             );
 
             var forceOption = new Option<bool>(
@@ -57,12 +57,12 @@ namespace Apify.Commands
             AddOption(urlOption);
             
             this.SetHandler(
-                (file, name, method, uri, force, debug, prompt) => ExecuteAsync(file, name, method, uri, force, debug, prompt),
+                (file, name, method, url, force, debug, prompt) => ExecuteAsync(file, name, method, url, force, debug, prompt),
                 fileArgument, nameOption, methodOption, urlOption, forceOption, RootOption.DebugOption, promptOption
             );
         }
 
-        private async Task ExecuteAsync(string filePath, string name, string method, string uri, bool force, bool debug, bool prompt)
+        private async Task ExecuteAsync(string filePath, string name, string method, string url, bool force, bool debug, bool prompt)
         {
             ConsoleHelper.WriteHeader("Creating New API Request");
 
@@ -102,7 +102,7 @@ namespace Apify.Commands
                 // Prompt for required information
                 name = ConsoleHelper.PromptInput<string>("API request name (e.g., Get User)");
                 method = ConsoleHelper.PromptChoice("Choose HTTP Method?", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
-                uri = ConsoleHelper.PromptInput<string>("URI (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)", required: true);
+                url = ConsoleHelper.PromptInput<string>("URL (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)", required: true);
             }
 
 
@@ -190,10 +190,10 @@ namespace Apify.Commands
             }
             
             // Create the API definition
-            var apiDefinition = new ApiDefinition
+            var requestSchema = new RequestDefinitionSchema
             {
                 Name = name,
-                Uri = uri,
+                Url = url,
                 Method = method,
                 Headers = headers.Count > 0 ? headers : null,
                 PayloadType = payloadContentType,
@@ -205,7 +205,7 @@ namespace Apify.Commands
             try
             {
                 // Serialize to JSON and save
-                string jsonContent = JsonHelper.SerializeObject(apiDefinition);
+                string jsonContent = JsonHelper.SerializeObject(requestSchema);
                 await File.WriteAllTextAsync(processedPath, jsonContent);
                 
                 ConsoleHelper.WriteSuccess($"API request is successfully created to: {processedPath}");

@@ -151,17 +151,17 @@ namespace Apify.Commands
             }
 
             // Gather mock API information through interactive prompts
-            MockSchema mockApi = await GatherMockApiInformation(options);
+            MockDefinitionSchema mockDefinitionApi = await GatherMockApiInformation(options);
 
             try
             {
                 // Serialize to JSON and save
-                string jsonContent = JsonHelper.SerializeObject(mockApi);
+                string jsonContent = JsonHelper.SerializeObject(mockDefinitionApi);
                 await File.WriteAllTextAsync(processedPath, jsonContent);
                 
                 ConsoleHelper.WriteSuccess($"Mock API response saved to: {processedPath}");
                 ConsoleHelper.WriteInfo($"You can test it with: apify mock-server");
-                ConsoleHelper.WriteInfo($"Then access: http://localhost:8080{mockApi.Endpoint}");
+                ConsoleHelper.WriteInfo($"Then access: http://localhost:8080{mockDefinitionApi.Endpoint}");
             }
             catch (Exception ex)
             {
@@ -169,7 +169,7 @@ namespace Apify.Commands
             }
         }
 
-        private Task<MockSchema> GatherMockApiInformation(CreateMockCommandOptions options)
+        private Task<MockDefinitionSchema> GatherMockApiInformation(CreateMockCommandOptions options)
         {
             string name = options.Name;
             string endpoint = options.Endpoint;
@@ -284,7 +284,7 @@ namespace Apify.Commands
                 }
             }
             
-            return Task.FromResult(new MockSchema {
+            return Task.FromResult(new MockDefinitionSchema {
                 Name = name,
                 Endpoint = endpoint,
                 Method = method,

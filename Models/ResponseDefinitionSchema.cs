@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 namespace Apify.Models;
 
 
-public class ApiResponse
+public class ResponseDefinitionSchema
 {
     public bool IsSuccessful { get; set; }
     public int StatusCode { get; set; }

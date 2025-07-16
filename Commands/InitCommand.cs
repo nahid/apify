@@ -200,10 +200,10 @@ namespace Apify.Commands
                 }
     
                 // Create the sample API test file
-                var sampleUserApi = new ApiDefinition
+                var sampleGetUserRequestSchema = new RequestDefinitionSchema
                 {
                     Name = "Sample User API Test",
-                    Uri = "{{env.baseUrl}}/users/1",
+                    Url = "{{env.baseUrl}}/users/1",
                     Method = "GET",
                     Headers = new Dictionary<string, string>
                     {
@@ -222,14 +222,14 @@ namespace Apify.Commands
 
                 // Create an example API file in the apis directory
                 string sampleApiFilePath = Path.Combine(RootOption.DefaultApiDirectory, "users", "get.json");
-                await File.WriteAllTextAsync(sampleApiFilePath, JsonHelper.SerializeObject(sampleUserApi));
+                await File.WriteAllTextAsync(sampleApiFilePath, JsonHelper.SerializeObject(sampleGetUserRequestSchema));
                 ConsoleHelper.WriteSuccess($"Created sample API test: {sampleApiFilePath}");
                 
                 // Create a POST sample with JSON payload
-                var samplePostTest = new ApiDefinition
+                var sampleCreateUserRequestSchema = new RequestDefinitionSchema
                 {
                     Name = "Sample Users Create API Test",
-                    Uri = "{{env.baseUrl}}/users",
+                    Url = "{{env.baseUrl}}/users",
                     Method = "POST",
                     Headers = new Dictionary<string, string>
                     {
@@ -260,7 +260,7 @@ namespace Apify.Commands
                 };
                 
                 string samplePostFilePath = Path.Combine(RootOption.DefaultApiDirectory, "users", "create.json");
-                await File.WriteAllTextAsync(samplePostFilePath, JsonHelper.SerializeObject(samplePostTest));
+                await File.WriteAllTextAsync(samplePostFilePath, JsonHelper.SerializeObject(sampleCreateUserRequestSchema));
                 ConsoleHelper.WriteSuccess($"Created sample POST API test: {samplePostFilePath}");
 
                 if (!hasRunWithoutPrompt)
