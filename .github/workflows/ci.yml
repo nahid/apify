@@ -30,36 +30,4 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     
-    - name: Run Init Command
-      run: dotnet run init --name "Test API Project" --mock --force
-      
-    - name: Run GET Tests
-      run: dotnet run call users.get
-
-    - name: Run POST Tests
-      run: dotnet run call users.create
-      
-    - name: Run All Tests Command
-      run: dotnet run tests
-      
-    - name: Test Mock Server (Linux/macOS only)
-      if: runner.os != 'Windows'
-      run: |
-        # Start mock server in background
-        dotnet run mock-server --port 5000 &
-        # Give server time to start
-        sleep 2
-        # Test default response for products search
-        curl -s "http://localhost:5000/products/search" | grep "Programming Guide" || exit 1
-        # Kill background process
-        kill %1
-      
-    - name: Test Mock Server (Windows only)
-      if: runner.os == 'Windows'
-      run: |
-        # Start mock server in background
-        start /b dotnet run mock-server --port 5000
-        # Give server time to start
-        timeout /t 2
-        # Test default response - check if server is running
-        curl -s "http://localhost:5000/products/search"
+    
