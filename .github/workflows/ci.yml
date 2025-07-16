@@ -34,16 +34,13 @@ jobs:
       run: dotnet run init --name "Test API Project" --mock --force
       
     - name: Run GET Tests
-      run: dotnet run call get
+      run: dotnet run call users.get
 
     - name: Run POST Tests
-      run: dotnet run call create
+      run: dotnet run call users.create
       
     - name: Run All Tests Command
       run: dotnet run tests
-      
-    - name: List environments
-      run: dotnet run list-env
       
     - name: Test Mock Server (Linux/macOS only)
       if: runner.os != 'Windows'
