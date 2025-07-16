@@ -7,7 +7,7 @@ namespace Apify.Models
     /// <summary>
     /// Represents an advanced mock API definition with improved condition handling
     /// </summary>
-    public class MockSchema
+    public class MockDefinitionSchema
     {
         /// <summary>
         /// Name of the API endpoint

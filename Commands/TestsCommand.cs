@@ -1,22 +1,17 @@
 using System.CommandLine;
-using System.CommandLine.Invocation;
 using Apify.Models;
 using Apify.Services;
 using Apify.Utils;
 using Newtonsoft.Json;
-using System.Security.Cryptography;
 
 namespace Apify.Commands
 {
-    public class TestsCommand
+    public class TestsCommand: Command
     {
-        public Command Command { get; }
         private const string DefaultApiDirectoryName = ".apify";
         
-        public TestsCommand()
+        public TestsCommand(): base("tests", "Run all tests in the .apify directory")
         {
-            Command = new Command("tests", "Run all tests in the .apify directory");
-            
             var verboseOption = new Option<bool>(
                 "--verbose",
                 () => false,
@@ -33,29 +28,29 @@ namespace Apify.Commands
                 name: "--env",
                 description: "EnvironmentSchema to use from the configuration profile");
             environmentOption.AddAlias("-e");
-            Command.AddOption(environmentOption);    
+            AddOption(environmentOption);    
             
             var varsOption = new Option<string?>(
                 name: "--vars",
                 description: "Runtime variables for configurations");
-            Command.AddOption(varsOption);
+            AddOption(varsOption);
             
             var tagOption = new Option<string>(
                 "--tag",
                 "Filter tests by tag"
             );
             
-            Command.AddOption(verboseOption);
-            Command.AddOption(dirOption);
-            Command.AddOption(tagOption);
+            AddOption(verboseOption);
+            AddOption(dirOption);
+            AddOption(tagOption);
             
-            Command.SetHandler(
-                (verbose, dir, envName, vars, tag) => RunAllTestsAsync(verbose, dir, envName, vars, tag),
-                verboseOption, dirOption, environmentOption, varsOption, tagOption
+            this.SetHandler(
+                (verbose, dir, envName, vars, tag, debug) => RunAllTestsAsync(verbose, dir, envName, vars, tag, debug),
+                verboseOption, dirOption, environmentOption, varsOption, tagOption, RootOption.DebugOption
             );
         }
         
-        private async Task RunAllTestsAsync(bool verbose, string directory, string? envName, string? vars, string? tag)
+        private async Task RunAllTestsAsync(bool verbose, string directory, string? envName, string? vars, string? tag, bool debug = false)
         {
             var configService = new ConfigService();
             envName = envName ?? configService.LoadConfiguration()?.DefaultEnvironment ?? "Development";
@@ -101,9 +96,9 @@ namespace Apify.Commands
                 try
                 {
                     string json = await File.ReadAllTextAsync(apiFile);
-                    var apiDefinition = JsonConvert.DeserializeObject<ApiDefinition>(json);
+                    var requestSchema = JsonConvert.DeserializeObject<RequestDefinitionSchema>(json);
                     
-                    if (apiDefinition == null)
+                    if (requestSchema == null)
                     {
                         Console.WriteLine();
                         ConsoleHelper.WriteError($"Failed to parse API definition from {apiFile}");
@@ -112,38 +107,45 @@ namespace Apify.Commands
                     
                     // Skip if tag filtering is enabled and this API doesn't match
                     if (!string.IsNullOrEmpty(tag) && 
-                        (apiDefinition.Tags == null || !apiDefinition.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)))
+                        (requestSchema.Tags == null || !requestSchema.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
                     
                     Console.SetCursorPosition(0, cursorPosition);
                     // Show current API being processed with highlighted box
-                    ConsoleHelper.WriteLineColored($"▶ TESTING: {apiDefinition.Name}", ConsoleColor.Cyan);
+                    ConsoleHelper.WriteLineColored($"▶ TESTING: {requestSchema.Name}", ConsoleColor.Cyan);
                     
                     
-                    var apiExecutor = new ApiExecutor();
+                    var apiExecutor = new ApiExecutor(new ApiExecutorOptions (
+                        Tests: true,
+                        ShowRequest: false,
+                        ShowResponse: false,
+                        ShowOnlyResponse: false,
+                        Verbose: verbose,
+                        Debug: debug
+                    ));
                     
                     var variables = MiscHelper.ParseArgsVariables(vars ?? "");
                     var runtimeVars = new Dictionary<string, Dictionary<string, string>>();
                     runtimeVars.Add("vars", variables);
                     
-                    apiDefinition = apiExecutor.ApplyEnvToApiDefinition(apiDefinition, envName, runtimeVars);
-                    var response = await apiExecutor.ExecuteRequestAsync(apiDefinition);
+                    requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, runtimeVars);
+                    var response = await apiExecutor.ExecuteRequestAsync(requestSchema);
                     
-                    var assertionExecutor = new AssertionExecutor(response);
+                    var assertionExecutor = new AssertionExecutor(response, requestSchema);
                     
-                    var testResults = await assertionExecutor.RunAsync(apiDefinition.Tests ?? new List<AssertionEntity>());
-                    totalTestResults.AddTestResults(apiDefinition.Uri, testResults);
+                    var testResults = await assertionExecutor.RunAsync(requestSchema.Tests ?? new List<AssertionEntity>());
+                    totalTestResults.AddTestResults(requestSchema.Url, testResults);
                     
                     Console.SetCursorPosition(0, cursorPosition);
                     if (testResults.FailedCount > 0)
                     {
-                        ConsoleHelper.WriteError($"✗ FAILED: {apiDefinition.Name} ({response.ResponseTimeMs:F2} ms)");
+                        ConsoleHelper.WriteError($"✗ FAILED: {requestSchema.Name} ({response.ResponseTimeMs:F2} ms)");
                     }
                     else
                     {
-                        ConsoleHelper.WriteSuccess($"✓ PASSED: {apiDefinition.Name} ({response.ResponseTimeMs:F2} ms)");
+                        ConsoleHelper.WriteSuccess($"✓ PASSED: {requestSchema.Name} ({response.ResponseTimeMs:F2} ms)");
                     }
                     
                     //apiExecutor.DisplayTestResults(testResults, verbose);
@@ -188,7 +190,15 @@ namespace Apify.Commands
             Console.WriteLine();
             ConsoleHelper.WriteRepeatChar('=', 20);
 
-            var apiExec = new ApiExecutor();
+            var apiExec = new ApiExecutor(new ApiExecutorOptions (
+                Tests: true,
+                ShowRequest: false,
+                ShowResponse: false,
+                ShowOnlyResponse: false,
+                Verbose: verbose,
+                Debug: debug
+            ));
+            
             foreach (var testResult in totalTestResults.GetAllResults())
             {
                 foreach (var tResult in testResult)
@@ -197,7 +207,7 @@ namespace Apify.Commands
                     ConsoleHelper.WriteColored(tResult.Key, ConsoleColor.Cyan);
                     Console.WriteLine();
                     ConsoleHelper.WriteRepeatChar('-', tResult.Key.Length);
-                    apiExec.DisplayTestResults(tResult.Value, true);
+                    apiExec.DisplayTestResults(tResult.Value);
                 }
 
                 

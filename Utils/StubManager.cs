@@ -1,3 +1,5 @@
+using Apify.Services;
+using Bogus;
 using Newtonsoft.Json.Linq;
 using System.Dynamic;
 using System.Text.RegularExpressions;
@@ -9,6 +11,16 @@ public static class StubManager
     private static readonly Regex _placeholderRe = new Regex(@"\{\{\s*(.+?)\s*\}\}",
         RegexOptions.Compiled);
 
+    private static DynamicExpressionManager _dynamicExpression;
+    
+    static StubManager()
+    {
+        _dynamicExpression = new DynamicExpressionManager();
+        var faker = new Faker("en");
+        _dynamicExpression.GetInterpreter().SetVariable("Faker", faker);
+   
+    }
+
     /// <summary>
     /// Replaces all {{path.to.value}} stubs in <paramref name="template"/> by
     /// looking up nested dictionaries in <paramref name="variables"/>.
@@ -17,10 +29,11 @@ public static class StubManager
         string template,
         Dictionary<string, object> vars)
     {
+        SetVariables(vars);
         
         return _placeholderRe.Replace(template, match =>
         {
-            if (DynamicExpression.IsEvalExpression(match.Groups[1].Value))
+            if (_dynamicExpression.IsEvalExpression(match.Groups[1].Value))
             {
                 return ExecExpression(match.Groups[1].Value);
             }
@@ -37,13 +50,13 @@ public static class StubManager
     
     private static string ExecExpression(string expr)
     {
-        var expression = DynamicExpression.GetExpression(expr);
-        if (expression == null || string.IsNullOrEmpty(expression))
+        var expression = _dynamicExpression.GetExpression(expr);
+        if (string.IsNullOrEmpty(expression))
         {
-            throw new ArgumentException($"Invalid expression: {expr}");
+            return expr;
         }
         
-        var result = DynamicExpression.Execute(expression);
+        var result = _dynamicExpression.Compile(expression);
         if (string.IsNullOrEmpty(result))
         {
             return expr;
@@ -96,5 +109,30 @@ public static class StubManager
 
 // ✅ Leaf node found
         return current?.ToString() ?? "";
+    }
+    
+    private static void SetVariables(Dictionary<string, object> vars)
+    {
+        foreach (var kvp in vars)
+        {
+            if (kvp.Value is JToken jtoken)
+            {
+                _dynamicExpression.GetInterpreter().SetVariable(kvp.Key, jtoken);
+            }
+
+            if (kvp.Value is Dictionary<string, string> sdict)
+            {
+                _dynamicExpression.GetInterpreter().SetVariable(kvp.Key, sdict);
+            }
+            
+            if (kvp.Value is Dictionary<string, object> odict)
+            {
+                _dynamicExpression.GetInterpreter().SetVariable(kvp.Key, odict);
+            }
+            else
+            {
+                _dynamicExpression.GetInterpreter().SetVariable(kvp.Key, kvp.Value);
+            }
+        }
     }
 }

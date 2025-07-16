@@ -103,6 +103,7 @@ namespace Apify.Utils
         {
             Console.ForegroundColor = KeyColor;
             Console.Write($"{key}: ");
+            Console.ResetColor();
             Console.ForegroundColor = ValueColor;
             Console.WriteLine(value);
             Console.ResetColor();
@@ -146,6 +147,14 @@ namespace Apify.Utils
             Console.WriteLine($"{milliseconds}ms");
             Console.ResetColor();
         }
+        
+        public static void WriteFeatures(string key, object value)
+        {
+            Console.Write($"{key}: ");
+            Console.ForegroundColor = JsonKeyColor;
+            Console.WriteLine(value.ToString());
+            Console.ResetColor();
+        }
 
         public static void WriteStatusCode(int statusCode)
         {
@@ -181,6 +190,152 @@ namespace Apify.Utils
             Console.WriteLine(message);
             Console.ResetColor();
         }
+        
+        public static T PromptInput<T>(string message, T? defaultValue = default, bool required = false)
+        {
+            while (true)
+            {
+                string prompt = defaultValue is null || defaultValue.Equals(default(T))
+                ? $"{message}: "
+                : $"{message} [{defaultValue}]: ";
+
+                Console.Write(prompt);
+                string? input = Console.ReadLine();
+
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    if (!required && defaultValue is not null)
+                        return defaultValue;
+
+                    if (required)
+                    {
+                        Console.WriteLine("Input is required. Please try again.");
+                        continue;
+                    }
+
+                    return default!;
+                }
+
+                try
+                {
+                    return (T)Convert.ChangeType(input, typeof(T));
+                }
+                catch
+                {
+                    Console.WriteLine($"Invalid input. Please enter a value of type {typeof(T).Name}.");
+                }
+            }
+        }
+        public static string PromptMultiLineInput(string message, string? defaultValue = null)
+        {
+            Console.WriteLine(message);
+            Console.WriteLine("(Press Enter on an empty line to finish input)");
+            StringBuilder sb = new StringBuilder();
+
+            while (true)
+            {
+                string? line = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    if (sb.Length == 0 && defaultValue != null)
+                    {
+                        return defaultValue;
+                    }
+                    break;
+                }
+                sb.AppendLine(line);
+            }
+
+            return sb.ToString().TrimEnd();
+        }
+        
+        public static T PromptChoice<T>(string question, IEnumerable<T> options)
+        {
+            var optionList = options.ToList();
+
+            if (!optionList.Any())
+                throw new ArgumentException("Option list cannot be empty.");
+
+            Console.WriteLine(question);
+            for (int i = 0; i < optionList.Count; i++)
+            {
+                Console.WriteLine($"  {i + 1}) {optionList[i]}");
+            }
+
+            while (true)
+            {
+                Console.Write("Enter choice number: ");
+                string? input = Console.ReadLine();
+
+                if (int.TryParse(input, out int choice) &&
+                    choice >= 1 && choice <= optionList.Count)
+                {
+                    return optionList[choice - 1];
+                }
+
+                Console.WriteLine("Invalid selection. Please try again.");
+            }
+        }
+        
+        public static int PromptChoiceWithIndex<T>(string question, IEnumerable<T> options)
+        {
+            var optionList = options.ToList();
+
+            if (!optionList.Any())
+                throw new ArgumentException("Option list cannot be empty.");
+
+            Console.WriteLine(question);
+            for (int i = 0; i < optionList.Count; i++)
+            {
+                Console.WriteLine($"  {i + 1}) {optionList[i]}");
+            }
+
+            while (true)
+            {
+                Console.Write("Enter choice number: ");
+                string? input = Console.ReadLine();
+
+                if (int.TryParse(input, out int choice) &&
+                    choice >= 1 && choice <= optionList.Count)
+                {
+                    return choice - 1; // Return 0-based index
+                }
+
+                Console.WriteLine("Invalid selection. Please try again.");
+            }
+        }
+
+
+
+        public static bool PromptYesNo(string question, bool? defaultValue = null)
+        {
+            string options = defaultValue == true ? "Y/n"
+            : defaultValue == false ? "y/N"
+            : "y/n";
+
+            while (true)
+            {
+                Console.Write($"{question} [{options}]: ");
+                string? input = Console.ReadLine()?.Trim().ToLower();
+
+                if (string.IsNullOrEmpty(input))
+                {
+                    if (defaultValue.HasValue)
+                        return defaultValue.Value;
+
+                    Console.WriteLine("Please enter 'y' or 'n'.");
+                    continue;
+                }
+
+                if (input == "y" || input == "yes")
+                    return true;
+
+                if (input == "n" || input == "no")
+                    return false;
+
+                Console.WriteLine("Invalid input. Please enter 'y' or 'n'.");
+            }
+        }
 
         public static void WritePrompt(string prompt)
         {
@@ -210,46 +365,47 @@ namespace Apify.Utils
             WriteHeader("🚀 Quick Start Guide");
             Console.WriteLine();
             
-            string exeName = Path.GetFileName(Environment.ProcessPath ?? "apitester");
-            string exeCommand = isCompiledExecutable ? $"./{exeName}" : "dotnet run";
+            string exeName = Path.GetFileName(Environment.ProcessPath ?? "apify");
+            string exeCommand = isCompiledExecutable ? $"./{exeName}" : "apify";
             
             WriteSuccess("Your API testing project is ready to use!");
             Console.WriteLine();
             
             WriteInfo("Project Structure:");
             WriteKeyValue("  Configuration", configFilePath);
-            WriteKeyValue("  API Definitions", apiDirectoryName);
-            WriteKeyValue("  Mock API Definitions", $"{apiDirectoryName}/*/*.mock.json");
+            WriteKeyValue("  API Definitions & Mock Definitions", apiDirectoryName);
+            WriteKeyValue("  Mock Definitions Extension", "*.mock.json");
             Console.WriteLine();
             
             WriteInfo("Try these commands:");
-            WriteKeyValue($"  {exeCommand} run sample-api", "Run the sample GET API test");
-            WriteKeyValue($"  {exeCommand} run sample-post", "Run the sample POST API test");
+            WriteKeyValue($"  {exeCommand} call users.get", "Run the command to get users from the API");
+            WriteKeyValue($"  {exeCommand} call users.", "Run the command to create new user");
             WriteKeyValue($"  {exeCommand} list-env", "List all configured environments");
-            WriteKeyValue($"  {exeCommand} create request --file users.get", "Create a new API request file");
-            WriteKeyValue($"  {exeCommand} mock-server --port 8080 --verbose", "Start the mock API server");
+            WriteKeyValue($"  {exeCommand} create:request users.get", "Create a new API request file");
+            WriteKeyValue($"  {exeCommand} server:mock --port 1988 --verbose", "Start the mock API server");
             WriteKeyValue($"  {exeCommand} tests", "Run all tests with progress indicators");
+            WriteWarning("We set https://reqres.in/api as the default API endpoint for testing purposes.");
             Console.WriteLine();
             
             WriteTip("You can use shortened paths like 'users.all' instead of '.apify/users/all.json'");
             
             WriteInfo("Next Steps:");
             Console.WriteLine("1. Explore the sample API tests in the .apify directory");
-            Console.WriteLine("2. Create your own API tests using the 'create request' command");
+            Console.WriteLine("2. Create your own API tests using the 'create:request' command");
             Console.WriteLine("3. Configure additional environment variables in apify-config.json");
-            Console.WriteLine("4. Run your API tests using the 'run' command");
+            Console.WriteLine("4. Run your API tests using the 'tests' command");
             Console.WriteLine();
             
             // Add the mock server section
             WriteInfo("Mock Server:");
             Console.WriteLine("- Create .mock.json files in subdirectories of .apify to define mock endpoints");
             Console.WriteLine("- Mock server configuration is in the MockServer section of apify-config.json");
-            Console.WriteLine("- Start the mock server with 'mock-server' command for offline development");
-            Console.WriteLine("- Use dynamic templates like {{$date}} or {{$random:uuid}} in mock responses");
-            Console.WriteLine("- Define route parameters with :param syntax (e.g., /users/:id)");
+            Console.WriteLine("- Start the mock server with 'server:mock' command for offline development");
+            Console.WriteLine("- Use Fake Data like {{Faker.Name.FirstName()}} or {{ expr|> Faker.Name.FirstName()}} in mock responses");
+            Console.WriteLine("- Define route parameters with {param} syntax (e.g., /users/{id})");
             Console.WriteLine();
             
-            WriteTip("Check the docs/Apify-Documentation.md file for detailed mock server usage instructions");
+            WriteTip("Check the https://apifyapp.com/docs site for detailed usage instructions");
             Console.WriteLine();
         }
 
@@ -318,7 +474,7 @@ namespace Apify.Utils
                 string content = trimmedLine.TrimStart();
                 
                 // Handle braces and brackets
-                if (content == "{" || content == "}" || content == "[" || content == "]" || content == "," || content.EndsWith(","))
+                if (content == "{" || content == "}" || content == "[" || content == "]" || content == ",")
                 {
                     WriteLineColored(content, JsonPunctuationColor);
                     continue;

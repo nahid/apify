@@ -1,17 +1,20 @@
 using Apify.Models;
 using DynamicExpresso;
+using Newtonsoft.Json.Linq;
 
 namespace Apify.Services;
 
 public class AssertionExecutor
 {
-    public ApiResponse Response;
+    public ResponseDefinitionSchema ResponseDefinitionSchema;
+    public RequestDefinitionSchema RequestDefinitionSchema;
 
     
     
-    public AssertionExecutor(ApiResponse response)
+    public AssertionExecutor(ResponseDefinitionSchema responseDefinitionSchema, RequestDefinitionSchema requestDefinitionSchema)
     {
-        Response = response;
+        ResponseDefinitionSchema = responseDefinitionSchema;
+        RequestDefinitionSchema = requestDefinitionSchema;
 
     }
     
@@ -21,8 +24,9 @@ public class AssertionExecutor
         var assertionTracker = new AssertionTracker();
         var testResults = new TestResults();
         
-        interpreter.SetVariable("Assert", new Assert(Response, assertionTracker));
-        interpreter.SetVariable("Response", Response);
+        interpreter.SetVariable("Assert", new Assert(ResponseDefinitionSchema, assertionTracker));
+        interpreter.SetVariable("Response", ResponseDefinitionSchema);
+        interpreter.SetVariable("Request", RequestDefinitionSchema);
         
         foreach (var assertion in assertions)
         {
@@ -62,9 +66,9 @@ public class Assert
     private AssertionTracker _assertionTracker;
     
     
-    public Assert(ApiResponse apiResponse, AssertionTracker assertionTracker)
+    public Assert(ResponseDefinitionSchema responseDefinitionSchema, AssertionTracker assertionTracker)
     {
-        Response = new AssertResponse(apiResponse, assertionTracker);
+        Response = new AssertResponse(responseDefinitionSchema, assertionTracker);
         _assertionTracker = assertionTracker ?? throw new ArgumentNullException(nameof(assertionTracker), "Assertion tracker cannot be null.");
     }
     
@@ -246,6 +250,21 @@ public class Assert
         return _assertionTracker.AddResult(false, $"Actual: {actual}, Lower Bound: {lowerBound}, Upper Bound: {upperBound}. " + message);
     }
     
+    public bool Contains(object actual, object expected, string message = "")
+    {
+        message = string.IsNullOrEmpty(message) ? "String contains expected substring." : message;
+
+        var heystack = actual.ToString();
+        string needle = expected.ToString();
+        
+        if (heystack.Contains(needle))
+        {
+            return _assertionTracker.AddResult(true, message);
+        }
+
+        return _assertionTracker.AddResult(false, $"Actual: '{actual}', Expected Substring: '{expected}'. " + message);
+    }
+    
     
     
 }
@@ -291,12 +310,12 @@ public class TestResults
 
 public class AssertResponse
 {
-    private ApiResponse? _apiResponse;
+    private ResponseDefinitionSchema? _apiResponse;
     private AssertionTracker _assertionTracker;
     
-    public AssertResponse(ApiResponse apiResponse, AssertionTracker tracker)
+    public AssertResponse(ResponseDefinitionSchema responseDefinitionSchema, AssertionTracker tracker)
     {
-        _apiResponse = apiResponse ?? throw new ArgumentNullException(nameof(apiResponse), "API response cannot be null.");
+        _apiResponse = responseDefinitionSchema ?? throw new ArgumentNullException(nameof(responseDefinitionSchema), "API response cannot be null.");
         _assertionTracker = tracker ?? throw new ArgumentNullException(nameof(tracker), "Assertion tracker cannot be null.");
     }
 

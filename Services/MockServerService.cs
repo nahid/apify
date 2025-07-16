@@ -12,7 +12,7 @@ namespace Apify.Services
     public class MockServerService
     {
         private readonly string _mockDirectory;
-        private readonly List<MockSchema> _mockSchemaDefinitions = new();
+        private readonly List<MockDefinitionSchema> _mockSchemaDefinitions = new();
         private readonly ConfigService _configService;
         private readonly ConditionEvaluator _conditionEvaluator = new();
         private bool _verbose;
@@ -34,7 +34,7 @@ namespace Apify.Services
 
             if (port == 0)
             {
-                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 8088;
+                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 1988;
             }
             
             // Load all mock definitions
@@ -145,24 +145,24 @@ namespace Apify.Services
                     }
 
                     // First try to parse as advanced mock definition
-                    MockSchema mockDef;
+                    MockDefinitionSchema mockDefinitionDef;
                     
-                    mockDef = JsonConvert.DeserializeObject<MockSchema>(json) ??
-                                      new MockSchema();
+                    mockDefinitionDef = JsonConvert.DeserializeObject<MockDefinitionSchema>(json) ??
+                                      new MockDefinitionSchema();
 
                     if (_debug)
                     {
                         ConsoleHelper.WriteInfo($"Successfully parsed {file} as MockSchema");
                     }
 
-                    if (mockDef != null && mockDef.Responses != null &&
-                        mockDef.Responses.Count > 0)
+                    if (mockDefinitionDef != null && mockDefinitionDef.Responses != null &&
+                        mockDefinitionDef.Responses.Count > 0)
                     {
-                        _mockSchemaDefinitions.Add(mockDef);
+                        _mockSchemaDefinitions.Add(mockDefinitionDef);
 
                         // Always show loaded API info
                         ConsoleHelper.WriteInfo(
-                            $"Loaded mock API: {mockDef.Name} [{mockDef.Method}] {mockDef.Endpoint}");
+                            $"Loaded mock API: {mockDefinitionDef.Name} [{mockDefinitionDef.Method}] {mockDefinitionDef.Endpoint}");
                     }
 
                 }
@@ -258,7 +258,7 @@ namespace Apify.Services
             return text.StartsWith("{") && text.EndsWith("}");
         }
         
-        private MockSchema? FindMatchingMockDefinition(HttpListenerRequest request)
+        private MockDefinitionSchema? FindMatchingMockDefinition(HttpListenerRequest request)
         {
             string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
             string method = request.HttpMethod;
@@ -299,7 +299,7 @@ namespace Apify.Services
             return null;
         }
         
-        private async Task ProcessMockResponseAsync(HttpListenerContext context, MockSchema mockDef, Dictionary<string, string> pathParams)
+        private async Task ProcessMockResponseAsync(HttpListenerContext context, MockDefinitionSchema mockDefinitionDef, Dictionary<string, string> pathParams)
         {
             var request = context.Request;
             var response = context.Response;
@@ -307,7 +307,7 @@ namespace Apify.Services
             string method = request.HttpMethod;
             
             // Extract path parameters for use in templates
-            ExtractPathParameters(mockDef.Endpoint, requestUrl, out pathParams);
+            ExtractPathParameters(mockDefinitionDef.Endpoint, requestUrl, out pathParams);
             
             // Get Headers
             Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -388,7 +388,7 @@ namespace Apify.Services
             var regularResponses = new List<ConditionalResponse>();
             
             // Sort the responses into appropriate lists
-            foreach (var resp in mockDef.Responses)
+            foreach (var resp in mockDefinitionDef.Responses)
             {
                 if (_conditionEvaluator.IsDefaultCondition(resp.Condition))
                 {
@@ -450,7 +450,7 @@ namespace Apify.Services
                 else
                 {
                     // If no explicit default, use the last response as fallback
-                    matchedResponse = mockDef.Responses.LastOrDefault();
+                    matchedResponse = mockDefinitionDef.Responses.LastOrDefault();
                     if (matchedResponse != null && _debug)
                     {
                         Console.WriteLine($"DEBUG: No explicit default found, using last response with condition '{matchedResponse.Condition ?? "null"}' as fallback");
@@ -507,7 +507,7 @@ namespace Apify.Services
                     {
                         {"env", envVars},
                         {"headers", headers},
-                        {"path", pathParams},
+                        {"params", pathParams},
                         {"query", queryParams},
                         {"body", bodyContent}
                     });
@@ -542,7 +542,7 @@ namespace Apify.Services
                 var envVars = _configService.GetDefaultEnvironment();
                 responseContent = StubManager.Replace(responseContent, new System.Collections.Generic.Dictionary<string, object>
                 {
-                    {"env", envVars},
+                    {"env", envVars.Variables},
                     {"headers", headers},
                     {"path", pathParams},
                     {"query", queryParams},

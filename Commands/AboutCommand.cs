@@ -10,8 +10,6 @@ namespace Apify.Commands
 {
     public class AboutCommand : Command
     {
-        private const string DefaultConfigFileName = "apify-config.json";
-        private const string DefaultApiDirectoryName = ".apify";
         private ConfigService _env;
 
         public AboutCommand() : base("about", "Getting application information")
@@ -28,19 +26,14 @@ namespace Apify.Commands
             _env = new ConfigService();
 
             this.SetHandler(
-                (force) => ExecuteAsync(force),
-                forceOption
+                (force, debug) => ExecuteAsync(force, debug),
+                forceOption, RootOption.DebugOption
             );
         }
 
-        private async Task ExecuteAsync(bool force)
+        private async Task ExecuteAsync(bool force, bool debug)
         {
             ConsoleHelper.WriteHeader("About API Testing Project");
-
-
-            var result = DynamicExpression.Execute("Faker.Email()");
-            // var result = funcs["RandomString()"]() as string;
-            ConsoleHelper.WriteSection($"Result: {result}: {result?.Length}");
             
 
             var config = _env.LoadConfiguration();

@@ -1,5 +1,8 @@
+using Apify.Commands;
 using Newtonsoft.Json.Linq;
 using System.Dynamic;
+using System.Net;
+using System.Text.RegularExpressions;
 
 namespace Apify.Utils;
 
@@ -57,6 +60,67 @@ public static class MiscHelper
         }
 
         return dict;
+    }
+    
+    
+    public static string HandlePath(string path, string extension = ".json")
+    {
+        string defaultDirectory = RootOption.DefaultApiDirectory;
+        string processedPath = path;
+            
+        if (processedPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Path.IsPathRooted(processedPath))
+            {
+                // If it's an absolute path, just return it
+                return processedPath;
+            }
+                
+            if (!Directory.Exists(defaultDirectory))
+            {
+                throw new DirectoryNotFoundException($"Default API directory '{defaultDirectory}' does not exist. Please create it or specify a different path.");
+            }
+                
+            // If it already has .json extension, just return it
+            return Path.Combine(defaultDirectory, path);
+        }
+            
+        if (!Directory.Exists(defaultDirectory))
+        {
+            throw new DirectoryNotFoundException($"Default API directory '{defaultDirectory}' does not exist. Please create it or specify a different path.");
+        }
+            
+        var pathWithoutExtension = path.Replace(".", Path.DirectorySeparatorChar.ToString());
+        path = Path.Combine(defaultDirectory, pathWithoutExtension + extension);
+
+        return path;
+    }
+    
+    public static bool IsLikelyPath(string input)
+    {
+        return Path.IsPathRooted(input) && input.IndexOfAny(Path.GetInvalidPathChars()) == -1;
+    }
+
+    public static string GetHttpStatusCodeName(object statusCode)
+    {
+        var code = statusCode.ToString();
+        string name = "Unknown";
+        if (Enum.TryParse<HttpStatusCode>(code, out HttpStatusCode parsedCode))
+        {
+            name = parsedCode.ToString(); // Returns "NotFound"
+        }
+
+        return PascalCaseToSpaceCase(name);
+
+    }
+    
+    public static string PascalCaseToSpaceCase(string input)
+    {
+        // প্রথমে, দুটি Capital এর মাঝে স্পেস (যেমন: "TooManyRedirection")
+        string result = Regex.Replace(input, "([a-z])([A-Z])", "$1 $2");
+        // পরে, একাধিক Capital letter থাকলে (যেমন: "HTTPStatusCode" => "HTTP Status Code")
+        result = Regex.Replace(result, "([A-Z])([A-Z][a-z])", "$1 $2");
+        return result.Trim();
     }
 
 }

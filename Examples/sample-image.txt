@@ -1,1 +1,0 @@
-This is a test file that would represent a sample image or other file to be uploaded using the Apify tool. In a real scenario, this would be replaced with an actual image or binary file.
