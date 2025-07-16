@@ -41,7 +41,7 @@ The easiest way to get Apify is to download the pre-built executable from the [G
 
 Alternatively, you can build Apify from source:
 
-### Native AOT Compilation
+### Build from Source
 
 Apify supports Native AOT (Ahead-of-Time) compilation, which produces a self-contained executable with no dependency on the .NET runtime. This results in:
 
@@ -76,7 +76,8 @@ For other platforms, replace `linux-x64` with your target platform:
 - Windows: `win-x64`
 - macOS: `osx-x64`
 - ARM64: `linux-arm64` or `osx-arm64`
-```
+
+
 
 ## Core Concepts
 
@@ -85,19 +86,18 @@ For other platforms, replace `linux-x64` with your target platform:
 To start using Apify in your project, navigate to your project's root directory and run:
 
 ```bash
-apify init --name "My Project API Tests" --base-url "https://api.myproject.com"
+apify init
 ```
 
 This command interactively prompts for:
 - Project Name
-- Base URL for your API
 - Default Environment Name (e.g., "Development")
 - Additional environments (e.g., "Staging,Production")
 
 It creates:
 - `apify-config.json`: The main configuration file.
 - `.apify/`: A directory to store your API test definitions (`.json`) and mock definitions (`.mock.json`).
-- Sample API test and mock definition files within `.apify/apis/` and `.apify/mocks/` respectively.
+- Sample API test and mock definition files within `.apify/` and `.apify/mocks/` respectively.
 - A `MockServer` configuration block in `apify-config.json`.
 
 ### Configuration (`apify-config.json`)
@@ -137,8 +137,7 @@ This file stores project-level settings, environments, and mock server configura
     "EnableCors": true,
     "DefaultHeaders": {
       "X-Mock-Server": "Apify"
-    },
-    "FileStoragePath": ".apify/uploads/mock-server"
+    }
   }
 }
 ```
@@ -151,11 +150,9 @@ This file stores project-level settings, environments, and mock server configura
     - **`Variables`**: Key-value pairs specific to this environment. These override project-level variables.
 - **`MockServer`**: Configuration for the mock server.
     - **`Port`**: Port for the mock server.
-    - **`Directory`**: Directory containing mock definition files.
     - **`Verbose`**: Enable verbose logging for the mock server.
     - **`EnableCors`**: Enable CORS headers (defaults to allow all).
     - **`DefaultHeaders`**: Headers to be added to all mock responses.
-    - **`FileStoragePath`**: Path to store files uploaded to mock endpoints (if configured in the mock definition).
 
 ### API Test Definitions (`.json`)
 
@@ -166,15 +163,14 @@ Structure:
 {
   "Name": "Get All Users",
   "Description": "Fetches the list of all users",
-  "Uri": "{{baseUrl}}/users?page={{defaultPage}}",
+  "Url": "{{baseUrl}}/users?page={{defaultPage}}",
   "Method": "GET",
   "Headers": {
     "Accept": "application/json",
     "X-Api-Key": "{{apiKey}}"
   },
-  "Payload": null,
+  "Body": null,
   "PayloadType": "none", // "json", "text", "formData"
-  "Files": [], // For "multipart/form-data"
   "Timeout": 30000, // Optional, in milliseconds
   "Tags": ["users", "smoke"], // Optional, for filtering tests
   "Variables": { // Request-specific variables (highest precedence)
@@ -182,41 +178,12 @@ Structure:
   },
   "Tests": [
     {
-      "Name": "Status code is 200 OK",
-      "AssertType": "StatusCode",
-      "ExpectedValue": "200"
+      "Title": "Status code is 200 OK",
+      "Case": "Assert.Response.StatusCodeIs(200)"
     },
     {
-      "Name": "Response body is an array",
-      "AssertType": "IsArray",
-      "Property": "data" // Path to property, e.g., "user.details.name" or "users[0].id"
-    },
-    {
-      "Name": "First user has an ID",
-      "AssertType": "ContainsProperty",
-      "Property": "data[0].id"
-    },
-    {
-      "Name": "Content-Type header is application/json",
-      "AssertType": "HeaderContains",
-      "Property": "Content-Type", // Header name
-      "ExpectedValue": "application/json"
-    },
-    {
-      "Name": "Response time is below 500ms",
-      "AssertType": "ResponseTimeBelow",
-      "ExpectedValue": "500" // Milliseconds
-    },
-    {
-      "Name": "User count matches expected",
-      "AssertType": "Equal",
-      "Property": "meta.total_items",
-      "ExpectedValue": "25" // Expected value (can be string, number, boolean)
-    },
-    {
-      "Name": "User list is not empty",
-      "AssertType": "ArrayNotEmpty",
-      "Property": "data"
+      "Title": "Response body is an array",
+      "Case": "Assert.Response.Json.data.Type == JTokenType.Array"
     }
   ]
 }
@@ -224,23 +191,15 @@ Structure:
 
 - **`Variables` (Request-Level)**: Override environment and project variables.
 - **`Tags`**: Used for filtering tests with `apify tests --tag <tagname>`.
-- **`Tests` (Assertions)**:
-    - **`AssertType`**: The type of assertion. Supported types:
-        - `StatusCode`: Checks the HTTP status code. `ExpectedValue` is the code (e.g., "200", "4xx").
-        - `ContainsProperty`: Checks if a JSON property exists. `Property` is the JSONPath-like path.
-        - `HeaderContains`: Checks if a response header contains a value. `Property` is header name, `ExpectedValue` is the content.
-        - `ResponseTimeBelow`: Checks if response time is below `ExpectedValue` (ms).
-        - `Equal`: Checks if a JSON property's value equals `ExpectedValue`. `Property` is the JSONPath-like path.
-        - `IsArray`: Checks if a JSON property is an array. `Property` is the JSONPath-like path.
-        - `ArrayNotEmpty`: Checks if a JSON array property is not empty. `Property` is the JSONPath-like path.
-    - **`Property`**: For JSON assertions, this is a JSONPath-like expression (e.g., `user.id`, `items[0].name`, `response.data.info`). For header assertions, it's the header name.
-    - **`ExpectedValue`**: The value to assert against.
+- **`Tests` (Assertions)**: A list of assertion objects.
+    - **`Title`**: A descriptive name for the assertion.
+    - **`Case`**: A C# expression to be evaluated. The expression should return a boolean value. You can use the `Assert` object and its methods to perform assertions.
 
 ### Mock API Definitions (`.mock.json`)
 
-Mock APIs are defined in `.mock.json` files (e.g., `.apify/mocks/users/get-user-by-id.mock.json`). Apify uses `AdvancedMockApiDefinition`.
+Mock APIs are defined in `.mock.json` files (e.g., `.apify/mocks/users/get-user-by-id.mock.json`).
 
-Structure (`AdvancedMockApiDefinition`):
+Structure:
 ```json
 {
   "Name": "Mock User by ID",
@@ -248,9 +207,8 @@ Structure (`AdvancedMockApiDefinition`):
   "Endpoint": "/api/users/:id", // Path parameters with :param or {param}
   "Responses": [
     {
-      "Condition": "path.id == \"1\"", // JavaScript-like condition
+      "Condition": "path.id == \"1\"", // C#-like condition
       "StatusCode": 200,
-      "ContentType": "application/json",
       "Headers": {
         "X-Source": "Mock-Conditional-User1"
       },
@@ -259,7 +217,7 @@ Structure (`AdvancedMockApiDefinition`):
         "name": "John Doe (Mocked)",
         "email": "john.mock@example.com",
         "requested_id": "{{path.id}}",
-        "random_code": "{{$random:int:1000:9999}}"
+        "random_code": "{{expr|> Faker.Random.Int(1000,9999)}}"
       }
     },
     {
@@ -271,7 +229,7 @@ Structure (`AdvancedMockApiDefinition`):
         "email": "admin.mock@example.com",
         "role": "admin",
         "token_used": "{{header.X-Admin-Token}}",
-        "uuid": "{{$random:uuid}}"
+        "uuid": "{{expr|> Faker.Random.Uuid()}}"
       }
     },
     {
@@ -283,7 +241,7 @@ Structure (`AdvancedMockApiDefinition`):
       }
     },
     {
-      "Condition": "true", // Default response if no other conditions match
+      "Condition": "default", // Default response if no other conditions match
       "StatusCode": 404,
       "ResponseTemplate": {
         "error": "User not found",
@@ -296,75 +254,69 @@ Structure (`AdvancedMockApiDefinition`):
 
 - **`Endpoint`**: The URL path for the mock. Supports path parameters like `/users/:id` or `/users/{id}`.
 - **`Responses`**: An array of conditional response objects. They are evaluated in order.
-    - **`Condition`**: A JavaScript-like expression to determine if this response should be used.
+    - **`Condition`**: A C#-like expression to determine if this response should be used.
         - Access request data:
             - `path.paramName` (e.g., `path.id`)
             - `query.paramName` (e.g., `query.page`)
-            - `header.HeaderName` (e.g., `header.Authorization`, case-insensitive)
+            - `headers.HeaderName` (e.g., `headers.Authorization`, case-insensitive)
             - `body.fieldName` (e.g., `body.username`, for JSON bodies)
-        - `true` can be used for a default fallback response.
+        - `default` can be used for a default fallback response.
     - **`StatusCode`**: The HTTP status code to return.
-    - **`ContentType`**: The `Content-Type` header for the response.
     - **`Headers`**: An object of response headers.
     - **`ResponseTemplate`**: The body of the response. Can be a JSON object or a string.
         - **Template Variables**:
             - `{{path.paramName}}`: Value of a path parameter.
             - `{{query.paramName}}`: Value of a query parameter.
-            - `{{header.HeaderName}}`: Value of a request header (case-insensitive).
+            - `{{headers.HeaderName}}`: Value of a request header (case-insensitive).
             - `{{body.fieldName}}`: Value of a field from the JSON request body.
             - `{{body}}`: The full raw request body (string).
-            - `{{$random:int:min:max}}`: A random integer between min and max (inclusive). E.g., `{{$random:int:1:100}}`.
-            - `{{$random:uuid}}`: A random UUID.
-            - `{{timestamp}}`: Current Unix timestamp (seconds).
-            - `{{datetime}}`: Current datetime in ISO 8601 format.
+            - `{{expr|> Faker.Random.Int(min,max)}}`: A random integer between min and max (inclusive). E.g., `{{expr|> Faker.Random.Int(1,100)}}`.
+            - `{{expr|> Faker.Random.Uuid()}}`: A random UUID.
+            - `{{expr|> Faker.Date.Recent()}}`: A recent date.
             - Any environment or project variable (e.g., `{{baseUrl}}`).
 
 ## Commands
 
-Apify commands are run as `apify <command> [subcommand] [options]`.
+Apify commands are run as `apify <command> [subcommand] [options]` if installed globally, or `dotnet run -- <command> [subcommand] [options]` if run from the project directory.
 
 ### `apify init`
 Initializes a new API testing project in the current directory.
 
 ```bash
-apify init --name "My API" --base-url "https://api.example.com" [--environment "CustomDev"] [--force]
+apify init [--force]
 ```
-- `--name`: (Required) The name of the API testing project.
-- `--base-url`: (Required) The base URL for API endpoints.
-- `--environment`: The name for the default environment (default: "Development").
 - `--force`: Overwrite existing `apify-config.json` and `.apify` directory if they exist.
-- Prompts for project name, base URL, default environment name, and other environments to create.
+- Prompts for project name, default environment name, and other environments to create.
 - Creates `apify-config.json`, `.apify/` directory with sample test and mock files.
 
-### `apify create request`
+### `apify create:request`
 Interactively creates a new API test definition file.
 
 ```bash
-apify create request --file users.getById [--force]
+apify create:request <file> [--force]
 ```
-- `--file`: (Required) The file path for the new API request definition (e.g., `users.all` becomes `.apify/users/all.json`). The `.json` extension is added automatically.
+- `<file>`: (Required) The file path for the new API request definition (e.g., `users.all` becomes `.apify/users/all.json`). The `.json` extension is added automatically.
 - `--force`: Overwrite if the file already exists.
 - Prompts for request name, HTTP method, URI, headers, payload, and basic assertions.
 
-### `apify create mock`
+### `apify create:mock`
 Interactively creates a new mock API definition file.
 
 ```bash
-apify create mock --file mocks.users.getById [--force]
+apify create:mock <file> [--force]
 ```
-- `--file`: (Required) The file path for the new mock API definition (e.g., `users.get` becomes `.apify/users/get.mock.json`). The `.mock.json` extension is added automatically.
+- `<file>`: (Required) The file path for the new mock API definition (e.g., `users.get` becomes `.apify/users/get.mock.json`). The `.mock.json` extension is added automatically.
 - `--force`: Overwrite if the file already exists.
 - Prompts for mock name, HTTP method, endpoint path, status code, content type, response body, headers, and conditional responses.
 
-### `apify run`
-Executes API tests from specified definition files.
+### `apify call`
+Executes an API test from a specified definition file.
 
 ```bash
-apify run <file_or_pattern_1> [file_or_pattern_2...] [--env <environment_name>] [--profile <profile_name>] [--verbose]
+apify call <file> [--env <environment_name>] [--verbose]
 ```
-- `files`: (Required) One or more API definition file paths or glob patterns (e.g., `users/all.json`, `.apify/orders/*.json`). Dot notation like `users.all` is also supported.
+- `<file>`: (Required) An API definition file path (e.g., `users/all.json`). Dot notation like `users.all` is also supported.
 - `--env <environment_name>`: Specifies the environment to use (e.g., "Production"). Uses default from `apify-config.json` if not set.
-- `--profile <profile_name>`: Specifies the configuration profile name (default: "Default").
 - `--verbose` or `-v`: Displays detailed output, including request and response bodies.
 
 ### `apify tests`
@@ -378,14 +330,14 @@ apify tests [--env <environment_name>] [--tag <tag_name>] [--verbose]
 - `--verbose` or `-v`: Displays detailed output.
 - Shows visual progress indicators and a summary at the end.
 
-### `apify mock-server`
+### `apify server:mock`
 Starts a local API mock server using mock definition files.
 
 ```bash
-apify mock-server [--port <port_number>] [--directory <path_to_mocks>] [--verbose]
+apify server:mock [--port <port_number>] [--directory <path_to_mocks>] [--verbose]
 ```
-- `--port <port_number>`: Port for the mock server (default: 8080 or as configured in `apify-config.json`).
-- `--directory <path_to_mocks>`: Directory containing mock definition files (default: `.apify/mocks` or as configured).
+- `--port <port_number>`: Port for the mock server (default: from `apify-config.json` or 1988).
+- `--directory <path_to_mocks>`: Directory containing mock definition files (default: `.apify`).
 - `--verbose` or `-v`: Enable verbose logging for the mock server.
 - Reads configuration from the `MockServer` block in `apify-config.json` but command-line options take precedence.
 
@@ -400,7 +352,6 @@ apify list-env
 These options can be used with most commands.
 
 - `--debug`: Show detailed debug output, including stack traces and internal logging. Useful for troubleshooting Apify itself.
-- `--verbose` or `-v` (for `run`, `tests`, `mock-server`): Enables more detailed output for the specific command.
 
 ## CI/CD with GitHub Actions
 
@@ -426,12 +377,11 @@ This process typically builds single file executables for various platforms and 
 
 1.  **Initialize Project:**
     ```bash
-    apify init --name "User API" --base-url "http://localhost:8080/api"
-    # (Assuming mock server will run on port 8080 for testing against mocks)
+    apify init
     ```
 
 2.  **Create a Mock for `GET /api/users/:id`:**
-    Use `apify create mock --file users.getById` and define it like this in `.apify/mocks/users/getById.mock.json`:
+    Use `apify create:mock users.getById` and define it like this in `.apify/users/getById.mock.json`:
     ```json
     {
       "Name": "Mock User by ID",
@@ -441,11 +391,10 @@ This process typically builds single file executables for various platforms and 
         {
           "Condition": "path.id == \"1\"",
           "StatusCode": 200,
-          "ContentType": "application/json",
           "ResponseTemplate": { "id": 1, "name": "Mocked Alice", "email": "alice.mock@example.com" }
         },
         {
-          "Condition": "true",
+          "Condition": "default",
           "StatusCode": 404,
           "ResponseTemplate": { "error": "MockUser not found" }
         }
@@ -455,31 +404,31 @@ This process typically builds single file executables for various platforms and 
 
 3.  **Start the Mock Server:**
     ```bash
-    apify mock-server --port 8080
+    apify server:mock --port 8080
     ```
     (In a separate terminal)
 
 4.  **Create an API Test for `GET /api/users/1`:**
-    Use `apify create request --file users.getUser1` and define it in `.apify/apis/users/getUser1.json`:
+    Use `apify create:request users.getUser1` and define it in `.apify/users/getUser1.json`:
     ```json
     {
       "Name": "Get User 1",
-      "Uri": "{{baseUrl}}/users/1", // baseUrl will be http://localhost:8080/api
+      "Url": "{{baseUrl}}/users/1", // baseUrl will be http://localhost:8080/api
       "Method": "GET",
       "Tests": [
-        { "Name": "Status 200", "AssertType": "StatusCode", "ExpectedValue": "200" },
-        { "Name": "ID is 1", "AssertType": "Equal", "Property": "id", "ExpectedValue": 1 },
-        { "Name": "Name is Mocked Alice", "AssertType": "Equal", "Property": "name", "ExpectedValue": "Mocked Alice" }
+        { "Title": "Status 200", "Case": "Assert.Response.StatusCodeIs(200)" },
+        { "Title": "ID is 1", "Case": "Assert.Equals(1, Response.Json.id)" },
+        { "Title": "Name is Mocked Alice", "Case": "Assert.Equals(\"Mocked Alice\", Response.Json.name)" }
       ]
     }
     ```
 
 5.  **Run the Test:**
     ```bash
-    apify run users.getUser1 --verbose
+    apify call users.getUser1 --verbose
     # This will hit your running mock server.
     ```
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details. (Ensure you have a LICENSE file).
+This project is licensed under the MIT License.
