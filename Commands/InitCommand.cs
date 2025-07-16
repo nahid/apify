@@ -192,6 +192,12 @@ namespace Apify.Commands
                         }
                     }
                 };
+                
+                string usersDirPath = Path.Combine(RootOption.DefaultApiDirectory, "users");
+                if (!Directory.Exists(usersDirPath))
+                {
+                    Directory.CreateDirectory(usersDirPath);
+                }
     
                 // Create the sample API test file
                 var sampleUserApi = new ApiDefinition
@@ -215,7 +221,7 @@ namespace Apify.Commands
                 };
 
                 // Create an example API file in the apis directory
-                string sampleApiFilePath = Path.Combine(RootOption.DefaultApiDirectory, "get.json");
+                string sampleApiFilePath = Path.Combine(RootOption.DefaultApiDirectory, "users", "get.json");
                 await File.WriteAllTextAsync(sampleApiFilePath, JsonHelper.SerializeObject(sampleUserApi));
                 ConsoleHelper.WriteSuccess($"Created sample API test: {sampleApiFilePath}");
                 
@@ -245,11 +251,15 @@ namespace Apify.Commands
                         new AssertionEntity { 
                             Title = "Status code is Created", 
                             Case = "Assert.Response.StatusCodeIs(201)",
+                        }, 
+                        new AssertionEntity { 
+                            Title = "The value of response's name matches the request body", 
+                            Case = "Assert.Equals(Request.Body.Json.name, Response.Json.name)",
                         }
                     }
                 };
                 
-                string samplePostFilePath = Path.Combine(RootOption.DefaultApiDirectory, "create.json");
+                string samplePostFilePath = Path.Combine(RootOption.DefaultApiDirectory, "users", "create.json");
                 await File.WriteAllTextAsync(samplePostFilePath, JsonHelper.SerializeObject(samplePostTest));
                 ConsoleHelper.WriteSuccess($"Created sample POST API test: {samplePostFilePath}");
 
@@ -260,12 +270,6 @@ namespace Apify.Commands
                 // Ask if user wants to create mock API examples
                 if (mock)
                 {
-                    // Create users directory for mock examples if it doesn't exist
-                    string usersDirPath = Path.Combine(RootOption.DefaultApiDirectory, "users");
-                    if (!Directory.Exists(usersDirPath))
-                    {
-                        Directory.CreateDirectory(usersDirPath);
-                    }
                     
                                       // Create a sample Get User by ID mock definition
                     string getUserByIdMockJson = @"{
@@ -274,13 +278,13 @@ namespace Apify.Commands
   ""Endpoint"": ""/api/users/{id}"",
   ""Responses"": [
     {
-      ""Condition"": ""q.id == \""2\"""",
+      ""Condition"": ""path[\""id\""] == \""2\"""",
       ""StatusCode"": 200,
       ""Headers"": {
         ""X-Apify-Version"": ""{{env.apiKey}}""
       },
       ""ResponseTemplate"": {
-            ""id"": 2,
+            ""id"": ""2"",
             ""name"": ""Nahid Bin Azhar"",
             ""email"": ""nahid@jouleslabs.com""
       }
@@ -289,7 +293,7 @@ namespace Apify.Commands
       ""Condition"": ""true"", 
       ""StatusCode"": 200,
       ""ResponseTemplate"": {
-        ""id"": 123,
+        ""id"": ""{{path.id}}"",
         ""name"": ""{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}"",
         ""email"": ""{{expr|> Faker.Internet.Email()}}""
       }

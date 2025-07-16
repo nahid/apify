@@ -67,17 +67,21 @@ public class DynamicExpressionManager
     
     public string Compile(string expr)
     {
+        return Compile<string>(expr);
+        
+    }
+    
+    public T Compile<T>(string expr)
+    {
         expr = expr.Replace("\\", "");
         try
         {
-            var result = _interpreter.Eval(expr);
-
-            return result.ToString() ?? string.Empty;
+            var result = _interpreter!.Eval<T>(expr);
+            return result;
         } catch (Exception ex)
         {
-            return expr;
+            return default(T)!; // Return default value for type T
         }
-        
     }
     
     public bool IsEvalExpression(string expr)

@@ -15,18 +15,12 @@ namespace Apify.Services
     public class ConditionEvaluator
     {
         private readonly Interpreter _interpreter;
+        private DynamicExpressionManager _dynamicExpression;
 
         public ConditionEvaluator()
         {
             _interpreter = new Interpreter(InterpreterOptions.Default);
-            
-            // Register helper methods to be used in expressions
-            _interpreter.SetFunction("int", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0));
-            _interpreter.SetFunction("Parse", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0));
-            _interpreter.SetFunction("ToLower", new Func<string, string>(s => s?.ToLower() ?? string.Empty));
-            _interpreter.SetFunction("ToUpper", new Func<string, string>(s => s?.ToUpper() ?? string.Empty));
-            _interpreter.SetFunction("Contains", new Func<string, string, bool>((source, value) => 
-                source?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false));
+            _dynamicExpression = new DynamicExpressionManager();
         }
         
  
@@ -50,22 +44,22 @@ namespace Apify.Services
             try
             {
                 // Set up parameters for the expression
-                _interpreter.SetVariable("headers", headers);
-                _interpreter.SetVariable("body", body);
-                _interpreter.SetVariable("query", queryParams);
-                _interpreter.SetVariable("params", pathParams);
+                _dynamicExpression.GetInterpreter().SetVariable("headers", headers);
+                _dynamicExpression.GetInterpreter().SetVariable("body", body);
+                _dynamicExpression.GetInterpreter().SetVariable("query", queryParams);
+                _dynamicExpression.GetInterpreter().SetVariable("path", pathParams);
                 
                 
                 // Add special accessor objects for query parameters and headers
                 // For accessing query parameters in a more natural way (q.parameter)
-                _interpreter.SetVariable("q", MiscHelper.DictionaryToExpandoObject(queryParams ?? new Dictionary<string, string>()));
+                _dynamicExpression.GetInterpreter().SetVariable("q", MiscHelper.DictionaryToExpandoObject(queryParams ?? new Dictionary<string, string>()));
                 
                 // For accessing headers in a more natural way (h.header)
-                _interpreter.SetVariable("h", MiscHelper.DictionaryToExpandoObject(headers ?? new Dictionary<string, string>()));
-                _interpreter.SetVariable("p", MiscHelper.DictionaryToExpandoObject(pathParams ?? new Dictionary<string, string>()));
+                _dynamicExpression.GetInterpreter().SetVariable("h", MiscHelper.DictionaryToExpandoObject(headers ?? new Dictionary<string, string>()));
+                _dynamicExpression.GetInterpreter().SetVariable("p", MiscHelper.DictionaryToExpandoObject(pathParams ?? new Dictionary<string, string>()));
 
                 // Evaluate the expression
-                var result = _interpreter.Eval<bool>(condition);
+                var result = _dynamicExpression.Compile<bool>(condition);
                 return result;
             }
             catch (Exception e)
