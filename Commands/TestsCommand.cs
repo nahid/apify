@@ -45,7 +45,7 @@ namespace Apify.Commands
             AddOption(tagOption);
             
             this.SetHandler(
-                (verbose, dir, envName, vars, tag, debug) => RunAllTestsAsync(verbose, dir, envName, vars, tag, debug),
+                RunAllTestsAsync,
                 verboseOption, dirOption, environmentOption, varsOption, tagOption, RootOption.DebugOption
             );
         }
@@ -53,7 +53,7 @@ namespace Apify.Commands
         private async Task RunAllTestsAsync(bool verbose, string directory, string? envName, string? vars, string? tag, bool debug = false)
         {
             var configService = new ConfigService();
-            envName = envName ?? configService.LoadConfiguration()?.DefaultEnvironment ?? "Development";
+            envName = envName ?? configService.LoadConfiguration().DefaultEnvironment ?? "Development";
             
             ConsoleHelper.DisplayTitle("Apify - Running All Tests");
             
@@ -113,7 +113,7 @@ namespace Apify.Commands
                     }
                     
                     Console.SetCursorPosition(0, cursorPosition);
-                    // Show current API being processed with highlighted box
+                    // Show the current API being processed with the highlighted box
                     ConsoleHelper.WriteLineColored($"▶ TESTING: {requestSchema.Name}", ConsoleColor.Cyan);
                     
                     
@@ -127,9 +127,10 @@ namespace Apify.Commands
                     ));
                     
                     var variables = MiscHelper.ParseArgsVariables(vars ?? "");
-                    var runtimeVars = new Dictionary<string, Dictionary<string, string>>();
-                    runtimeVars.Add("vars", variables);
-                    
+                    var runtimeVars = new Dictionary<string, Dictionary<string, string>> {
+                        { "vars", variables }
+                    };
+
                     requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, runtimeVars);
                     var response = await apiExecutor.ExecuteRequestAsync(requestSchema);
                     
@@ -179,7 +180,7 @@ namespace Apify.Commands
             if (totalTests > 0)
             {
                 ConsoleHelper.WriteKeyValue("Total Execution Time", $"{executionTime:F2} seconds");
-                ConsoleHelper.WriteKeyValue("Total Response Time", $"{(double)(totalResponseTime / 1000.0):F2} seconds");
+                ConsoleHelper.WriteKeyValue("Total Response Time", $"{totalResponseTime / 1000.0:F2} seconds");
                 ConsoleHelper.WriteKeyValue("Average Response Time", $"{(double)(totalResponseTime / totalTests):F2} ms");
             }
             
@@ -238,13 +239,14 @@ namespace Apify.Commands
 
     public class AllTestResults
     {
-        private List<Dictionary<string, TestResults>> _allTestResults = new List<Dictionary<string, TestResults>>();
+        private readonly List<Dictionary<string, TestResults>> _allTestResults = new List<Dictionary<string, TestResults>>();
         
         public void AddTestResults(string name, TestResults results)
         {
-            var resultsDict = new Dictionary<string, TestResults>();
-            resultsDict.Add(name, results);
-            
+            var resultsDict = new Dictionary<string, TestResults> {
+                { name, results }
+            };
+
             _allTestResults.Add(resultsDict);
         }
 

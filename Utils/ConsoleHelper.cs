@@ -6,21 +6,21 @@ namespace Apify.Utils
     public static class ConsoleHelper
     {
         // Colors for different types of content
-        private static readonly ConsoleColor HeaderColor = ConsoleColor.Magenta;
-        private static readonly ConsoleColor KeyColor = ConsoleColor.DarkCyan;
-        private static readonly ConsoleColor ValueColor = ConsoleColor.White;
-        private static readonly ConsoleColor JsonKeyColor = ConsoleColor.DarkYellow;
-        private static readonly ConsoleColor JsonValueColor = ConsoleColor.DarkGreen;
-        private static readonly ConsoleColor JsonPunctuationColor = ConsoleColor.DarkGray;
-        private static readonly ConsoleColor UrlColor = ConsoleColor.Blue;
-        private static readonly ConsoleColor MethodColor = ConsoleColor.Magenta;
-        private static readonly ConsoleColor TimingColor = ConsoleColor.DarkMagenta;
-        private static readonly ConsoleColor StatusSuccessColor = ConsoleColor.Green;
-        private static readonly ConsoleColor StatusWarningColor = ConsoleColor.Yellow;
-        private static readonly ConsoleColor StatusErrorColor = ConsoleColor.Red;
-        private static readonly ConsoleColor SectionColor = ConsoleColor.Cyan;
-        private static readonly ConsoleColor TipColor = ConsoleColor.DarkCyan;
-        private static readonly ConsoleColor PromptColor = ConsoleColor.Yellow;
+        private readonly static ConsoleColor HeaderColor = ConsoleColor.Magenta;
+        private readonly static ConsoleColor KeyColor = ConsoleColor.DarkCyan;
+        private readonly static ConsoleColor ValueColor = ConsoleColor.White;
+        private readonly static ConsoleColor JsonKeyColor = ConsoleColor.DarkYellow;
+        private readonly static ConsoleColor JsonValueColor = ConsoleColor.DarkGreen;
+        private readonly static ConsoleColor JsonPunctuationColor = ConsoleColor.DarkGray;
+        private readonly static ConsoleColor UrlColor = ConsoleColor.Blue;
+        private readonly static ConsoleColor MethodColor = ConsoleColor.Magenta;
+        private readonly static ConsoleColor TimingColor = ConsoleColor.DarkMagenta;
+        private readonly static ConsoleColor StatusSuccessColor = ConsoleColor.Green;
+        private readonly static ConsoleColor StatusWarningColor = ConsoleColor.Yellow;
+        private readonly static ConsoleColor StatusErrorColor = ConsoleColor.Red;
+        private readonly static ConsoleColor SectionColor = ConsoleColor.Cyan;
+        private readonly static ConsoleColor TipColor = ConsoleColor.DarkCyan;
+        private readonly static ConsoleColor PromptColor = ConsoleColor.Yellow;
         
         public static void WriteError(string message, bool strong = false)
         {
@@ -160,11 +160,11 @@ namespace Apify.Utils
         {
             Console.Write("Status Code: ");
             
-            if (statusCode >= 200 && statusCode < 300)
+            if (statusCode is >= 200 and < 300)
             {
                 Console.ForegroundColor = StatusSuccessColor;
             }
-            else if (statusCode >= 300 && statusCode < 400)
+            else if (statusCode is >= 300 and < 400)
             {
                 Console.ForegroundColor = StatusWarningColor;
             }
@@ -347,7 +347,7 @@ namespace Apify.Utils
         /// <summary>
         /// Displays a tip to the user with prominent formatting
         /// </summary>
-        public static void WriteTip(string tipText)
+        private static void WriteTip(string tipText)
         {
             Console.WriteLine();
             Console.ForegroundColor = TipColor;
@@ -415,18 +415,11 @@ namespace Apify.Utils
         /// </summary>
         public static string PromptInput(string message, string? defaultValue = null)
         {
-            if (defaultValue != null)
-            {
-                WritePrompt($"{message} [{defaultValue}]: ");
-            }
-            else
-            {
-                WritePrompt($"{message}: ");
-            }
-            
+            WritePrompt(defaultValue != null ? $"{message} [{defaultValue}]: " : $"{message}: ");
+
             string? input = Console.ReadLine();
             
-            // Return default value if input is empty and there is a default
+            // Return the default value if input is empty and there is a default
             if (string.IsNullOrWhiteSpace(input) && defaultValue != null)
             {
                 return defaultValue;
@@ -511,14 +504,12 @@ namespace Apify.Utils
 
         public static void DisplayTable<T>(List<T> tableData, string tableName = "") where T : class
         {
-            StringBuilder sb = new StringBuilder();
             ConsoleTableBuilder
                 .From(tableData)
                 .WithTitle(tableName)
                 .WithFormat(ConsoleTableBuilderFormat.Alternative)
                 .ExportAndWriteLine();
-            
-            // The ExportAndWriteLine method already writes to the console
+
         }
     }
 }

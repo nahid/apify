@@ -15,10 +15,10 @@ public class DynamicExpressionManager
         // Register helper methods to be used in expressions
         _interpreter.SetFunction("int", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0));
         _interpreter.SetFunction("Parse", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0));
-        _interpreter.SetFunction("ToLower", new Func<string, string>(s => s?.ToLower() ?? string.Empty));
-        _interpreter.SetFunction("ToUpper", new Func<string, string>(s => s?.ToUpper() ?? string.Empty));
+        _interpreter.SetFunction("ToLower", new Func<string, string>(s => s.ToLower()));
+        _interpreter.SetFunction("ToUpper", new Func<string, string>(s => s.ToUpper()));
         _interpreter.SetFunction("Contains", new Func<string, string, bool>((source, value) => 
-            source?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false));
+            source.Contains(value, StringComparison.OrdinalIgnoreCase)));
     }
 
     public void SetVariables(Dictionary<string, object> vars)
@@ -78,7 +78,7 @@ public class DynamicExpressionManager
         {
             var result = _interpreter!.Eval<T>(expr);
             return result;
-        } catch (Exception ex)
+        } catch (Exception)
         {
             return default(T)!; // Return default value for type T
         }

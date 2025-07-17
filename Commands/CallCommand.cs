@@ -1,10 +1,7 @@
 using Apify.Models;
 using Apify.Services;
 using Apify.Utils;
-using Bogus;
-using Newtonsoft.Json.Linq;
 using System.CommandLine;
-using System.CommandLine.Invocation;
 
 namespace Apify.Commands
 {
@@ -68,7 +65,7 @@ namespace Apify.Commands
             
             
             
-            this.SetHandler(async (InvocationContext context) =>
+            this.SetHandler(async (context) =>
             {
                 // Get the parsed arguments and options
                 var file = context.ParseResult.GetValueForArgument(fileArgument);
@@ -102,8 +99,8 @@ namespace Apify.Commands
         private async Task ExecuteRunCommand(CallCommandOptions options)
         {
            // ConsoleHelper.DisplayTitle("Apify - API Request Runner");
-           var configService = new ConfigService(options.Debug);;
-            var envName = options.Environment ?? configService.LoadConfiguration()?.DefaultEnvironment ?? "Development";
+           var configService = new ConfigService(options.Debug);
+            var envName = options.Environment ?? configService.LoadConfiguration().DefaultEnvironment ?? "Development";
             var apiExecutor = new ApiExecutor(new ApiExecutorOptions (
                 Tests: options.Tests,
                 ShowRequest: options.ShowRequest,
@@ -128,9 +125,10 @@ namespace Apify.Commands
                 }
 
                 var variables = MiscHelper.ParseArgsVariables(options.Vars ?? "");
-                var argVars = new Dictionary<string, Dictionary<string, string>>();
-                argVars.Add("vars", variables);
-                
+                var argVars = new Dictionary<string, Dictionary<string, string>> {
+                    { "vars", variables }
+                };
+
                 requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, argVars);
 
 

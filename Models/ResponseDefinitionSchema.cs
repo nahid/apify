@@ -9,9 +9,9 @@ public class ResponseDefinitionSchema
     public int StatusCode { get; set; }
     public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
     public Dictionary<string, string> ContentHeaders { get; set; } = new Dictionary<string, string>();
-    public string? ContentType { get; set; } = null;
+    public string? ContentType { get; set; }
     public string Body { get; set; } = string.Empty;
-    public JToken? Json { get; set; } = null;
+    public JToken? Json { get; set; }
     public long ResponseTimeMs { get; set; }
     public string? ErrorMessage { get; set; }
 

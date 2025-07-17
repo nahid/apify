@@ -1,29 +1,22 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text.RegularExpressions;
 using Apify.Models;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Linq;
 
 namespace Apify.Services;
 
 public class ConfigService
 {
     private const string ConfigFileName = "apify-config.json";
-    private static readonly Regex VariablePattern = new Regex(@"{{(.+?)}}", RegexOptions.Compiled);
 
-    private EnvironmentSchema? _defaultEnvironment = null;
-    private ApifyConfigSchema? _config = null;
-    private string? _configFilePath = null;
+    private EnvironmentSchema? _defaultEnvironment;
+    private ApifyConfigSchema? _config;
+    private string? _configFilePath;
     private bool _debug;
     
     public EnvironmentSchema? DefaultEnvironment => _defaultEnvironment;
     
     public ConfigService(bool debug = false)
     {
-        // Initialize config path to null - it will be determined dynamically when needed
+        // Initialize config a path to null - it will be determined dynamically when needed
         _configFilePath = null;
         _debug = debug;
     }
@@ -38,7 +31,7 @@ public class ConfigService
         _configFilePath = path;
     }
     
-    // Function to get the configuration file path - always uses current working directory
+    // Function to get the configuration file path - always uses the current working directory
     private string GetConfigFilePath()
     {
         // If the config file path is already set, return it
@@ -79,7 +72,7 @@ public class ConfigService
         
         var settings = new JsonSerializerSettings
         {
-            Error = (sender, args) => 
+            Error = (_, args) => 
             {
                 Console.WriteLine($"JSON Error: {args.ErrorContext.Error.Message}");
                 args.ErrorContext.Handled = true;
@@ -103,7 +96,7 @@ public class ConfigService
         }
         
         // Ensure Environments collection is initialized
-        if (config.Environments == null)
+        if (config.Environments.Count == 0)
         {
             config.Environments = new List<EnvironmentSchema>();
             
@@ -135,9 +128,9 @@ public class ConfigService
         var config = LoadConfiguration();
         
         string defaultEnvName = environmentName ?? config.DefaultEnvironment ?? config.Environments.FirstOrDefault()?.Name ?? "Development";
-        var environment = config.Environments.FirstOrDefault(e => e.Name?.Equals(defaultEnvName, StringComparison.OrdinalIgnoreCase) == true);
+        var environment = config.Environments.FirstOrDefault(e => e.Name.Equals(defaultEnvName, StringComparison.OrdinalIgnoreCase));
         
-        // If environment is not found, use the first one or create a default
+        // If an environment is not found, use the first one or create a default
         if (environment == null)
         {
             if (config.Environments.Count > 0)

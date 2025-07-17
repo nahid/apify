@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Apify.Models
@@ -10,21 +9,13 @@ namespace Apify.Models
                                DynamicallyAccessedMemberTypes.PublicFields | 
                                DynamicallyAccessedMemberTypes.PublicMethods |
                                DynamicallyAccessedMemberTypes.PublicConstructors)]
-    public class RequestDefinitionSchema
+    [method: Newtonsoft.Json.JsonConstructor]
+    public class RequestDefinitionSchema()
     {
         // Constructor for JSON deserialization
-        [Newtonsoft.Json.JsonConstructor]
-        public RequestDefinitionSchema()
-        {
-            Name = string.Empty;
-            Url = string.Empty;
-            Method = "GET";
-            Timeout = 30000;
-            Variables = new Dictionary<string, string>();
-        }
-        
+
         [JsonPropertyName("name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         [JsonPropertyName("description")]
         public string? Description { get; set; }
@@ -39,10 +30,10 @@ namespace Apify.Models
         public Dictionary<string, string>? Headers { get; set; }
 
         [JsonPropertyName("body")]
-        public Body? Body { get; set; } = null;
+        public Body? Body { get; set; }
         
         [JsonPropertyName("payloadType")]
-        public PayloadContentType? PayloadType { get; set; } = null;
+        public PayloadContentType? PayloadType { get; set; }
 
         [JsonPropertyName("tests")]
         public List<AssertionEntity>? Tests { get; set; }
@@ -51,8 +42,8 @@ namespace Apify.Models
         public int Timeout { get; set; } = 30000; // 30 seconds default timeout
         
         [JsonPropertyName("variables")]
-        public Dictionary<string, string>? Variables { get; set; }
-        
+        public Dictionary<string, string>? Variables { get; set; } = new Dictionary<string, string>();
+
         [JsonPropertyName("tags")]
         public List<string>? Tags { get; set; }
         
@@ -170,56 +161,32 @@ namespace Apify.Models
     [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties | 
                                DynamicallyAccessedMemberTypes.PublicFields |
                                DynamicallyAccessedMemberTypes.PublicConstructors)]
-    public class FileUpload
-    {
-        // This constructor is needed for Native AOT compatibility with JSON deserialization
-        [Newtonsoft.Json.JsonConstructor]
-        public FileUpload()
-        {
-            Name = string.Empty;
-            FieldName = string.Empty;
-            FilePath = string.Empty;
-            ContentType = "application/octet-stream";
-        }
-        
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
-
-        [JsonPropertyName("fieldName")]
-        public string FieldName { get; set; } = string.Empty;
-
-        [JsonPropertyName("filePath")]
-        public string FilePath { get; set; } = string.Empty;
-
-        [JsonPropertyName("contentType")]
-        public string ContentType { get; set; } = "application/octet-stream";
-    }
     
     public class MultipartData
     {
         [JsonPropertyName("name")]
-        public string Name { get; set; }
+        public string? Name { get; set; }
         
         [JsonPropertyName("content")]
-        public string Content { get; set; }
+        public string? Content { get; set; }
     }
 
     public class Body
     {
         [JsonPropertyName("json")]
-        public JToken? Json { get; set; } = null;
+        public JToken? Json { get; set; }
         
         [JsonPropertyName("text")]
-        public string? Text { get; set; } = null;
+        public string? Text { get; set; }
         
         [JsonPropertyName("formData")]
-        public Dictionary<string, string>? FormData { get; set; } = null;
+        public Dictionary<string, string>? FormData { get; set; }
         
         [JsonPropertyName("multipart")]
-        public List<MultipartData>? Multipart { get; set; } = null;
+        public List<MultipartData>? Multipart { get; set; }
         
         [JsonPropertyName("binary")]
-        public string? Binary { get; set; } = null;
+        public string? Binary { get; set; }
         
     }
 }

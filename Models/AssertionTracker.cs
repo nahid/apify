@@ -2,7 +2,7 @@ namespace Apify.Models;
 
 public class AssertionTracker
 {
-    private List<AssertionResult> _results = new List<AssertionResult>();
+    private readonly List<AssertionResult> _results = new List<AssertionResult>();
 
     public bool AddResult(bool status, string message = "Assertion passed")
     {
@@ -36,7 +36,7 @@ public class AssertionResult
     public AssertionResult(bool status, string message = "")
     {
         _status = status;
-        _message = message ?? string.Empty;
+        _message = message;
     }
 
     public bool IsPassed()

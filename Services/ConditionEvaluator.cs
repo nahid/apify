@@ -1,11 +1,5 @@
 using Apify.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using DynamicExpresso;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Dynamic;
 
 namespace Apify.Services
 {
@@ -14,12 +8,10 @@ namespace Apify.Services
     /// </summary>
     public class ConditionEvaluator
     {
-        private readonly Interpreter _interpreter;
-        private DynamicExpressionManager _dynamicExpression;
+        private readonly DynamicExpressionManager _dynamicExpression;
 
         public ConditionEvaluator()
         {
-            _interpreter = new Interpreter(InterpreterOptions.Default);
             _dynamicExpression = new DynamicExpressionManager();
         }
         
@@ -52,11 +44,11 @@ namespace Apify.Services
                 
                 // Add special accessor objects for query parameters and headers
                 // For accessing query parameters in a more natural way (q.parameter)
-                _dynamicExpression.GetInterpreter().SetVariable("q", MiscHelper.DictionaryToExpandoObject(queryParams ?? new Dictionary<string, string>()));
+                _dynamicExpression.GetInterpreter().SetVariable("q", MiscHelper.DictionaryToExpandoObject(queryParams));
                 
                 // For accessing headers in a more natural way (h.header)
-                _dynamicExpression.GetInterpreter().SetVariable("h", MiscHelper.DictionaryToExpandoObject(headers ?? new Dictionary<string, string>()));
-                _dynamicExpression.GetInterpreter().SetVariable("p", MiscHelper.DictionaryToExpandoObject(pathParams ?? new Dictionary<string, string>()));
+                _dynamicExpression.GetInterpreter().SetVariable("h", MiscHelper.DictionaryToExpandoObject(headers));
+                _dynamicExpression.GetInterpreter().SetVariable("p", MiscHelper.DictionaryToExpandoObject(pathParams));
 
                 // Evaluate the expression
                 var result = _dynamicExpression.Compile<bool>(condition);

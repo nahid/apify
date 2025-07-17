@@ -1,9 +1,6 @@
 using System.CommandLine;
 using Apify.Models;
 using Apify.Utils;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.CommandLine.Invocation;
 
 namespace Apify.Commands
 {
@@ -80,7 +77,7 @@ namespace Apify.Commands
             AddOption(promptOption);
             
             
-            this.SetHandler(async (InvocationContext context) => {
+            this.SetHandler(async (context) => {
                     var file = context.ParseResult.GetValueForArgument(fileArgument);
                 var force = context.ParseResult.GetValueForOption(forceOption);
                     var name = context.ParseResult.GetValueForOption(nameOption);
@@ -94,12 +91,12 @@ namespace Apify.Commands
 
                     var options = new CreateMockCommandOptions(
                         file,
-                        name,
-                        method,
-                        endpoint,
+                        name ?? "",
+                        method ?? "GET",
+                        endpoint ?? "/new-endpoint",
                         statusCode,
-                        contentType,
-                        responseBody,
+                        contentType ?? "application/json",
+                        responseBody ?? "",
                         force,
                         prompt,
                         debug
@@ -160,8 +157,8 @@ namespace Apify.Commands
                 await File.WriteAllTextAsync(processedPath, jsonContent);
                 
                 ConsoleHelper.WriteSuccess($"Mock API response saved to: {processedPath}");
-                ConsoleHelper.WriteInfo($"You can test it with: apify mock-server");
-                ConsoleHelper.WriteInfo($"Then access: http://localhost:8080{mockDefinitionApi.Endpoint}");
+                ConsoleHelper.WriteInfo($"You can test it with: apify server:mock --port=1988");
+                ConsoleHelper.WriteInfo($"Then access: http://localhost:1988{mockDefinitionApi.Endpoint}");
             }
             catch (Exception ex)
             {
@@ -187,7 +184,7 @@ namespace Apify.Commands
             
             if (string.IsNullOrWhiteSpace(method))
             {
-                method = "GET"; // Default method if not provided
+                method = "GET"; // Default method if isn't provided
             }
             
             if (options.Prompt)
@@ -195,11 +192,12 @@ namespace Apify.Commands
                 // Basic mock API information
                 name = ConsoleHelper.PromptInput("Mock API name (e.g., Get User)");
                 endpoint = ConsoleHelper.PromptInput("Endpoint path (e.g., /api/users/1 or /users):");
-                method = ConsoleHelper.PromptChoice<string>("HTTP method:", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
+                method = ConsoleHelper.PromptChoice<string>("HTTP method:", ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"
+                ]);
             }
 
             
-            // Ensure endpoint starts with /
+            // Ensure the endpoint starts with /
             if (!endpoint.StartsWith("/"))
             {
                 endpoint = "/" + endpoint;
@@ -224,7 +222,7 @@ namespace Apify.Commands
             {
                 statusCode = PromptForStatusCode();
 
-                contentType = ConsoleHelper.PromptChoice("Content Type:", new[] {
+                contentType = ConsoleHelper.PromptChoice("Content Type:", [
                     "application/json",
                     "text/plain",
                     "text/html",
@@ -232,12 +230,12 @@ namespace Apify.Commands
                     "text/csv",
                     "application/octet-stream",
                     "application/x-www-form-urlencoded"
-                });
+                ]);
             }
       
             
             // Response body
-            object? responseBody = null;
+            object? responseBody;
             if (contentType.Contains("json") && options.Prompt)
             {
                 responseBody = ConsoleHelper.PromptMultiLineInput("Enter JSON Body(Plain Text):");
@@ -270,40 +268,39 @@ namespace Apify.Commands
             }
             
             // Advanced options
-            int delay = 0;
+           
+
             if (options.Prompt && ConsoleHelper.PromptYesNo("Add response delay (simulates latency)?"))
             {
                 while (true)
                 {
                     string delayStr = ConsoleHelper.PromptInput("Delay in milliseconds (e.g., 500):");
-                    if (int.TryParse(delayStr, out delay) && delay >= 0)
+
+                    if (int.TryParse(delayStr, out var delay) && delay >= 0)
                     {
                         break;
                     }
                     ConsoleHelper.WriteWarning("Please enter a valid non-negative number.");
                 }
             }
-            
             return Task.FromResult(new MockDefinitionSchema {
                 Name = name,
                 Endpoint = endpoint,
                 Method = method,
-                Responses = new List<ConditionalResponse>
-                {
-                    new ConditionalResponse
-                    {
+                Responses = [
+                    new ConditionalResponse {
                         Condition = "default", // Default condition for the main response
                         StatusCode = statusCode,
                         Headers = headers ?? new Dictionary<string, string>(),
                         ResponseTemplate = responseBody,
                     }
-                }
+                ]
             });
         }
 
         private int PromptForStatusCode()
         {
-            string[] statusOptions = {
+            string[] statusOptions = [
                 "200 - OK",
                 "201 - Created",
                 "204 - No Content",
@@ -313,9 +310,9 @@ namespace Apify.Commands
                 "404 - Not Found",
                 "500 - Server Error",
                 "Custom Status Code"
-            };
+            ];
             
-            int[] statusCodes = { 200, 201, 204, 400, 401, 403, 404, 500, 0 };
+            int[] statusCodes = [200, 201, 204, 400, 401, 403, 404, 500, 0];
             
             int selectedIndex = ConsoleHelper.PromptChoiceWithIndex("Status Code:", statusOptions);
             
@@ -325,7 +322,7 @@ namespace Apify.Commands
                 while (true)
                 {
                     int customCode = ConsoleHelper.PromptInput<int>("Enter custom status code (100-599):");
-                    if (customCode >= 100 && customCode <= 599)
+                    if (customCode is >= 100 and <= 599)
                     {
                         return customCode;
                     }
