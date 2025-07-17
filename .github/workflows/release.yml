@@ -44,7 +44,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     outputs:
-      version: ${{ steps.set_version.outputs.VERSION }}
+      version: ${{ steps.set_version_from_build.outputs.VERSION }}
     
     steps:
     - uses: actions/checkout@v4
@@ -62,20 +62,20 @@ jobs:
     
     - name: Set version from build job
       id: set_version_from_build
-      run: echo "VERSION=${{ needs.build-single-file.outputs.version }}" >> $GITHUB_OUTPUT
+      run: echo "VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
       shell: bash
       
     - name: Rename Artifact
       run: |
         mkdir -p ./artifacts
-        cp ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./artifacts/apify-${{ steps.set_version.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
+        cp ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./artifacts/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
       shell: bash
     
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: apify-${{ matrix.platform }}
-        path: ./artifacts/apify-${{ steps.set_version.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
+        path: ./artifacts/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
         
   create-release:
     needs: build-single-file
