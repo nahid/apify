@@ -11,7 +11,7 @@ namespace Apify
         {
             var rootCommand = new System.CommandLine.RootCommand
             {
-                Description = "Apify - A CLI tool for testing APIs"
+                Description = "Apify - A robust and powerful CLI tool for testing APIs and a mock server."
             };
             rootCommand.AddGlobalOption(RootOption.DebugOption);
 
@@ -28,6 +28,11 @@ namespace Apify
             rootCommand.AddCommand(new TestsCommand());
             rootCommand.AddCommand(new MockServerCommand());
 
+            if (args.Length == 0)
+            {
+                // Show help if no arguments are provided
+                return await rootCommand.InvokeAsync(["--help"]);
+            }
             // Parse and execute
             return await rootCommand.InvokeAsync(args);
         }
