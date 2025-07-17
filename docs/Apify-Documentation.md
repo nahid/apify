@@ -83,22 +83,67 @@ For other platforms, replace `linux-x64` with your target platform:
 
 ### Project Initialization (`apify init`)
 
-To start using Apify in your project, navigate to your project's root directory and run:
+To start using Apify in your project, navigate to your desired project directory and run:
 
 ```bash
 apify init
 ```
 
-This command interactively prompts for:
-- Project Name
-- Default Environment Name (e.g., "Development")
-- Additional environments (e.g., "Staging,Production")
+This command interactively guides you through the initial setup, prompting for:
+- **Project Name**: A descriptive name for your API testing project.
+- **Default Environment Name**: The name for your primary testing environment (e.g., "Development", "Local").
+- **Additional Environment Variables**: You'll be asked if you want to configure global variables that apply across all environments (e.g., `baseUrl`, `apiToken`).
+- **Additional Environments**: You can define more environments (e.g., "Staging", "Production") and their specific variables.
+- **Sample Mock API Definitions**: Option to generate example mock files.
 
-It creates:
-- `apify-config.json`: The main configuration file.
-- `.apify/`: A directory to store your API test definitions (`.json`) and mock definitions (`.mock.json`).
-- Sample API test and mock definition files within `.apify/` and `.apify/mocks/` respectively.
-- A `MockServer` configuration block in `apify-config.json`.
+Upon successful initialization, Apify creates the following:
+- `apify-config.json`: The central configuration file for your project. This file stores project metadata, environment definitions, and mock server settings.
+- `.apify/`: A dedicated directory where your API test definitions (`.json` files) and mock API definitions (`.mock.json` files) will reside.
+- Sample API test files (e.g., `users/get.json`, `users/create.json`) within the `.apify/` directory, demonstrating basic GET and POST requests with assertions.
+- If you opt to create sample mocks, a `user.mock.json` file will be generated in `.apify/users/`, showcasing conditional mock responses.
+
+**Example Interactive Session:**
+
+```
+$ apify init
+Initializing API Testing Project
+? Enter project name: MyAwesomeApiProject
+? Enter default environment name [Development]:
+? Configure additional environment variables? (y/N): y
+Enter environment variables (empty name to finish):
+? Variable name: baseUrl
+? Value for baseUrl: https://api.example.com/v1
+? Variable name: apiToken
+? Value for apiToken: your-secret-token
+? Variable name:
+? Add additional environments? (y/N): y
+? Environment name (empty to finish): Staging
+? Description for Staging [Staging environment]:
+? baseUrl for Staging [https://api.example.com/v1]: https://staging.example.com/v1
+? apiToken for Staging [your-secret-token]: staging-secret-token
+? Environment name (empty to finish):
+? Create sample mock API definitions? (y/N): y
+✓ Created sample API test: .apify/users/get.json
+✓ Created sample POST API test: .apify/users/create.json
+✓ Created sample mock API definitions in .apify/users
+✓ Created configuration file: apify-config.json
+
+Project initialized successfully!
+
+🚀 Quick Start Guide
+... (rest of the quick start guide)
+```
+
+You can also initialize a project non-interactively by providing options:
+
+```bash
+apify init --name "My Headless Project" --mock --force
+```
+- `--name <project_name>`: Specifies the project name directly.
+- `--mock`: Automatically creates sample mock API definitions.
+- `--force`: Overwrites existing `apify-config.json` and `.apify/` directory if they exist, without prompting.
+
+This command is crucial for setting up your testing workspace and provides a foundational `apify-config.json` with sensible defaults and example API definitions.
 
 ### Configuration (`apify-config.json`)
 
@@ -290,63 +335,518 @@ apify init [--force]
 - Creates `apify-config.json`, `.apify/` directory with sample test and mock files.
 
 ### `apify create:request`
-Interactively creates a new API test definition file.
+
+This command interactively guides you through the creation of a new API request definition file (`.json`). These files define the HTTP request to be made, including its URL, method, headers, body, and associated tests.
 
 ```bash
-apify create:request <file> [--force]
+apify create:request <file_path> [--force] [--prompt]
 ```
-- `<file>`: (Required) The file path for the new API request definition (e.g., `users.all` becomes `.apify/users/all.json`). The `.json` extension is added automatically.
-- `--force`: Overwrite if the file already exists.
-- Prompts for request name, HTTP method, URI, headers, payload, and basic assertions.
+
+- `<file_path>`: (Required) The desired path and name for your new API request file. Apify automatically resolves this path relative to your `.apify/` directory and appends the `.json` extension. For example, `users.get` will create `.apify/users/get.json`.
+- `--force`: (Optional) If a file already exists at the specified `<file_path>`, this flag will force an overwrite without prompting for confirmation.
+- `--prompt`: (Optional) Forces interactive prompting for all details, even if some are provided via other command-line options.
+
+**Interactive Prompts:**
+When you run `apify create:request` (especially with `--prompt` or without sufficient arguments), you'll be guided through the following:
+- **API request name**: A human-readable name for your request (e.g., "Get User by ID").
+- **HTTP Method**: Choose from common HTTP verbs (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS).
+- **URL**: The endpoint for your request. You can use environment variables (e.g., `{{baseUrl}}/users/{{userId}}`) and runtime variables here.
+- **Add request headers?**: Option to define custom HTTP headers.
+- **Add request payload?**: If the method typically includes a body (POST, PUT, PATCH), you'll be prompted to define the payload type (JSON, Text, FormData, Binary) and its content.
+
+**Example Usage:**
+
+To create a new GET request for fetching user details:
+
+```bash
+apify create:request users.getById --prompt
+```
+
+**Example Interactive Session:**
+
+```
+$ apify create:request users.getById --prompt
+Creating New API Request
+? API request name (e.g., Get User): Get User by ID
+? Choose HTTP Method? [GET]: GET
+? URL (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users): {{baseUrl}}/users/1
+? Add request headers? (y/N): y
+Enter headers (empty name to finish):
+? Header name (e.g., Content-Type): Accept
+? Value for Accept: application/json
+? Header name (e.g., Content-Type):
+✓ API request is successfully created to: .apify/users/getById.json
+You can run it with: apify run users.getById
+```
+
+This will create a file named `.apify/users/getById.json` with content similar to this:
+
+```json
+{
+  "Name": "Get User by ID",
+  "Url": "{{baseUrl}}/users/1",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "application/json"
+  },
+  "PayloadType": "none",
+  "Body": null,
+  "Tests": []
+}
+```
+
+**Example with POST Request and JSON Payload:**
+
+```bash
+apify create:request users.create --prompt
+```
+
+**Example Interactive Session:**
+
+```
+$ apify create:request users.create --prompt
+Creating New API Request
+? API request name (e.g., Get User): Create New User
+? Choose HTTP Method? [GET]: POST
+? URL (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users): {{baseUrl}}/users
+? Add request headers? (y/N): y
+Enter headers (empty name to finish):
+? Header name (e.g., Content-Type): Content-Type
+? Value for Content-Type: application/json
+? Header name (e.g., Content-Type):
+? Add request payload? (y/N): y
+? Payload type: JSON
+? Enter JSON payload: {"name": "John Doe", "job": "Software Engineer"}
+✓ API request is successfully created to: .apify/users/create.json
+You can run it with: apify run users.create
+```
+
+This will create a file named `.apify/users/create.json` with content similar to this:
+
+```json
+{
+  "Name": "Create New User",
+  "Url": "{{baseUrl}}/users",
+  "Method": "POST",
+  "Headers": {
+    "Content-Type": "application/json"
+  },
+  "PayloadType": "json",
+  "Body": {
+    "json": {
+      "name": "John Doe",
+      "job": "Software Engineer"
+    }
+  },
+  "Tests": []
+}
+```
 
 ### `apify create:mock`
-Interactively creates a new mock API definition file.
+
+This command interactively assists you in creating a new mock API definition file (`.mock.json`). These files define how your mock server should respond to specific requests, including conditional responses based on request parameters, headers, or body content.
 
 ```bash
-apify create:mock <file> [--force]
+apify create:mock <file_path> [--force] [--prompt] [--name <name>] [--method <method>] [--endpoint <endpoint>] [--status-code <status>] [--content-type <type>] [--response-body <body>]
 ```
-- `<file>`: (Required) The file path for the new mock API definition (e.g., `users.get` becomes `.apify/users/get.mock.json`). The `.mock.json` extension is added automatically.
-- `--force`: Overwrite if the file already exists.
-- Prompts for mock name, HTTP method, endpoint path, status code, content type, response body, headers, and conditional responses.
+
+- `<file_path>`: (Required) The desired path and name for your new mock API file. Apify automatically resolves this path relative to your `.apify/` directory and appends the `.mock.json` extension. For example, `users.getById` will create `.apify/users/getById.mock.json`.
+- `--force`: (Optional) If a file already exists at the specified `<file_path>`, this flag will force an overwrite without prompting for confirmation.
+- `--prompt`: (Optional) Forces interactive prompting for all details, even if some are provided via other command-line options.
+- `--name <name>`: (Optional) Specifies the name of the mock API.
+- `--method <method>`: (Optional) Specifies the HTTP method (e.g., GET, POST).
+- `--endpoint <endpoint>`: (Optional) Specifies the endpoint path (e.g., `/api/users/{id}`).
+- `--status-code <status>`: (Optional) Sets the HTTP status code for the default response.
+- `--content-type <type>`: (Optional) Sets the Content-Type header for the default response.
+- `--response-body <body>`: (Optional) Provides the response body for the default response.
+
+**Interactive Prompts:**
+When you run `apify create:mock` (especially with `--prompt` or without sufficient arguments), you'll be guided through the following:
+- **Mock API name**: A descriptive name for your mock (e.g., "Get User by ID Mock").
+- **Endpoint path**: The URL path for the mock. Supports path parameters like `/users/{id}`.
+- **HTTP method**: Choose from common HTTP verbs.
+- **Status Code**: The HTTP status code for the response.
+- **Content Type**: The `Content-Type` header for the response.
+- **Response body**: The content of the response body. For JSON, you can enter a plain JSON string.
+- **Add custom response headers?**: Option to define custom HTTP headers for the mock response.
+- **Add response delay?**: Option to simulate network latency.
+
+**Example Usage:**
+
+To create a new mock for a GET request to `/api/users/{id}`:
+
+```bash
+apify create:mock users.getById --prompt
+```
+
+**Example Interactive Session:**
+
+```
+$ apify create:mock users.getById --prompt
+Creating New Mock API Response
+? Mock API name (e.g., Get User): Get User by ID Mock
+? Endpoint path (e.g., /api/users/1 or /users): /api/users/{id}
+? HTTP method: GET
+? Status Code: 200 - OK
+? Content Type: application/json
+? Enter JSON Body(Plain Text):
+{
+  "id": "{{path.id}}",
+  "name": "{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}",
+  "email": "{{expr|> Faker.Internet.Email()}}"
+}
+(Press Enter on an empty line to finish input)
+
+? Add custom response headers? (y/N): n
+? Add response delay (simulates latency)? (y/N): n
+✓ Mock API response saved to: .apify/users/getById.mock.json
+You can test it with: apify server:mock --port=1988
+Then access: http://localhost:1988/api/users/1
+```
+
+This will create a file named `.apify/users/getById.mock.json` with content similar to this:
+
+```json
+{
+  "Name": "Get User by ID Mock",
+  "Description": "",
+  "Method": "GET",
+  "Endpoint": "/api/users/{id}",
+  "Responses": [
+    {
+      "Condition": "default",
+      "StatusCode": 200,
+      "Headers": {},
+      "ResponseTemplate": {
+        "id": "{{path.id}}",
+        "name": "{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}",
+        "email": "{{expr|> Faker.Internet.Email()}}"
+      }
+    }
+  ]
+}
+```
+
+**Example with Conditional Response:**
+
+To create a mock that responds differently based on the `id` path parameter:
+
+```json
+{
+  "Name": "Mock User by ID",
+  "Method": "GET",
+  "Endpoint": "/api/users/{id}",
+  "Responses": [
+    {
+      "Condition": "path.id == \"1\"",
+      "StatusCode": 200,
+      "ResponseTemplate": { "id": 1, "name": "Mocked Alice", "email": "alice.mock@example.com" }
+    },
+    {
+      "Condition": "default",
+      "StatusCode": 404,
+      "ResponseTemplate": { "error": "User not found", "id_searched": "{{path.id}}" }
+    }
+  ]
+}
+```
+
+In this example:
+- If the `id` in the path is `1`, it returns a 200 OK with Alice's details.
+- Otherwise (the `default` condition), it returns a 404 Not Found with an error message.
+
+**Using Request Body in Conditions (for POST/PUT/PATCH mocks):**
+
+```json
+{
+  "Name": "Create User Mock",
+  "Method": "POST",
+  "Endpoint": "/api/users",
+  "Responses": [
+    {
+      "Condition": "body.name == \"John Doe\"",
+      "StatusCode": 201,
+      "ResponseTemplate": {
+        "message": "User John Doe created successfully",
+        "id": "{{expr|> Faker.Random.Int(1000, 9999)}}",
+        "name": "{{body.name}}",
+        "job": "{{body.job}}"
+      }
+    },
+    {
+      "Condition": "default",
+      "StatusCode": 400,
+      "ResponseTemplate": {
+        "error": "Invalid request body",
+        "received_body": "{{body}}"
+      }
+    }
+  ]
+}
+```
+
+This mock demonstrates:
+- Accessing `body.name` from the request JSON body in the `Condition`.
+- Using `{{body.name}}` and `{{body.job}}` to echo values from the request body into the response template.
+- Using `{{body}}` to include the entire request body in the response for debugging or logging.
+
 
 ### `apify call`
-Executes an API test from a specified definition file.
+
+This command executes an API test defined in a `.json` file. It sends the HTTP request, receives the response, and runs any defined assertions, providing detailed output based on the specified options.
 
 ```bash
-apify call <file> [--env <environment_name>] [--verbose]
+apify call <file_path> [--env <environment_name>] [--vars <key=value;...>] [--tests] [--show-request] [--show-response] [--show-only-response] [--verbose]
 ```
-- `<file>`: (Required) An API definition file path (e.g., `users/all.json`). Dot notation like `users.all` is also supported.
-- `--env <environment_name>`: Specifies the environment to use (e.g., "Production"). Uses default from `apify-config.json` if not set.
-- `--verbose` or `-v`: Displays detailed output, including request and response bodies.
+
+- `<file_path>`: (Required) The path to your API definition file. This can be a direct path (e.g., `.apify/users/get.json`) or use dot notation (e.g., `users.get`). Apify automatically looks for files within the `.apify/` directory.
+- `--env <environment_name>` or `-e`: (Optional) Specifies the environment to use for this call (e.g., "Production", "Staging"). If not provided, Apify uses the `DefaultEnvironment` specified in your `apify-config.json`.
+- `--vars <key=value;...>`: (Optional) Provides runtime variables that are specific to this command execution. These variables will override any project-level or environment-level variables with the same name. Multiple variables can be separated by semicolons (e.g., `--vars "userId=123;token=abc"`).
+- `--tests` or `-t`: (Optional) Forces the execution and display of tests defined within the API definition file, even if `RequestOptions.Tests` is set to `false` in `apify-config.json`.
+- `--show-request` or `-sr`: (Optional) Displays the full details of the outgoing HTTP request (URL, method, headers, body) before sending it.
+- `--show-response` or `-srp`: (Optional) Displays the full details of the received HTTP response (status, headers, body) after the request completes.
+- `--show-only-response` or `-r`: (Optional) Displays only the response details, suppressing the request details. This option takes precedence over `--show-request`.
+- `--verbose` or `-v`: (Optional) Enables verbose output, which includes detailed request and response information, as well as full test results. This option overrides `--show-request`, `--show-response`, and `--show-only-response`.
+
+**Example Usage:**
+
+Let's assume you have an `apify-config.json` with a `Development` environment and a `baseUrl` variable set to `https://reqres.in/api`.
+
+And you have an API definition file `.apify/users/get.json`:
+
+```json
+{
+  "Name": "Get Single User",
+  "Url": "{{baseUrl}}/users/{{vars.userId}}",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "application/json"
+  },
+  "Tests": [
+    {
+      "Title": "Status code is 200 OK",
+      "Case": "Assert.Response.StatusCodeIs(200)"
+    },
+    {
+      "Title": "User ID matches requested ID",
+      "Case": "Assert.Equals(vars.userId, Response.Json.data.id)"
+    },
+    {
+      "Title": "User email is present",
+      "Case": "Assert.IsNotNull(Response.Json.data.email)"
+    }
+  ]
+}
+```
+
+Now, you can call this API definition with different options:
+
+1.  **Basic Call (using default environment and no extra variables):**
+    ```bash
+    apify call users.get
+    ```
+    This will execute the request for `https://reqres.in/api/users/` (since `userId` is not provided, it might result in an error or a list of users depending on the API).
+
+2.  **Call with Runtime Variables:**
+    ```bash
+    apify call users.get --vars "userId=2"
+    ```
+    This will execute the request for `https://reqres.in/api/users/2`.
+
+3.  **Call with Specific Environment and Verbose Output:**
+    ```bash
+    apify call users.get --env Production --vars "userId=3" --verbose
+    ```
+    If your `Production` environment has a different `baseUrl`, it will use that. The `--verbose` flag will show the full request and response details, along with detailed test results.
+
+4.  **Call to Show Only Response:**
+    ```bash
+    apify call users.get --vars "userId=1" --show-only-response
+    ```
+    This will only display the HTTP response body and status, without showing the request details.
+
+5.  **Call to Force Test Execution and Show Request:**
+    ```bash
+    apify call users.get --vars "userId=4" --tests --show-request
+    ```
+    This ensures that the tests defined in `users.get.json` are run and their results displayed, and also shows the details of the outgoing request.
 
 ### `apify tests`
-Runs all API tests found in the `.apify` directory and its subdirectories.
+
+This command is designed to run all API tests defined in your `.apify/` directory and its subdirectories. It provides a comprehensive overview of your API health, including individual test results and a summary.
 
 ```bash
-apify tests [--env <environment_name>] [--tag <tag_name>] [--verbose]
+apify tests [--env <environment_name>] [--vars <key=value;...>] [--tag <tag_name>] [--dir <directory_path>] [--verbose]
 ```
-- `--env <environment_name>`: Specifies the environment.
-- `--tag <tag_name>`: Filters and runs only tests that have the specified tag in their definition.
-- `--verbose` or `-v`: Displays detailed output.
-- Shows visual progress indicators and a summary at the end.
+
+- `--env <environment_name>` or `-e`: (Optional) Specifies the environment to use for all tests (e.g., "Production", "Staging"). If not provided, Apify uses the `DefaultEnvironment` from `apify-config.json`.
+- `--vars <key=value;...>`: (Optional) Provides runtime variables that are applied to all tests during this execution. These variables override project-level and environment-level variables. Multiple variables can be separated by semicolons.
+- `--tag <tag_name>`: (Optional) Filters the tests to run. Only tests that have the specified tag in their `Tags` array within their `.json` definition will be executed.
+- `--dir <directory_path>`: (Optional) Specifies the root directory to search for API test files. Defaults to `.apify/`.
+- `--verbose` or `-v`: (Optional) Enables verbose output, showing detailed request/response information and individual assertion results for each test.
+
+**How it Works:**
+1.  Apify scans the specified directory (defaulting to `.apify/`) for all `.json` files that are not mock definitions (`.mock.json`).
+2.  For each found API test file, it loads the definition, applies environment and runtime variables, and executes the HTTP request.
+3.  All assertions defined within each API test file are run against the received response.
+4.  During execution, a visual spinner indicates progress, and a summary is displayed upon completion.
+
+**Example Usage:**
+
+Let's assume you have the following API test files:
+
+- `.apify/users/get.json` (with `Tags: ["smoke", "users"]`)
+- `.apify/users/create.json` (with `Tags: ["users"]`)
+- `.apify/products/list.json` (with `Tags: ["smoke", "products"]`)
+
+1.  **Run all tests in the default directory:**
+    ```bash
+    apify tests
+    ```
+    This will execute `users/get.json`, `users/create.json`, and `products/list.json` using your default environment.
+
+2.  **Run tests for a specific environment:**
+    ```bash
+    apify tests --env Staging
+    ```
+    All tests will be executed against the `Staging` environment's configurations (e.g., `baseUrl`).
+
+3.  **Run only tests with the `smoke` tag:**
+    ```bash
+    apify tests --tag smoke
+    ```
+    This will execute `users/get.json` and `products/list.json`.
+
+4.  **Run tests with runtime variables and verbose output:**
+    ```bash
+    apify tests --vars "testUser=api_tester" --verbose
+    ```
+    The `testUser` variable will be available in all tests, and detailed output for each request, response, and assertion will be shown.
+
+5.  **Run tests from a custom directory:**
+    ```bash
+    apify tests --dir ./my-custom-tests
+    ```
+    Apify will look for `.json` test files within the `./my-custom-tests` directory instead of `.apify/`.
 
 ### `apify server:mock`
-Starts a local API mock server using mock definition files.
+
+This command starts a local HTTP server that serves mock API responses based on your `.mock.json` definition files. It's invaluable for frontend development, testing, and scenarios where you need to simulate API behavior without a live backend.
 
 ```bash
-apify server:mock [--port <port_number>] [--directory <path_to_mocks>] [--verbose]
+apify server:mock [--port <port_number>] [--directory <path_to_mocks>] [--verbose] [--debug]
 ```
-- `--port <port_number>`: Port for the mock server (default: from `apify-config.json` or 1988).
-- `--directory <path_to_mocks>`: Directory containing mock definition files (default: `.apify`).
-- `--verbose` or `-v`: Enable verbose logging for the mock server.
-- Reads configuration from the `MockServer` block in `apify-config.json` but command-line options take precedence.
+
+- `--port <port_number>`: (Optional) Specifies the port on which the mock server will listen. If not provided, it defaults to the `Port` setting in the `MockServer` block of your `apify-config.json` (typically 1988).
+- `--directory <path_to_mocks>`: (Optional) Specifies the root directory where Apify should look for `.mock.json` files. Defaults to `.apify/`.
+- `--verbose` or `-v`: (Optional) Enables verbose logging for the mock server, showing details about incoming requests and matched mock responses.
+- `--debug`: (Optional) Provides even more detailed debug output, useful for troubleshooting mock server behavior and condition evaluation.
+
+**How it Works:**
+1.  Apify scans the specified directory (defaulting to `.apify/`) for all `.mock.json` files.
+2.  It loads and parses these files, creating a registry of mock API definitions, including their endpoints, methods, and conditional responses.
+3.  When a request comes into the mock server, it attempts to match the incoming request (method, URL, headers, body) against the defined mocks.
+4.  If a match is found, it evaluates the conditions within the matched mock and returns the appropriate response template, applying any dynamic variables or expressions.
+
+**Configuration (`apify-config.json`):**
+
+The `MockServer` section in your `apify-config.json` provides global settings for the mock server:
+
+```json
+{
+  "MockServer": {
+    "Port": 1988,
+    "Verbose": true,
+    "EnableCors": true,
+    "DefaultHeaders": {
+      "X-Powered-By": "Apify Mock Server",
+      "Cache-Control": "no-cache"
+    }
+  }
+}
+```
+
+- **`Port`**: The default port for the mock server.
+- **`Verbose`**: Global setting to enable verbose logging for the mock server.
+- **`EnableCors`**: If `true`, the mock server will add CORS headers to all responses, allowing cross-origin requests from web browsers.
+- **`DefaultHeaders`**: A dictionary of headers that will be added to all mock responses by default. These can be overridden by headers defined in individual `.mock.json` files.
+
+**Example Usage:**
+
+1.  **Start the mock server on the default port (1988) with verbose logging:**
+    ```bash
+    apify server:mock --verbose
+    ```
+    You will see output indicating the server has started and listing the loaded mock endpoints.
+
+2.  **Start the mock server on a custom port:**
+    ```bash
+    apify server:mock --port 8080
+    ```
+    Access your mocks at `http://localhost:8080/`.
+
+3.  **Start the mock server from a different directory:**
+    ```bash
+    apify server:mock --directory ./my-custom-mocks
+    ```
+    Apify will load `.mock.json` files from `./my-custom-mocks` instead of `.apify/`.
+
+**Accessing Mocked Endpoints:**
+
+Once the mock server is running, you can access your defined endpoints using tools like `curl`, Postman, Insomnia, or directly from your web browser or frontend application.
+
+For example, if you have a mock defined with `"Endpoint": "/api/users/{id}"`:
+
+```bash
+curl http://localhost:1988/api/users/1
+```
+
+This will return the response defined in your `users.getById.mock.json` (or similar) for `id=1`.
+
+**Troubleshooting Port Binding Issues (Windows):**
+
+On Windows, if you encounter "Access is denied" errors when trying to bind to a port (especially ports below 1024), you might need to:
+- Run your command prompt or PowerShell as an **Administrator**.
+- Or, add a URL reservation (one-time setup) using an Administrator PowerShell:
+  ```powershell
+  netsh http add urlacl url=http://+:YOUR_PORT/ user=Everyone
+  ```
+  Replace `YOUR_PORT` with the port you intend to use.
+- Or, use a port number above 1024 (e.g., 8080, 3000).
 
 ### `apify list-env`
-Lists all available environments and their variables from `apify-config.json`.
+
+This command displays a summary of all environments defined in your `apify-config.json` file, along with their associated variables. It's useful for quickly inspecting your environment configurations and ensuring variables are set as expected.
 
 ```bash
 apify list-env
 ```
+
+**Example Output:**
+
+Assuming your `apify-config.json` has `Development` and `Production` environments defined:
+
+```
+$ apify list-env
+
+Environment: Development
+  Description: Development environment specific variables
+  Variables:
+    baseUrl: https://dev-api.myproject.com
+    apiKey: dev-secret-key
+
+Environment: Production
+  Description: Production environment specific variables
+  Variables:
+    baseUrl: https://api.myproject.com
+    apiKey: prod-secret-key
+
+Global Project Variables:
+  globalProjectVar: This variable is available in all environments and tests
+```
+
+- **Environment Variables**: Variables specific to each environment are listed under their respective environment names.
+- **Global Project Variables**: Variables defined at the top-level `Variables` block in `apify-config.json` are listed separately, as they apply across all environments.
 
 ### Global Options
 These options can be used with most commands.

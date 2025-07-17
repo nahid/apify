@@ -31,7 +31,7 @@ namespace Apify.Commands
         private Task ExecuteAsync()
         {
             ConsoleHelper.WriteHeader("About Apify");
-            Console.WriteLine("A command-line tool for API testing and creating mock server for API");
+            Console.WriteLine("A robust and powerful CLI tool for testing APIs and a mock server.");
             Console.WriteLine();
             
       
