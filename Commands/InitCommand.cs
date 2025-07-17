@@ -1,8 +1,6 @@
 using System.CommandLine;
-using System.Text.Json;
 using Apify.Models;
 using Apify.Utils;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Apify.Commands
@@ -32,7 +30,7 @@ namespace Apify.Commands
             AddOption(forceOption);
 
             this.SetHandler(
-                (name, mock, force, debug) => ExecuteAsync(name, mock, force, debug),
+                ExecuteAsync,
                 projectName, mockConfigOption, forceOption, RootOption.DebugOption
             );
         }
@@ -43,7 +41,7 @@ namespace Apify.Commands
             
             ConsoleHelper.WriteHeader("Initializing API Testing Project");
 
-            // Check if configuration file already exists
+            // Check if a configuration file already exists
             string configFilePath = Path.Combine(Directory.GetCurrentDirectory(), RootOption.DefaultConfigFileName);
             
             if (File.Exists(configFilePath) && force)
@@ -68,7 +66,7 @@ namespace Apify.Commands
                 // Prompt for required information
                 if (hasRunWithoutPrompt)
                 {
-                    projectName = name;
+                    projectName = name ?? "Unnamed Project";
                 }
                 else
                 {
@@ -95,15 +93,23 @@ namespace Apify.Commands
                     }
                 }
 
-                // Create API directory if it doesn't exist
+                // Create an API directory if it doesn't exist
                 if (!Directory.Exists(RootOption.DefaultApiDirectory))
                 {
                     Directory.CreateDirectory(RootOption.DefaultApiDirectory);
-                    ConsoleHelper.WriteSuccess($"Created API directory: {RootOption.DefaultApiDirectory}");
+
+                    if (debug)
+                    {
+                        ConsoleHelper.WriteSuccess($"Created API directory: {RootOption.DefaultApiDirectory}");
+                    }
+                    
                 }
                 else
                 {
-                    ConsoleHelper.WriteInfo($"Using existing API directory: {RootOption.DefaultApiDirectory}");
+                    if (debug)
+                    {
+                        ConsoleHelper.WriteWarning($"API directory already exists: {RootOption.DefaultApiDirectory}");
+                    }
                 }
 
                 // Create environment configuration
@@ -122,7 +128,7 @@ namespace Apify.Commands
                     Variables = defaultEnvVariables
                 };
 
-                // Create production environment as an example
+                // Create a production environment as an example
                 var productionEnvVariables = new Dictionary<string, string>();
 
                 // Add user-defined variables to production too
@@ -138,8 +144,8 @@ namespace Apify.Commands
                     Variables = productionEnvVariables
                 };
 
-                // Ask if user wants to add additional environments
-                List<EnvironmentSchema> environments = new List<EnvironmentSchema> { defaultEnv, productionEnvironment };
+                // Ask if the user wants to add additional environments
+                List<EnvironmentSchema> environments = [defaultEnv, productionEnvironment];
                 
                 if (!hasRunWithoutPrompt && ConsoleHelper.PromptYesNo("Add additional environments?", false))
                 {
@@ -211,13 +217,12 @@ namespace Apify.Commands
                         { "x-api-key", "{{env.apiToken}}" }
                     },
                     PayloadType = PayloadContentType.None,
-                    Tests = new List<AssertionEntity>
-                    {
-                        new AssertionEntity { 
-                            Title = "Status code is successful", 
+                    Tests = [
+                        new AssertionEntity {
+                            Title = "Status code is successful",
                             Case = "Assert.Response.StatusCodeIs(200)",
                         }
-                    }
+                    ]
                 };
 
                 // Create an example API file in the apis directory
@@ -246,17 +251,17 @@ namespace Apify.Commands
                         }
                     },
                     PayloadType = PayloadContentType.Json,
-                    Tests = new List<AssertionEntity>
-                    {
-                        new AssertionEntity { 
-                            Title = "Status code is Created", 
+                    Tests = [
+                        new AssertionEntity {
+                            Title = "Status code is Created",
                             Case = "Assert.Response.StatusCodeIs(201)",
-                        }, 
-                        new AssertionEntity { 
-                            Title = "The value of response's name matches the request body", 
+                        },
+
+                        new AssertionEntity {
+                            Title = "The value of response's name matches the request body",
                             Case = "Assert.Equals(Request.Body.Json.name, Response.Json.name)",
                         }
-                    }
+                    ]
                 };
                 
                 string samplePostFilePath = Path.Combine(RootOption.DefaultApiDirectory, "users", "create.json");
@@ -267,7 +272,7 @@ namespace Apify.Commands
                 {
                     mock = ConsoleHelper.PromptYesNo("Create sample mock API definitions?");
                 }
-                // Ask if user wants to create mock API examples
+                // Ask if the user wants to create mock API examples
                 if (mock)
                 {
                     
@@ -320,7 +325,7 @@ namespace Apify.Commands
 
                     await File.WriteAllTextAsync(configFilePath, configJson);
                     
-                    // Verify file was created
+                    // Verify the file was created
                     if (File.Exists(configFilePath))
                     {
                         ConsoleHelper.WriteSuccess($"Created configuration file: {RootOption.DefaultConfigFileName}");
@@ -340,11 +345,11 @@ namespace Apify.Commands
                     }
                 }
 
-                // Display success message
+                // Display a success message
                 ConsoleHelper.WriteSuccess("\nProject initialized successfully!");
 
                 // Check if we're running as a compiled executable or via dotnet run
-                string exeName = Path.GetFileName(System.Environment.ProcessPath ?? "apitester");
+                string exeName = Path.GetFileName(Environment.ProcessPath ?? "apify");
                 bool isCompiledExecutable = !exeName.Equals("dotnet", StringComparison.OrdinalIgnoreCase);
                 
                 // Display the interactive quick start guide

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Apify.Models
@@ -17,9 +16,9 @@ namespace Apify.Models
         // Parameterized constructor for programmatic creation
         public ApifyConfigSchema(string name, string? description, List<EnvironmentSchema> environments, string? defaultEnvironment, Dictionary<string, string>? variables = null)
         {
-            Name = name ?? "Default";
+            Name = name;
             Description = description;
-            Environments = environments ?? new List<EnvironmentSchema>();
+            Environments = environments;
             DefaultEnvironment = defaultEnvironment ?? "Development";
             Variables = variables ?? new Dictionary<string, string>();
         }
@@ -37,7 +36,7 @@ namespace Apify.Models
         public List<EnvironmentSchema> Environments { get; set; }
         
         [JsonProperty("Authorization")]
-        public Authorization? Authorization { get; set; } = null;
+        public Authorization? Authorization { get; set; }
 
         [JsonProperty("DefaultEnvironment")]
         public string? DefaultEnvironment { get; set; }
@@ -46,50 +45,50 @@ namespace Apify.Models
         public Dictionary<string, string> Variables { get; set; }
         
         [JsonProperty("MockServer")]
-        public MockServer? MockServer { get; set; } = null;
+        public MockServer? MockServer { get; set; }
         
     }
 
     public class Authorization
     {
         [JsonProperty("Type")]
-        public string Type { get; set; }
+        public string? Type { get; set; }
         
         [JsonProperty("Token")]
-        public string Token { get; set; }
+        public string? Token { get; set; }
     }
 
     public class ApiCallDisplayOptions
     {
         [JsonProperty("Verbose")]
-        public bool? Verbose { get; set; } = null;
+        public bool? Verbose { get; set; }
         
         [JsonProperty("Tests")]
-        public bool? Tests { get; set; } = null;
+        public bool? Tests { get; set; }
         
         [JsonProperty("ShowRequest")]
-        public bool? ShowRequest { get; set; } = null;
+        public bool? ShowRequest { get; set; }
         
         [JsonProperty("ShowResponse")]
-        public bool? ShowResponse { get; set; } = null;
+        public bool? ShowResponse { get; set; }
         
         [JsonProperty("ShowOnlyResponse")]
-        public bool? ShowOnlyResponse { get; set; } = null;
+        public bool? ShowOnlyResponse { get; set; }
     }
 
 
     public class MockServer
     {
         [JsonProperty("Port")]
-        public int Port { get; set; } = 0;
+        public int Port { get; set; }
         
         [JsonProperty("Verbose")]
-        public bool Verbose { get; set; } = false; 
+        public bool Verbose { get; set; }
         
         [JsonProperty("EnableCors")]
-        public bool EnableCors { get; set; } = false;
+        public bool EnableCors { get; set; }
         
         [JsonProperty("DefaultHeaders")]
-        public Dictionary<string, string>? DefaultHeaders { get; set; } = null;
+        public Dictionary<string, string>? DefaultHeaders { get; set; }
     }
 }

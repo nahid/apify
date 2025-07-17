@@ -1,5 +1,4 @@
 using Apify.Commands;
-using Newtonsoft.Json.Linq;
 using System.Dynamic;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -72,7 +71,7 @@ public static class MiscHelper
         {
             if (Path.IsPathRooted(processedPath))
             {
-                // If it's an absolute path, just return it
+                // If it's an absolute path, return it
                 return processedPath;
             }
                 
@@ -81,7 +80,7 @@ public static class MiscHelper
                 throw new DirectoryNotFoundException($"Default API directory '{defaultDirectory}' does not exist. Please create it or specify a different path.");
             }
                 
-            // If it already has .json extension, just return it
+            // If it already has a.json extension, return it
             return Path.Combine(defaultDirectory, path);
         }
             
@@ -105,7 +104,7 @@ public static class MiscHelper
     {
         var code = statusCode.ToString();
         string name = "Unknown";
-        if (Enum.TryParse<HttpStatusCode>(code, out HttpStatusCode parsedCode))
+        if (Enum.TryParse(code, out HttpStatusCode parsedCode))
         {
             name = parsedCode.ToString(); // Returns "NotFound"
         }

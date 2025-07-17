@@ -2,7 +2,6 @@ using System.CommandLine;
 using Apify.Models;
 using Apify.Utils;
 using Newtonsoft.Json.Linq;
-using System.Text.RegularExpressions;
 
 namespace Apify.Commands
 {
@@ -57,7 +56,7 @@ namespace Apify.Commands
             AddOption(urlOption);
             
             this.SetHandler(
-                (file, name, method, url, force, debug, prompt) => ExecuteAsync(file, name, method, url, force, debug, prompt),
+                ExecuteAsync,
                 fileArgument, nameOption, methodOption, urlOption, forceOption, RootOption.DebugOption, promptOption
             );
         }
@@ -74,7 +73,7 @@ namespace Apify.Commands
             // Process file path to convert dot notation if needed
             string processedPath = MiscHelper.HandlePath(filePath);
             
-            // Check if file already exists
+            // Check if a file already exists
             if (File.Exists(processedPath) && !force)
             {
                 ConsoleHelper.WriteError($"File already exists: {processedPath}");
@@ -101,7 +100,8 @@ namespace Apify.Commands
             {
                 // Prompt for required information
                 name = ConsoleHelper.PromptInput<string>("API request name (e.g., Get User)");
-                method = ConsoleHelper.PromptChoice("Choose HTTP Method?", new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" });
+                method = ConsoleHelper.PromptChoice("Choose HTTP Method?", ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"
+                ]);
                 url = ConsoleHelper.PromptInput<string>("URL (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)", required: true);
             }
 
@@ -136,7 +136,7 @@ namespace Apify.Commands
             
             if (needsPayload && prompt && ConsoleHelper.PromptYesNo("Add request payload?", false))
             {
-                string[] payloadOptions = { "JSON", "Text", "FormData", "Binary" };
+                string[] payloadOptions = ["JSON", "Text", "FormData", "Binary"];
                 int payloadOptionIndex = ConsoleHelper.PromptChoiceWithIndex("Payload type:", payloadOptions);
                 
                 switch (payloadOptionIndex)

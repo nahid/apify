@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq; // Add this for JObject
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 namespace Apify.Utils
 {
@@ -27,7 +26,7 @@ namespace Apify.Utils
                 {
                     foreach (var test in tests)
                     {
-                        if (test is JObject testObj && 
+                        if (test is JObject && 
                             test["AssertType"]?.ToString().ToLowerInvariant() == "equal" &&
                             test["propertyPath"] != null)
                         {
@@ -79,7 +78,7 @@ namespace Apify.Utils
         {
             var settings = new JsonSerializerSettings
             {
-                Error = (sender, args) => 
+                Error = (_, args) => 
                 {
                     Console.WriteLine($"JSON Error: {args.ErrorContext.Error.Message}");
                     args.ErrorContext.Handled = true;
@@ -109,7 +108,7 @@ namespace Apify.Utils
 
         [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
             Justification = "JSON types are preserved in TrimmerRoots.xml")]
-        public static string? SerializeToJson<
+        public static string SerializeToJson<
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
             T>(T obj, bool indented = true)
         {
@@ -117,7 +116,7 @@ namespace Apify.Utils
             {
                 var settings = new JsonSerializerSettings
                 {
-                    Error = (sender, args) => 
+                    Error = (_, args) => 
                     {
                         Console.WriteLine($"JSON Error: {args.ErrorContext.Error.Message}");
                         args.ErrorContext.Handled = true;
@@ -127,7 +126,7 @@ namespace Apify.Utils
                 };
                 
                 return JsonConvert.SerializeObject(obj, 
-                    indented ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None,
+                    indented ? Formatting.Indented : Formatting.None,
                     settings);
             }
             catch (Exception ex)
@@ -141,7 +140,7 @@ namespace Apify.Utils
                 }
                 catch
                 {
-                    return "{}"; // Return empty JSON object as a last resort
+                    return "{}"; // Return an empty JSON object as a last resort
                 }
             }
         }
@@ -154,7 +153,7 @@ namespace Apify.Utils
             {
                 var settings = new JsonSerializerSettings
                 {
-                    Error = (sender, args) => 
+                    Error = (_, args) => 
                     {
                         Console.WriteLine($"JSON Error: {args.ErrorContext.Error.Message}");
                         args.ErrorContext.Handled = true;
@@ -164,7 +163,7 @@ namespace Apify.Utils
                 };
                 
                 return JsonConvert.SerializeObject(obj, 
-                    indented ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None,
+                    indented ? Formatting.Indented : Formatting.None,
                     settings);
             }
             catch (Exception ex)
@@ -178,7 +177,7 @@ namespace Apify.Utils
                 }
                 catch
                 {
-                    return "{}"; // Return empty JSON object as a last resort
+                    return "{}"; // Return an empty JSON object as a last resort
                 }
             }
         }
@@ -197,7 +196,7 @@ namespace Apify.Utils
                 {
                     var settings = new JsonSerializerSettings
                     {
-                        Error = (sender, args) => args.ErrorContext.Handled = true
+                        Error = (_, args) => args.ErrorContext.Handled = true
                     };
                     JsonConvert.DeserializeObject(json, settings);
                     return true;
@@ -226,12 +225,12 @@ namespace Apify.Utils
             {
                 var settings = new JsonSerializerSettings
                 {
-                    Error = (sender, args) => 
+                    Error = (_, args) => 
                     {
                         Console.WriteLine($"Format JSON Error: {args.ErrorContext.Error.Message}");
                         args.ErrorContext.Handled = true;
                     },
-                    Formatting = Newtonsoft.Json.Formatting.Indented
+                    Formatting = Formatting.Indented
                 };
                 
                 var obj = JsonConvert.DeserializeObject(json, settings);

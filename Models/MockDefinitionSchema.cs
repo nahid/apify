@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using Newtonsoft.Json;
 using Apify.Utils;
+using Newtonsoft.Json.Linq;
 
 namespace Apify.Models
 {
@@ -28,7 +28,7 @@ namespace Apify.Models
         public string Method { get; set; } = "GET";
         
         /// <summary>
-        /// The endpoint path, can include route parameters (e.g., /users/:id)
+        /// The endpoint path can include route parameters (e.g., /users/:id)
         /// </summary>
         [JsonProperty("endpoint")]
         public string Endpoint { get; set; } = string.Empty;

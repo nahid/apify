@@ -5,16 +5,15 @@ using Apify.Models;
 using Apify.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Dynamic;
 
 namespace Apify.Services
 {
     public class MockServerService
     {
         private readonly string _mockDirectory;
-        private readonly List<MockDefinitionSchema> _mockSchemaDefinitions = new();
+        private readonly List<MockDefinitionSchema> _mockSchemaDefinitions = [];
         private readonly ConfigService _configService;
-        private readonly ConditionEvaluator _conditionEvaluator = new();
+        private readonly ConditionEvaluator _conditionEvaluator = new ConditionEvaluator();
         private bool _verbose;
         private bool _debug;
         private HttpListener? _listener;
@@ -34,7 +33,7 @@ namespace Apify.Services
 
             if (port == 0)
             {
-                port = _configService.LoadConfiguration()?.MockServer?.Port ?? 1988;
+                port = _configService.LoadConfiguration().MockServer?.Port ?? 1988;
             }
             
             // Load all mock definitions
@@ -42,14 +41,17 @@ namespace Apify.Services
             
             if (_mockSchemaDefinitions.Count == 0)
             {
-                ConsoleHelper.WriteWarning("No mock API definitions found. Create .mock.json files in your .apify directory.");
-                ConsoleHelper.WriteInfo("Example path: .apify/users/all.mock.json");
+                if (_verbose)
+                {
+                    ConsoleHelper.WriteWarning("No mock API definitions found. Create .mock.json files in your .apify directory.");
+                    ConsoleHelper.WriteInfo("Example path: .apify/users/all.mock.json");
+                }
                 return;
             }
             
             // Start HTTP listener
             _listener = new HttpListener();
-            _listener.Prefixes.Add($"http://*:{port}/");
+            _listener.Prefixes.Add($"http" + $"://*:{port}/");
             
             try
             {
@@ -79,7 +81,7 @@ namespace Apify.Services
                 ConsoleHelper.WriteError($"Error starting mock server: {ex.Message}");
                 
                 // Provide helpful guidance for Windows users
-                if (OperatingSystem.IsWindows())
+                if (OperatingSystem.IsWindows() && _debug)
                 {
                     Console.WriteLine();
                     ConsoleHelper.WriteInfo("This error commonly occurs on Windows when binding to HTTP ports without administrator privileges.");
@@ -89,7 +91,7 @@ namespace Apify.Services
                     Console.WriteLine("   Right-click on cmd/PowerShell and select 'Run as administrator'");
                     Console.WriteLine();
                     Console.WriteLine("2. Add a URL reservation (one-time setup, preferred solution):");
-                    Console.WriteLine($"   Run this in an Administrator PowerShell: netsh http add urlacl url=http://+:{port}/ user=Everyone");
+                    Console.WriteLine($"   Run this in an Administrator PowerShell: netsh http add urlacl url=https://+:{port}/ user=Everyone");
                     Console.WriteLine();
                     Console.WriteLine("3. Try using a port number above 1024 (e.g., 8080):");
                     Console.WriteLine($"   dotnet run mock-server --port 8080");
@@ -123,15 +125,22 @@ namespace Apify.Services
             if (!Directory.Exists(_mockDirectory))
             {
                 Directory.CreateDirectory(_mockDirectory);
-                ConsoleHelper.WriteInfo($"Created mock API directory: {_mockDirectory}");
+                if (_debug)
+                {
+                    ConsoleHelper.WriteDebug($"Mock API directory created: {_mockDirectory}");
+                }
                 return;
             }
             
             // Find all .mock.json files in the directory and subdirectories
             var mockFiles = Directory.GetFiles(_mockDirectory, "*.mock.json", SearchOption.AllDirectories);
             
-            // Use debug flag for detailed logs, but show count regardless
-            Console.WriteLine($"Found {mockFiles.Length} mock API definition files");
+            // Use a debug flag for detailed logs but show the count regardless
+            if (_debug)
+            {
+                ConsoleHelper.WriteDebug($"Searching for mock API definition files in: {_mockDirectory}");
+                Console.WriteLine($"Found {mockFiles.Length} mock API definition files");
+            }
             
             foreach (var file in mockFiles)
             {
@@ -144,7 +153,7 @@ namespace Apify.Services
                         ConsoleHelper.WriteInfo($"Attempting to load mock from: {file}");
                     }
 
-                    // First try to parse as advanced mock definition
+                    // First, try to parse as an advanced mock definition
                     MockDefinitionSchema mockDefinitionDef;
                     
                     mockDefinitionDef = JsonConvert.DeserializeObject<MockDefinitionSchema>(json) ??
@@ -155,8 +164,7 @@ namespace Apify.Services
                         ConsoleHelper.WriteInfo($"Successfully parsed {file} as MockSchema");
                     }
 
-                    if (mockDefinitionDef != null && mockDefinitionDef.Responses != null &&
-                        mockDefinitionDef.Responses.Count > 0)
+                    if (mockDefinitionDef.Responses.Count > 0)
                     {
                         _mockSchemaDefinitions.Add(mockDefinitionDef);
 
@@ -210,11 +218,11 @@ namespace Apify.Services
             
             // Look for advanced mock definition first
             var mockDefinition = FindMatchingMockDefinition(request);
-            Dictionary<string, string> pathParams = new Dictionary<string, string>();
+       
             
             if (mockDefinition != null)
             {
-                await ProcessMockResponseAsync(context, mockDefinition, pathParams);
+                await ProcessMockResponseAsync(context, mockDefinition);
                 return;
             }
  
@@ -236,7 +244,7 @@ namespace Apify.Services
             {
                 error = "Not Found",
                 message = $"No mock defined for {method} {requestUrl}",
-                availableEndpoints = availableEndpoints
+                availableEndpoints
             }, Formatting.Indented);
             
             byte[] buffer = Encoding.UTF8.GetBytes(notFoundResponse);
@@ -299,19 +307,19 @@ namespace Apify.Services
             return null;
         }
         
-        private async Task ProcessMockResponseAsync(HttpListenerContext context, MockDefinitionSchema mockDefinitionDef, Dictionary<string, string> pathParams)
+        private async Task ProcessMockResponseAsync(HttpListenerContext context, MockDefinitionSchema mockDefinitionDef)
         {
             var request = context.Request;
             var response = context.Response;
             string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
             string method = request.HttpMethod;
-            
+
             // Extract path parameters for use in templates
-            ExtractPathParameters(mockDefinitionDef.Endpoint, requestUrl, out pathParams);
+            ExtractPathParameters(mockDefinitionDef.Endpoint, requestUrl, out var pathParams);
             
             // Get Headers
             Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (request.Headers.AllKeys != null)
+            if (request.Headers.AllKeys.Length > 0)
             {
                 foreach (string? key in request.Headers.AllKeys)
                 {
@@ -325,7 +333,7 @@ namespace Apify.Services
             
             // Get Query Parameters
             Dictionary<string, string> queryParams = new Dictionary<string, string>();
-            if (request.Url?.Query != null && request.Url.Query.Length > 0)
+            if (request.Url?.Query is { Length: > 0 })
             {
                 // Process the query string
                 
@@ -348,10 +356,11 @@ namespace Apify.Services
             
             // Get Body as JToken (null if not a valid JSON)
             JToken? bodyContent = null;
-            string bodyString = string.Empty;
+          
             
             if (request.HasEntityBody && request.ContentLength64 > 0)
             {
+                string bodyString;
                 try
                 {
                     using (var memoryStream = new MemoryStream())
@@ -413,7 +422,7 @@ namespace Apify.Services
                 bool conditionMet = _conditionEvaluator.EvaluateCondition(
                     resp.Condition, 
                     headers, 
-                    bodyContent,
+                    bodyContent ?? new JObject(),
                     queryParams,
                     pathParams);
                     
@@ -444,7 +453,7 @@ namespace Apify.Services
                     // Write additional debug info
                     if (_debug)
                     {
-                        Console.WriteLine($"DEBUG: Using default response with condition '{matchedResponse.Condition ?? "null"}'");
+                        Console.WriteLine($"DEBUG: Using default response with condition '{matchedResponse.Condition}'");
                     }
                 }
                 else
@@ -453,7 +462,7 @@ namespace Apify.Services
                     matchedResponse = mockDefinitionDef.Responses.LastOrDefault();
                     if (matchedResponse != null && _debug)
                     {
-                        Console.WriteLine($"DEBUG: No explicit default found, using last response with condition '{matchedResponse.Condition ?? "null"}' as fallback");
+                        Console.WriteLine($"DEBUG: No explicit default found, using last response with condition '{matchedResponse.Condition}' as fallback");
                     }
                 }
             }
@@ -483,25 +492,26 @@ namespace Apify.Services
             response.StatusCode = matchedResponse.StatusCode;
             response.ContentType = "application/json"; // Default
 
-            if (_configService?.LoadConfiguration().MockServer?.DefaultHeaders != null)
+            if (_configService.LoadConfiguration().MockServer?.DefaultHeaders != null)
             {
-                foreach (var header in _configService?.LoadConfiguration().MockServer?.DefaultHeaders ?? new Dictionary<string, string>())
+                foreach (var header in _configService.LoadConfiguration().MockServer?.DefaultHeaders ?? [])
                 {
                     response.Headers.Add(header.Key, header.Value);
                     
-                    // Set content type if it's in the headers
+                    // Set the content type if it's in the headers
                     if (string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
                     {
                         response.ContentType = header.Value;
                     }
                 }
             }
+            var envVars = _configService.GetDefaultEnvironment()?.Variables ?? [];
             // Add headers
-            if (matchedResponse.Headers != null)
+            if (matchedResponse.Headers.Count > 0)
             {
                 foreach (var header in matchedResponse.Headers)
                 {
-                    var envVars = _configService.GetDefaultEnvironment()?.Variables ?? new Dictionary<string, string>();
+                    
                     
                     string headerValue = StubManager.Replace(header.Value, new Dictionary<string, object>
                     {
@@ -509,7 +519,7 @@ namespace Apify.Services
                         {"headers", headers},
                         {"params", pathParams},
                         {"query", queryParams},
-                        {"body", bodyContent}
+                        {"body", bodyContent ?? new JObject()}
                     });
                     
                     response.Headers.Add(header.Key, headerValue);
@@ -525,8 +535,7 @@ namespace Apify.Services
             // Process response template
             string responseContent;
             
-            if (matchedResponse.ResponseTemplate != null)
-            {
+         
                 if (matchedResponse.ResponseTemplate is string str)
                 {
                     responseContent = str;
@@ -539,14 +548,13 @@ namespace Apify.Services
                 
                 // Replace any template variables with actual values
                 // responseContent = ApplyTemplateVariables(responseContent, pathParams);
-                var envVars = _configService.GetDefaultEnvironment();
-                responseContent = StubManager.Replace(responseContent, new System.Collections.Generic.Dictionary<string, object>
+                responseContent = StubManager.Replace(responseContent, new Dictionary<string, object>
                 {
-                    {"env", envVars.Variables},
+                    {"env", envVars},
                     {"headers", headers},
                     {"path", pathParams},
                     {"query", queryParams},
-                    {"body", bodyContent}
+                    {"body", bodyContent ?? new JObject()}
                 });
                 
                 // Process dynamic template expressions (e.g., {{$random:int:1000:1999}})
@@ -555,11 +563,7 @@ namespace Apify.Services
                 // Apply advanced template replacements
                 
                 // 1. Replace body.X references with actual body values
-            }
-            else
-            {
-                responseContent = "{}";
-            }
+            
             
             byte[] responseBuffer = Encoding.UTF8.GetBytes(responseContent);
             response.ContentLength64 = responseBuffer.Length;
@@ -596,13 +600,13 @@ namespace Apify.Services
         }
         
         // Extract path parameters from a URL
-        private bool ExtractPathParameters(string pattern, string path, out Dictionary<string, string> pathParams)
+        private void ExtractPathParameters(string pattern, string path, out Dictionary<string, string> pathParams)
         {
             pathParams = new Dictionary<string, string>();
             
             if (!pattern.Contains("{") || !pattern.Contains("}"))
-                return false;
-                
+                return;
+
             // Extract parameter names from pattern
             var paramNames = new List<string>();
             int paramIndex = 0;
@@ -617,8 +621,8 @@ namespace Apify.Services
             }
             
             if (paramNames.Count == 0)
-                return false;
-                
+                return;
+
             // Convert pattern to regex with named capture groups
             string regexPattern = "^" + Regex.Escape(pattern)
                 .Replace("\\{", "{")
@@ -642,11 +646,9 @@ namespace Apify.Services
                         pathParams[paramNames[i]] = match.Groups[i + 1].Value;
                     }
                 }
-                
-                return pathParams.Count > 0;
+
             }
-            
-            return false;
+
         }
     }
 }

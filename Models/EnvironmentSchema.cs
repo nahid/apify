@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Apify.Models
@@ -17,7 +16,7 @@ namespace Apify.Models
         public EnvironmentSchema(string name, Dictionary<string, string> variables, string? description)
         {
             Name = name;
-            Variables = variables ?? new Dictionary<string, string>();
+            Variables = variables;
             Description = description;
         }
 

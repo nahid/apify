@@ -1,4 +1,3 @@
-using Apify.Commands;
 using Apify.Models;
 using Apify.Utils;
 using System.Diagnostics;
@@ -14,13 +13,13 @@ namespace Apify.Services
         private readonly HttpClient _httpClient;
       
         private ConfigService _configService;
-        private ApiExecutorOptions? __options;
+        private readonly ApiExecutorOptions? _options;
 
         public ApiExecutor(ApiExecutorOptions? options = null)
         {
             _httpClient = new HttpClient();
             _configService = new ConfigService();
-            __options = options;
+            _options = options;
             
         }
 
@@ -32,11 +31,11 @@ namespace Apify.Services
             
             try
             {
-                // Create request message
+                // Create a request message
                 // Check if URL has a valid scheme (http:// or https://)
                 var url = requestDefinitionSchema.Url;
                 
-                // If URL doesn't start with http:// or https://, add https:// prefix
+                // If the URL doesn't start with http:// or https://, add https:// prefix
                 if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && 
                     !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
@@ -83,7 +82,7 @@ namespace Apify.Services
                 // Set timeout
                 _httpClient.Timeout = TimeSpan.FromMilliseconds(requestDefinitionSchema.Timeout);
 
-                // Send request and measure time
+                // Send a request and measure time
                 stopwatch.Start();
                 var httpResponse = await _httpClient.SendAsync(request);
                 stopwatch.Stop();
@@ -122,7 +121,7 @@ namespace Apify.Services
                 response.ErrorMessage = ex.Message;
                 response.ResponseTimeMs = stopwatch.ElapsedMilliseconds;
                 
-                // The detailed error info is already included in the response object
+                // The detailed error info is already included in the response object,
                 // so we don't need to log anything here
                 
                 // Include the error message in the response body for test assertion context
@@ -135,7 +134,7 @@ namespace Apify.Services
 
         private void AddPayloadContent(HttpRequestMessage request, RequestDefinitionSchema requestDefinitionSchema)
         {
-            string contentType = "application/json";
+            string contentType;
             if (requestDefinitionSchema.Headers != null && 
                 requestDefinitionSchema.Headers.TryGetValue("Content-Type", out string? headerContentType))
             {
@@ -143,7 +142,7 @@ namespace Apify.Services
             }
             else
             {
-                // Set appropriate content type based on payload type
+                // Set the appropriate content type based on a payload type
                 contentType = requestDefinitionSchema.PayloadType switch
                 {
                     PayloadContentType.Json => "application/json",
@@ -154,7 +153,6 @@ namespace Apify.Services
             }
             
             // Process payload based on type
-            StringContent content;
             switch (requestDefinitionSchema.PayloadType)
             {
                 case PayloadContentType.Json:
@@ -164,7 +162,7 @@ namespace Apify.Services
                     break;
 
                 case PayloadContentType.FormData:
-                    // For form data, we need to format as key=value&key2=value2...
+                    // For form data, we need to format as a key=value&key2=value2...
                     try
                     {
                         var formData = new FormUrlEncodedContent(requestDefinitionSchema.Body?.FormData ?? new Dictionary<string, string>());
@@ -194,10 +192,9 @@ namespace Apify.Services
                     contentType = "application/octet-stream"; // Default binary content type
                     request.Content = new ByteArrayContent(binaryData);
                     break;
-                    
-                case PayloadContentType.None:
+
                 default:
-                    // For "none" payload type, create an empty content
+                    // For the "none" payload type, create an empty content
                     request.Content = new StringContent(string.Empty, Encoding.UTF8);
                     break;
             }
@@ -221,7 +218,7 @@ namespace Apify.Services
                             continue;
                         }
                         
-                        if (MiscHelper.IsLikelyPath(field.Content) && File.Exists(field.Content))
+                        if (field.Content != null && MiscHelper.IsLikelyPath(field.Content) && File.Exists(field.Content))
                         {
                             // If the content is a file path, read the file and add it as a byte array
                             var fileBytes = await File.ReadAllBytesAsync(field.Content);
@@ -232,7 +229,8 @@ namespace Apify.Services
                         else
                         {
                             // Otherwise, treat it as a regular string content
-                            formData.Add(new StringContent(field.Content), field.Name);
+                            if (field.Content != null)
+                                formData.Add(new StringContent(field.Content), field.Name);
                         }
                     }
                 }
@@ -288,9 +286,9 @@ namespace Apify.Services
         
         public void DisplayTestStats(TestResults testResults)
         {
-            if (__options.Verbose == false && __options.Tests == false) return;
+            if (_options is { Verbose: false, Tests: false }) return;
 
-            if (__options.Tests == true)
+            if (_options?.Tests == true)
             {
                 ConsoleHelper.WriteSection("===============================");
                 ConsoleHelper.WriteKeyValue("Test Summary", $"{testResults.Results.Count}/{testResults.PassedCount} tests passed");
@@ -300,9 +298,9 @@ namespace Apify.Services
         }
         public void DisplayTestResults(TestResults testResults)
         {
-            if (__options.Verbose == false && __options.Tests == false) return;
+            if (_options is { Verbose: false, Tests: false }) return;
             
-            if (__options.Tests == false)
+            if (_options?.Tests == false)
             {
                 return; // No need to display test results if tests are not enabled
             }
@@ -357,10 +355,13 @@ namespace Apify.Services
             ConsoleHelper.WriteColored(status, color);
             Console.WriteLine("");
             ConsoleHelper.WriteFeatures("Status Code", $"{responseDefinitionSchema.StatusCode} ({MiscHelper.GetHttpStatusCodeName(responseDefinitionSchema.StatusCode)})");
-            ConsoleHelper.WriteFeatures("Content Type", responseDefinitionSchema.ContentType);
+
+            if (responseDefinitionSchema.ContentType != null)
+                ConsoleHelper.WriteFeatures("Content Type", responseDefinitionSchema.ContentType);
+
             ConsoleHelper.WriteFeatures("Response Time", $"{responseDefinitionSchema.ResponseTimeMs} ms");
 
-            if (__options.ShowResponse == true || __options.Verbose == true)
+            if (_options?.ShowResponse == true || _options?.Verbose == true)
             {
                 if (responseDefinitionSchema.Headers.Count > 0)
                 {
@@ -383,7 +384,7 @@ namespace Apify.Services
                 }
             }
             
-            if (__options.ShowOnlyResponse == false && __options.Verbose == false && __options.ShowResponse == false)
+            if (_options is { ShowOnlyResponse: false, Verbose: false, ShowResponse: false })
             {
                 return;
             }
@@ -403,7 +404,7 @@ namespace Apify.Services
         
         public void DisplayApiDefinition(RequestDefinitionSchema requestDefinitionSchema)
         {
-            if (__options.ShowRequest == false && __options.Verbose == false)
+            if (_options is { ShowRequest: false, Verbose: false })
             {
                 return;
             }

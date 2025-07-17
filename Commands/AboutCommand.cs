@@ -1,16 +1,13 @@
 using System.CommandLine;
-using System.Text.Json;
-using Apify.Models;
 using Apify.Services;
 using Apify.Utils;
-using Bogus;
-using Newtonsoft.Json;
+
 
 namespace Apify.Commands
 {
     public class AboutCommand : Command
     {
-        private ConfigService _env;
+        private ConfigService _config;
 
         public AboutCommand() : base("about", "Getting application information")
         
@@ -23,24 +20,28 @@ namespace Apify.Commands
 
             AddOption(forceOption);
             
-            _env = new ConfigService();
+            _config = new ConfigService();
 
             this.SetHandler(
-                (force, debug) => ExecuteAsync(force, debug),
+                (_, _) => ExecuteAsync(),
                 forceOption, RootOption.DebugOption
             );
         }
 
-        private async Task ExecuteAsync(bool force, bool debug)
+        private Task ExecuteAsync()
         {
-            ConsoleHelper.WriteHeader("About API Testing Project");
+            ConsoleHelper.WriteHeader("About Apify");
+            Console.WriteLine("A command-line tool for API testing and creating mock server for API");
+            Console.WriteLine();
             
-
-            var config = _env.LoadConfiguration();
-            var env = _env.LoadEnvironment("Development");
-            /*var faker = new Faker();
-            var name = faker.Internet.Email()*/
-            Console.WriteLine("Configuration:");
+      
+            ConsoleHelper.WriteKeyValue("Version", GetType().Assembly.GetName().Version?.ToString() ?? string.Empty);
+            ConsoleHelper.WriteKeyValue("Website", "https://apifyapp.com");
+            ConsoleHelper.WriteKeyValue("Author", "Nahid Bin Azhar");
+            ConsoleHelper.WriteKeyValue("Author URL", "https://nahid.im");
+            
+        
+            return Task.CompletedTask;
         }
 
     }

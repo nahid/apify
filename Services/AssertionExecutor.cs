@@ -1,20 +1,19 @@
 using Apify.Models;
 using DynamicExpresso;
-using Newtonsoft.Json.Linq;
 
 namespace Apify.Services;
 
 public class AssertionExecutor
 {
-    public ResponseDefinitionSchema ResponseDefinitionSchema;
-    public RequestDefinitionSchema RequestDefinitionSchema;
+    private readonly ResponseDefinitionSchema _responseDefinitionSchema;
+    private readonly RequestDefinitionSchema _requestDefinitionSchema;
 
     
     
     public AssertionExecutor(ResponseDefinitionSchema responseDefinitionSchema, RequestDefinitionSchema requestDefinitionSchema)
     {
-        ResponseDefinitionSchema = responseDefinitionSchema;
-        RequestDefinitionSchema = requestDefinitionSchema;
+        _responseDefinitionSchema = responseDefinitionSchema;
+        _requestDefinitionSchema = requestDefinitionSchema;
 
     }
     
@@ -24,9 +23,9 @@ public class AssertionExecutor
         var assertionTracker = new AssertionTracker();
         var testResults = new TestResults();
         
-        interpreter.SetVariable("Assert", new Assert(ResponseDefinitionSchema, assertionTracker));
-        interpreter.SetVariable("Response", ResponseDefinitionSchema);
-        interpreter.SetVariable("Request", RequestDefinitionSchema);
+        interpreter.SetVariable("Assert", new Assert(_responseDefinitionSchema, assertionTracker));
+        interpreter.SetVariable("Response", _responseDefinitionSchema);
+        interpreter.SetVariable("Request", _requestDefinitionSchema);
         
         foreach (var assertion in assertions)
         {
@@ -255,9 +254,9 @@ public class Assert
         message = string.IsNullOrEmpty(message) ? "String contains expected substring." : message;
 
         var heystack = actual.ToString();
-        string needle = expected.ToString();
+        string? needle = expected.ToString();
         
-        if (heystack.Contains(needle))
+        if (heystack != null && needle != null && heystack.Contains(needle))
         {
             return _assertionTracker.AddResult(true, message);
         }
@@ -271,7 +270,7 @@ public class Assert
 
 public class TestResultEntity
 {
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; set; }
     public bool Status { get; set; }
     public List<AssertionResult> Result { get; set; }
 
@@ -446,7 +445,7 @@ public class AssertResponse
         if (_apiResponse == null)
             return _assertionTracker.AddResult(false, "API response is null.");
 
-        int code = (int)_apiResponse.StatusCode;
+        int code = _apiResponse.StatusCode;
         if (code < 300 || code >= 400)
             return _assertionTracker.AddResult(false,
                 $"Status code {code} is not a redirect (3xx).");
@@ -471,7 +470,7 @@ public class AssertResponse
             return _assertionTracker.AddResult(false, "API response is null.");
         }
 
-        int code = (int)_apiResponse.StatusCode;
+        int code = _apiResponse.StatusCode;
         if (code < 300 || code >= 400)
         {
             return _assertionTracker.AddResult(false, "Status code " + code + " is not a redirect (3xx).");
