@@ -67,15 +67,19 @@ jobs:
       
     - name: Prepare Release Asset
       run: |
-        mkdir -p ./release-assets
-        mv ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./release-assets/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
+        ASSET_NAME="apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}"
+        mkdir -p release-assets/apify
+        mv ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./release-assets/apify/
+        cd release-assets
+        zip -r "../${ASSET_NAME}.zip" apify
+        cd ..
       shell: bash
 
     - name: Upload Release Asset
       uses: actions/upload-artifact@v4
       with:
         name: apify-${{ matrix.platform }}
-        path: ./release-assets/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
+        path: apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}.zip
         
   create-release:
     needs: build-single-file
