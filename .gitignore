@@ -68,3 +68,4 @@ ServiceFabricBackup/
 apify-config.json
 .idea
 .env
+.secrets

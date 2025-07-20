@@ -19,30 +19,25 @@ permissions:
 
 jobs:
   build-single-file:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            rid: linux-x64
+          - rid: linux-x64
             platform: Linux
             artifact_extension: ''
             
-          - os: windows-latest
-            rid: win-x64
+          - rid: win-x64
             platform: Windows
             artifact_extension: '.exe'
             
-          - os: macos-latest
-            rid: osx-x64
+          - rid: osx-x64
             platform: macOS
             artifact_extension: ''
             
-          - os: macos-latest
-            rid: osx-arm64
+          - rid: osx-arm64
             platform: macOS-arm64
             artifact_extension: ''
-
-    runs-on: ${{ matrix.os }}
     outputs:
       version: ${{ steps.set_version_from_build.outputs.VERSION }}
     
@@ -71,7 +66,7 @@ jobs:
         mkdir -p release-assets/apify
         mv ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./release-assets/apify/
         cd release-assets
-        zip -r "../${ASSET_NAME}.zip" apify
+        tar -a -c -f "../${ASSET_NAME}.zip" apify
         cd ..
       shell: bash
 
