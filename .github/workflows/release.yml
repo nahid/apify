@@ -65,23 +65,17 @@ jobs:
       run: echo "VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
       shell: bash
       
-    - name: Rename Artifact
+    - name: Prepare Release Asset
       run: |
-        mkdir -p ./artifacts
-        cp ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./artifacts/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
+        mkdir -p ./release-assets
+        mv ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./release-assets/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
       shell: bash
-    
-    - name: Build and Publish
-      run: dotnet publish -c Release -o publish
-    - name: Create zip archive
-      run: |
-        cd publish
-        zip -r ../apify-${{ github.ref_name }}.zip .
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4 
+
+    - name: Upload Release Asset
+      uses: actions/upload-artifact@v4
       with:
-        name: apify-${{ github.ref_name }}
-        path: apify-${{ github.ref_name }}.zip
+        name: apify-${{ matrix.platform }}
+        path: ./release-assets/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}${{ matrix.artifact_extension }}
         
   create-release:
     needs: build-single-file

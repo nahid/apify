@@ -67,3 +67,4 @@ ServiceFabricBackup/
 # API Tester specific files
 apify-config.json
 .idea
+.env
