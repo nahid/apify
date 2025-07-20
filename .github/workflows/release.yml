@@ -7,18 +7,34 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release'
+        description: 'Version to release (e.g., 1.0.0)'
         required: true
         default: '1.0.0'
 
-# Add explicit permissions needed for creating releases
 permissions:
   contents: write
   packages: write
   actions: read
 
 jobs:
+  determine_version:
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.set_version.outputs.VERSION }}
+    steps:
+      - name: Set version
+        id: set_version
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION_NAME="${{ github.ref_name }}"
+          else
+            VERSION_NAME="v${{ github.event.inputs.version }}"
+          fi
+          echo "VERSION=${VERSION_NAME}" >> $GITHUB_OUTPUT
+
   build-single-file:
+    needs: determine_version
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -38,9 +54,7 @@ jobs:
           - rid: osx-arm64
             platform: macOS-arm64
             artifact_extension: ''
-    outputs:
-      version: ${{ steps.set_version_from_build.outputs.VERSION }}
-    
+
     steps:
     - uses: actions/checkout@v4
     
@@ -54,15 +68,10 @@ jobs:
       
     - name: Build Single File
       run: dotnet publish Apify.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true
-    
-    - name: Set version from build job
-      id: set_version_from_build
-      run: echo "VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
-      shell: bash
       
     - name: Prepare Release Asset
       run: |
-        ASSET_NAME="apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}"
+        ASSET_NAME="apify-${{ needs.determine_version.outputs.VERSION }}-${{ matrix.platform }}"
         mkdir -p release-assets/apify
         mv ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./release-assets/apify/
         cd release-assets
@@ -75,20 +84,14 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: apify-${{ matrix.platform }}
-        path: release-assets/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}.zip
+        path: release-assets/apify-${{ needs.determine_version.outputs.VERSION }}-${{ matrix.platform }}.zip
         
   create-release:
-    needs: build-single-file
+    needs: [determine_version, build-single-file]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set version from build job
-      id: set_version_from_build
-      run: echo "VERSION=${{ needs.build-single-file.outputs.version }}" >> $GITHUB_OUTPUT
-      shell: bash
-    
-    # Download individual artifacts separately to avoid directories
     - name: Download Linux Artifact
       uses: actions/download-artifact@v4
       with:
@@ -114,18 +117,18 @@ jobs:
         path: ./release-artifacts
     
     - name: List prepared artifacts
-      run: ls -la ./release-artifacts/
+      run: ls -laR ./release-artifacts/
       shell: bash
     
     - name: Create Release
       id: create_release
       uses: ncipollo/release-action@v1
       with:
-        tag: v${{ steps.set_version_from_build.outputs.VERSION }}
-        name: Release v${{ steps.set_version_from_build.outputs.VERSION }}
+        tag: ${{ needs.determine_version.outputs.VERSION }}
+        name: Release ${{ needs.determine_version.outputs.VERSION }}
         draft: false
         prerelease: false
-        artifacts: "./release-artifacts/*"
+        artifacts: "./release-artifacts/**/*.zip"
         artifactContentType: application/octet-stream
         allowUpdates: true
         removeArtifacts: false
