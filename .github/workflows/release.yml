@@ -68,13 +68,14 @@ jobs:
         cd release-assets
         tar -a -c -f "../${ASSET_NAME}.zip" apify
         cd ..
+        mv "${ASSET_NAME}.zip" release-assets/
       shell: bash
 
     - name: Upload Release Asset
       uses: actions/upload-artifact@v4
       with:
         name: apify-${{ matrix.platform }}
-        path: apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}.zip
+        path: release-assets/apify-${{ steps.set_version_from_build.outputs.VERSION }}-${{ matrix.platform }}.zip
         
   create-release:
     needs: build-single-file
