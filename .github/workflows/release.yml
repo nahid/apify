@@ -69,13 +69,17 @@ jobs:
     - name: Build Single File
       run: dotnet publish Apify.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true
       
+    - name: Install zip
+      if: runner.os == 'Linux'
+      run: sudo apt-get install -y zip
+      
     - name: Prepare Release Asset
       run: |
         ASSET_NAME="apify-${{ needs.determine_version.outputs.VERSION }}-${{ matrix.platform }}"
         mkdir -p release-assets/apify
         mv ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./release-assets/apify/
         cd release-assets
-        tar -a -c -f "../${ASSET_NAME}.zip" apify
+        zip -r "../${ASSET_NAME}.zip" apify
         cd ..
         mv "${ASSET_NAME}.zip" release-assets/
       shell: bash
