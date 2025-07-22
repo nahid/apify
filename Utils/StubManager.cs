@@ -59,7 +59,9 @@ public static class StubManager
             return expr;
         }
         
-        var result = DynamicExpression.Compile(expression);
+        var output = DynamicExpression.Compile<object>(expression);
+        var result = output.ToString() ?? string.Empty;
+        
         if (string.IsNullOrEmpty(result))
         {
             return expr;
