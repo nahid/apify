@@ -1,6 +1,10 @@
-# Apify
+<p align="center">
+  <img src="assets/logo.png" alt="Apify Logo" width="250"/>
+</p>
 
-A powerful C# CLI application for comprehensive API testing and mocking, enabling developers to streamline API validation and development workflows with rich configuration and execution capabilities.
+# Apify App
+
+A powerful CLI application for comprehensive API testing and mocking, enabling developers to streamline API validation and development workflows with rich configuration and execution capabilities.
 
 ## Features
 
