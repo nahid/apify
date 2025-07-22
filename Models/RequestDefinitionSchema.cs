@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json.Linq;
@@ -14,37 +15,37 @@ namespace Apify.Models
     {
         // Constructor for JSON deserialization
 
-        [JsonPropertyName("name")]
+        [JsonProperty("name")]
         public string Name { get; set; } = string.Empty;
 
-        [JsonPropertyName("description")]
+        [JsonProperty("description")]
         public string? Description { get; set; }
 
-        [JsonPropertyName("url")]
+        [JsonProperty("url")]
         public string Url { get; set; } = string.Empty;
 
-        [JsonPropertyName("method")]
+        [JsonProperty("method")]
         public string Method { get; set; } = "GET";
 
-        [JsonPropertyName("headers")]
+        [JsonProperty("headers")]
         public Dictionary<string, string>? Headers { get; set; }
 
-        [JsonPropertyName("body")]
+        [JsonProperty("body")]
         public Body? Body { get; set; }
         
-        [JsonPropertyName("payloadType")]
+        [JsonProperty("payloadType")]
         public PayloadContentType? PayloadType { get; set; }
 
-        [JsonPropertyName("tests")]
+        [JsonProperty("tests")]
         public List<AssertionEntity>? Tests { get; set; }
 
-        [JsonPropertyName("timeout")]
+        [JsonProperty("timeout")]
         public int Timeout { get; set; } = 30000; // 30 seconds default timeout
         
-        [JsonPropertyName("variables")]
+        [JsonProperty("variables")]
         public Dictionary<string, string>? Variables { get; set; } = new Dictionary<string, string>();
 
-        [JsonPropertyName("tags")]
+        [JsonProperty("tags")]
         public List<string>? Tags { get; set; }
         
         public string? GetPayloadAsString()
@@ -139,22 +140,22 @@ namespace Apify.Models
 
     public enum PayloadContentType
     {
-        [JsonPropertyName("none")]
+        [JsonProperty("none")]
         None,
         
-        [JsonPropertyName("text")]
+        [JsonProperty("text")]
         Text,
         
-        [JsonPropertyName("json")]
+        [JsonProperty("json")]
         Json,
         
-        [JsonPropertyName("formData")]
+        [JsonProperty("formData")]
         FormData,
         
-        [JsonPropertyName("multipart")]
+        [JsonProperty("multipart")]
         Multipart,
         
-        [JsonPropertyName("binary")]
+        [JsonProperty("binary")]
         Binary
     }
 
@@ -164,28 +165,28 @@ namespace Apify.Models
     
     public class MultipartData
     {
-        [JsonPropertyName("name")]
+        [JsonProperty("name")]
         public string? Name { get; set; }
         
-        [JsonPropertyName("content")]
+        [JsonProperty("content")]
         public string? Content { get; set; }
     }
 
     public class Body
     {
-        [JsonPropertyName("json")]
+        [JsonProperty("json")]
         public JToken? Json { get; set; }
         
-        [JsonPropertyName("text")]
+        [JsonProperty("text")]
         public string? Text { get; set; }
         
-        [JsonPropertyName("formData")]
+        [JsonProperty("formData")]
         public Dictionary<string, string>? FormData { get; set; }
         
-        [JsonPropertyName("multipart")]
+        [JsonProperty("multipart")]
         public List<MultipartData>? Multipart { get; set; }
         
-        [JsonPropertyName("binary")]
+        [JsonProperty("binary")]
         public string? Binary { get; set; }
         
     }

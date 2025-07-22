@@ -20,13 +20,13 @@ namespace Apify.Models
             Description = description;
         }
 
-        [JsonProperty("Name")]
+        [JsonProperty("name")]
         public string Name { get; set; }
 
-        [JsonProperty("Variables")]
+        [JsonProperty("variables")]
         public Dictionary<string, string> Variables { get; set; }
 
-        [JsonProperty("Description")]
+        [JsonProperty("description")]
         public string? Description { get; set; }
     }
 }

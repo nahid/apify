@@ -23,72 +23,87 @@ namespace Apify.Models
             Variables = variables ?? new Dictionary<string, string>();
         }
 
-        [JsonProperty("Name")]
+        [JsonProperty("name")]
         public string Name { get; set; }
 
-        [JsonProperty("Description")]
+        [JsonProperty("description")]
         public string? Description { get; set; }
 
-        [JsonProperty("RequestOptions")]
+        [JsonProperty("requestOptions")]
         public ApiCallDisplayOptions? RequestOptions { get; set; } = new ApiCallDisplayOptions();
 
-        [JsonProperty("Environments")]
+        [JsonProperty("environments")]
         public List<EnvironmentSchema> Environments { get; set; }
         
-        [JsonProperty("Authorization")]
+        [JsonProperty("authorization")]
         public Authorization? Authorization { get; set; }
 
-        [JsonProperty("DefaultEnvironment")]
+        [JsonProperty("defaultEnvironment")]
         public string? DefaultEnvironment { get; set; }
         
-        [JsonProperty("Variables")]
+        [JsonProperty("variables")]
         public Dictionary<string, string> Variables { get; set; }
         
-        [JsonProperty("MockServer")]
+        [JsonProperty("mockServer")]
         public MockServer? MockServer { get; set; }
         
     }
 
     public class Authorization
     {
-        [JsonProperty("Type")]
-        public string? Type { get; set; }
+        [JsonProperty("type")]
+        public AuthorizationType? Type { get; set; }
         
-        [JsonProperty("Token")]
+        [JsonProperty("token")]
         public string? Token { get; set; }
+    }
+    
+    public enum AuthorizationType
+    {
+        [JsonProperty("none")]
+        None,
+        
+        [JsonProperty("bearer")]
+        Bearer,
+        
+        [JsonProperty("basic")]
+        Basic,
+        
+        [JsonProperty("apiKey")]
+        ApiKey
     }
 
     public class ApiCallDisplayOptions
     {
-        [JsonProperty("Verbose")]
+        [JsonProperty("verbose")]
         public bool? Verbose { get; set; }
         
-        [JsonProperty("Tests")]
+        [JsonProperty("tests")]
         public bool? Tests { get; set; }
         
-        [JsonProperty("ShowRequest")]
+        [JsonProperty("showRequest")]
         public bool? ShowRequest { get; set; }
         
-        [JsonProperty("ShowResponse")]
+        [JsonProperty("showResponse")]
         public bool? ShowResponse { get; set; }
         
-        [JsonProperty("ShowOnlyResponse")]
+        [JsonProperty("showOnlyResponse")]
         public bool? ShowOnlyResponse { get; set; }
     }
 
 
     public class MockServer
     {
-        [JsonProperty("Port")]
+        [JsonProperty("port")]
         public int Port { get; set; }
         
-        [JsonProperty("Verbose")]
+        [JsonProperty("verbose")]
         public bool Verbose { get; set; }
         
-        [JsonProperty("EnableCors")]
+        [JsonProperty("enableCors")]
         public bool EnableCors { get; set; }
         
-        [JsonProperty("DefaultHeaders")]
+        [JsonProperty("defaultHeaders")]
         public Dictionary<string, string>? DefaultHeaders { get; set; }
     }
 }

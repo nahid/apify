@@ -44,6 +44,29 @@ namespace Apify.Services
                 
                 var request = new HttpRequestMessage(new HttpMethod(requestDefinitionSchema.Method), url);
 
+                if (_configService.LoadConfiguration().Authorization != null)
+                {
+                    // If authorization is set in the config, add it to the request headers
+                    var authHeader = _configService.LoadConfiguration().Authorization;
+
+                    switch (authHeader?.Type)
+                    {
+                        case AuthorizationType.Bearer:
+                            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _configService.LoadConfiguration().Authorization?.Token);
+                            break;
+                        case AuthorizationType.Basic:
+                            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", _configService.LoadConfiguration().Authorization?.Token);
+                            break;
+                        case AuthorizationType.ApiKey:
+                            // For API Key, we assume the token is the key itself
+                            request.Headers.Add("Api-Key", _configService.LoadConfiguration().Authorization?.Token ?? string.Empty);
+                            break;
+                        default:
+                            request.Headers.Authorization = null; // No authorization header if type is not recognized
+                            break;
+                    }
+                }
+
                 // Add headers
                 if (requestDefinitionSchema.Headers != null)
                 {
