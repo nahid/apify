@@ -106,3 +106,4 @@ jobs:
         prerelease: false
         artifacts: "./release-artifacts/**/*.zip"
         token: ${{ github.token }}
+        allowUpdates: true
