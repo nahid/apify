@@ -4,12 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., 1.0.0)'
-        required: true
-        default: '1.0.0'
 
 permissions:
   contents: write
@@ -17,7 +11,7 @@ permissions:
   actions: read
 
 jobs:
-  determine_version:
+  release:
     runs-on: ubuntu-latest
     outputs:
       VERSION: ${{ steps.set_version.outputs.VERSION }}
@@ -26,115 +20,84 @@ jobs:
         id: set_version
         shell: bash
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            VERSION_NAME="${{ github.ref_name }}"
-          else
-            VERSION_NAME="v${{ github.event.inputs.version }}"
-          fi
-          # Strip "v" prefix for .NET versioning
-          echo "VERSION=${VERSION_NAME#v}" >> $GITHUB_OUTPUT
+          # Strip "v" prefix from the tag for use in asset names and .NET versioning
+          echo "VERSION=${{ github.ref_name#v }}" >> $GITHUB_OUTPUT
 
-  build-single-file:
-    needs: determine_version
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - rid: linux-x64
-            platform: Linux
-            artifact_extension: ''
-            
-          - rid: win-x64
-            platform: Windows
-            artifact_extension: '.exe'
-            
-          - rid: osx-x64
-            platform: macOS
-            artifact_extension: ''
-            
-          - rid: osx-arm64
-            platform: macOS-arm64
-            artifact_extension: ''
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
-    
-    - name: Restore dependencies
-      run: dotnet restore
-      
-    - name: Build Single File
-      run: dotnet publish Apify.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -p:Version=${{ needs.determine_version.outputs.VERSION }}
-      
-    - name: Install zip
-      if: runner.os == 'Linux'
-      run: sudo apt-get install -y zip
-      
-    - name: Prepare Release Asset
-      run: |
-        ASSET_NAME="apify-${{ needs.determine_version.outputs.VERSION }}-${{ matrix.platform }}"
-        mkdir -p release-assets/apify
-        mv ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./release-assets/apify/
-        cd release-assets
-        zip -r "../${ASSET_NAME}.zip" apify
-        cd ..
-        mv "${ASSET_NAME}.zip" release-assets/
-      shell: bash
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Upload Release Asset
-      uses: actions/upload-artifact@v4
-      with:
-        name: apify-${{ matrix.platform }}
-        path: release-assets/apify-${{ needs.determine_version.outputs.VERSION }}-${{ matrix.platform }}.zip
-        
-  create-release:
-    needs: [determine_version, build-single-file]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download Linux Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: apify-Linux
-        path: ./release-artifacts
-        
-    - name: Download Windows Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: apify-Windows
-        path: ./release-artifacts
-        
-    - name: Download macOS Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: apify-macOS
-        path: ./release-artifacts
-        
-    - name: Download macOS ARM64 Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: apify-macOS-arm64
-        path: ./release-artifacts
-    
-    - name: List prepared artifacts
-      run: ls -laR ./release-artifacts/
-      shell: bash
-    
-    - name: Create Release
-      id: create_release
-      uses: ncipollo/release-action@v1
-      with:
-        tag: ${{ needs.determine_version.outputs.VERSION }}
-        name: Release ${{ needs.determine_version.outputs.VERSION }}
-        draft: false
-        prerelease: false
-        artifacts: "./release-artifacts/**/*.zip"
-        artifactContentType: application/octet-stream
-        allowUpdates: true
-        removeArtifacts: false
-        token: ${{ github.token }}
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # Build binaries for all platforms
+      - name: Build for Linux
+        run: dotnet publish Apify.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:Version=${{ steps.set_version.outputs.VERSION }}
+      
+      - name: Build for Windows
+        run: dotnet publish Apify.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:Version=${{ steps.set_version.outputs.VERSION }}
+
+      - name: Build for macOS (x64)
+        run: dotnet publish Apify.csproj -c Release -r osx-x64 --self-contained true -p:PublishSingleFile=true -p:Version=${{ steps.set_version.outputs.VERSION }}
+
+      - name: Build for macOS (ARM64)
+        run: dotnet publish Apify.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true -p:Version=${{ steps.set_version.outputs.VERSION }}
+
+      # Prepare release assets
+      - name: Install zip
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y zip
+
+      - name: Package Linux Asset
+        run: |
+          ASSET_NAME="apify-${{ steps.set_version.outputs.VERSION }}-Linux"
+          mkdir -p release-assets/apify
+          mv ./bin/Release/net8.0/linux-x64/publish/apify ./release-assets/apify/
+          cd release-assets
+          zip -r "../${ASSET_NAME}.zip" apify
+          cd .. && rm -rf release-assets/apify
+
+      - name: Package Windows Asset
+        run: |
+          ASSET_NAME="apify-${{ steps.set_version.outputs.VERSION }}-Windows"
+          mkdir -p release-assets/apify
+          mv ./bin/Release/net8.0/win-x64/publish/apify.exe ./release-assets/apify/
+          cd release-assets
+          zip -r "../${ASSET_NAME}.zip" apify
+          cd .. && rm -rf release-assets/apify
+
+      - name: Package macOS (x64) Asset
+        run: |
+          ASSET_NAME="apify-${{ steps.set_version.outputs.VERSION }}-macOS"
+          mkdir -p release-assets/apify
+          mv ./bin/Release/net8.0/osx-x64/publish/apify ./release-assets/apify/
+          cd release-assets
+          zip -r "../${ASSET_NAME}.zip" apify
+          cd .. && rm -rf release-assets/apify
+
+      - name: Package macOS (ARM64) Asset
+        run: |
+          ASSET_NAME="apify-${{ steps.set_version.outputs.VERSION }}-macOS-arm64"
+          mkdir -p release-assets/apify
+          mv ./bin/Release/net8.0/osx-arm64/publish/apify ./release-assets/apify/
+          cd release-assets
+          zip -r "../${ASSET_NAME}.zip" apify
+          cd .. && rm -rf release-assets/apify
+
+      - name: List prepared artifacts
+        run: ls -la .
+
+      - name: Create Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          artifacts: "*.zip"
+          token: ${{ github.token }}
