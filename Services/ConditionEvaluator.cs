@@ -42,13 +42,13 @@ namespace Apify.Services
                 _dynamicExpression.GetInterpreter().SetVariable("path", pathParams);
                 
                 
-                // Add special accessor objects for query parameters and headers
-                // For accessing query parameters in a more natural way (q.parameter)
-                _dynamicExpression.GetInterpreter().SetVariable("q", MiscHelper.DictionaryToExpandoObject(queryParams));
-                
-                // For accessing headers in a more natural way (h.header)
-                _dynamicExpression.GetInterpreter().SetVariable("h", MiscHelper.DictionaryToExpandoObject(headers));
-                _dynamicExpression.GetInterpreter().SetVariable("p", MiscHelper.DictionaryToExpandoObject(pathParams));
+                // // Add special accessor objects for query parameters and headers
+                // // For accessing query parameters in a more natural way (q.parameter)
+                // _dynamicExpression.GetInterpreter().SetVariable("q", MiscHelper.DictionaryToExpandoObject(queryParams));
+                //
+                // // For accessing headers in a more natural way (h.header)
+                // _dynamicExpression.GetInterpreter().SetVariable("h", MiscHelper.DictionaryToExpandoObject(headers));
+                // _dynamicExpression.GetInterpreter().SetVariable("p", MiscHelper.DictionaryToExpandoObject(pathParams));
 
                 // Evaluate the expression
                 var result = _dynamicExpression.Compile<bool>(condition);
