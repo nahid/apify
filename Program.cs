@@ -1,6 +1,4 @@
 using Apify.Commands;
-using Apify.Services;
-using Apify.Utils;
 using System.CommandLine;
 
 namespace Apify
