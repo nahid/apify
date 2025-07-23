@@ -10,7 +10,7 @@ namespace Apify.Services
 {
     public class MockServerService
     {
-        private readonly string _mockDirectory;
+        private readonly string _projectDirectory;
         private readonly List<MockDefinitionSchema> _mockSchemaDefinitions = [];
         private readonly ConfigService _configService;
         private readonly ConditionEvaluator _conditionEvaluator = new ConditionEvaluator();
@@ -18,27 +18,69 @@ namespace Apify.Services
         private bool _debug;
         private HttpListener? _listener;
         private bool _isRunning;
-        
-        public MockServerService(string mockDirectory, bool debug = false)
-        {
-            _mockDirectory = mockDirectory;
-            _debug = debug;
-            _configService = new ConfigService(debug);
-           
-        }
-        
-        public async Task StartAsync(int port, bool verbose)
-        {
-            _verbose = verbose;
+        private FileSystemWatcher? _watcher;
+        private Timer? _reloadDebounceTimer;
+        private readonly object _reloadLock = new object();
+        private int _port;
+        private readonly TaskCompletionSource<object> _exitSignal = new TaskCompletionSource<object>();
 
-            if (port == 0)
+        public MockServerService(string projectDirectory, bool debug = false)
+        {
+            _projectDirectory = projectDirectory;
+            
+            if (_projectDirectory.StartsWith("~"))
             {
-                port = _configService.LoadConfiguration().MockServer?.Port ?? 1988;
+                string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                _projectDirectory = Path.Combine(home, _projectDirectory.Substring(2)); // remove "~/" and combine
+            }
+
+            if (string.IsNullOrEmpty(projectDirectory))
+            {
+                _projectDirectory = Directory.GetCurrentDirectory();
             }
             
+            _debug = debug;
+            _configService = new ConfigService(debug);
+            _configService.SetConfigFilePath(_projectDirectory);
+
+        }
+
+        public async Task StartAsync(int port, bool verbose, bool watch = false)
+        {
+            _verbose = verbose;
+            _port = port;
+
+            if (_port == 0)
+            {
+                _port = _configService.LoadConfiguration().MockServer?.Port ?? 1988;
+            }
+
+            if (watch)
+            {
+                // Handle Ctrl+C to gracefully exit
+                Console.CancelKeyPress += (sender, eventArgs) => {
+                    eventArgs.Cancel = true;
+                    _exitSignal.TrySetResult(null!);
+                };
+
+                SetupWatcher();
+                _ = StartServerAsync(); // Fire-and-forget the server task
+
+                await _exitSignal.Task; // Wait for Ctrl+C
+                Stop(); // Stop the server on exit
+                ConsoleHelper.WriteInfo("Mock server shut down.");
+            }
+            else
+            {
+                await StartServerAsync(); // Original behavior for non-watch mode
+            }
+        }
+
+        private async Task StartServerAsync()
+        {
             // Load all mock definitions
             LoadMockSchemaDefinitions();
-            
+
             if (_mockSchemaDefinitions.Count == 0)
             {
                 if (_verbose)
@@ -46,29 +88,30 @@ namespace Apify.Services
                     ConsoleHelper.WriteWarning("No mock API definitions found. Create .mock.json files in your .apify directory.");
                     ConsoleHelper.WriteInfo("Example path: .apify/users/all.mock.json");
                 }
-                return;
+                // If watching, we don't return, as new files might be added.
+                if (_watcher == null) return;
             }
-            
+
             // Start HTTP listener
             _listener = new HttpListener();
-            _listener.Prefixes.Add($"http" + $"://*:{port}/");
-            
+            _listener.Prefixes.Add($"http" + $"://*:{_port}/");
+
             try
             {
                 _listener.Start();
                 _isRunning = true;
-                
-                ConsoleHelper.WriteSuccess($"Mock API Server started on http://0.0.0.0:{port}");
+
+                ConsoleHelper.WriteSuccess($"Mock API Server started on http://localhost:{_port}");
                 ConsoleHelper.WriteInfo("Available endpoints:");
-                
+
                 // Display advanced mock endpoints
                 foreach (var mock in _mockSchemaDefinitions)
                 {
                     ConsoleHelper.WriteSuccess($"[{mock.Method}] {mock.Endpoint} - {mock.Name} (Advanced)");
                 }
-                
+
                 Console.WriteLine("\nPress Ctrl+C to stop the server...");
-                
+
                 // Handle requests
                 while (_isRunning)
                 {
@@ -79,7 +122,7 @@ namespace Apify.Services
             catch (HttpListenerException ex) when (ex.Message.Contains("Access is denied") || ex.ErrorCode == 5)
             {
                 ConsoleHelper.WriteError($"Error starting mock server: {ex.Message}");
-                
+
                 // Provide helpful guidance for Windows users
                 if (OperatingSystem.IsWindows() && _debug)
                 {
@@ -91,13 +134,13 @@ namespace Apify.Services
                     Console.WriteLine("   Right-click on cmd/PowerShell and select 'Run as administrator'");
                     Console.WriteLine();
                     Console.WriteLine("2. Add a URL reservation (one-time setup, preferred solution):");
-                    Console.WriteLine($"   Run this in an Administrator PowerShell: netsh http add urlacl url=https://+:{port}/ user=Everyone");
+                    Console.WriteLine($"   Run this in an Administrator PowerShell: netsh http add urlacl url=https://+:{_port}/ user=Everyone");
                     Console.WriteLine();
                     Console.WriteLine("3. Try using a port number above 1024 (e.g., 8080):");
                     Console.WriteLine($"   dotnet run mock-server --port 8080");
                     Console.WriteLine();
                 }
-                
+
                 if (_debug)
                 {
                     Console.WriteLine(ex.StackTrace);
@@ -105,40 +148,112 @@ namespace Apify.Services
             }
             catch (Exception ex)
             {
-                ConsoleHelper.WriteError($"Error starting mock server: {ex.Message}");
-                if (_debug)
+                if (_isRunning) // Only log if the error happened while the server was supposed to be running
                 {
-                    Console.WriteLine(ex.StackTrace);
+                    ConsoleHelper.WriteError($"Error with mock server: {ex.Message}");
+                    if (_debug)
+                    {
+                        Console.WriteLine(ex.StackTrace);
+                    }
                 }
+            }
+        }
+
+        private void SetupWatcher()
+        {
+            if (!Directory.Exists(_projectDirectory))
+            {
+                Directory.CreateDirectory(_projectDirectory);
+            }
+
+            _watcher = new FileSystemWatcher(_projectDirectory)
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName,
+                Filter = "*.mock.json",
+                IncludeSubdirectories = true,
+                EnableRaisingEvents = true,
+                InternalBufferSize = 65536
+            };
+
+            _watcher.Changed += OnMockFileChanged;
+            _watcher.Created += OnMockFileChanged;
+            _watcher.Deleted += OnMockFileChanged;
+            _watcher.Renamed += OnMockFileRenamed;
+
+            ConsoleHelper.WriteInfo($"Watching for changes in '{Path.GetFullPath(_projectDirectory)}'...");
+        }
+
+        private void OnMockFileChanged(object sender, FileSystemEventArgs e)
+        {
+            ConsoleHelper.WriteInfo($"File change detected: {e.ChangeType} - {e.Name}");
+            DebounceReload();
+        }
+
+        private void OnMockFileRenamed(object sender, RenamedEventArgs e)
+        {
+            ConsoleHelper.WriteInfo($"File renamed detected: {e.OldName} -> {e.Name}");
+            DebounceReload();
+        }
+
+        private void DebounceReload()
+        {
+            lock (_reloadLock)
+            {
+                _reloadDebounceTimer?.Dispose();
+                _reloadDebounceTimer = new Timer(ReloadServer, null, 200, Timeout.Infinite); // 200ms debounce
+            }
+        }
+
+        private void ReloadServer(object? state)
+        {
+            lock (_reloadLock)
+            {
+                ConsoleHelper.WriteInfo("Reloading mock server...");
+                Stop();
+
+                // Give a moment for the port to be released
+                Thread.Sleep(100);
+
+                // The StartServerAsync needs to run on a separate thread to not block the timer thread
+                Task.Run(StartServerAsync);
             }
         }
         
         public void Stop()
         {
+            if (!_isRunning) return;
+
             _isRunning = false;
-            _listener?.Stop();
+            try
+            {
+                _listener?.Stop();
+            }
+            catch (ObjectDisposedException) { /* Listener is already disposed, which is fine. */ }
             _listener?.Close();
+            _listener = null;
+            ConsoleHelper.WriteInfo("Mock server instance stopped.");
         }
         
         private void LoadMockSchemaDefinitions()
         {
-            if (!Directory.Exists(_mockDirectory))
+            _mockSchemaDefinitions.Clear();
+            if (!Directory.Exists(_projectDirectory))
             {
-                Directory.CreateDirectory(_mockDirectory);
+                Directory.CreateDirectory(_projectDirectory);
                 if (_debug)
                 {
-                    ConsoleHelper.WriteDebug($"Mock API directory created: {_mockDirectory}");
+                    ConsoleHelper.WriteDebug($"Mock API directory created: {_projectDirectory}");
                 }
                 return;
             }
             
             // Find all .mock.json files in the directory and subdirectories
-            var mockFiles = Directory.GetFiles(_mockDirectory, "*.mock.json", SearchOption.AllDirectories);
+            var mockFiles = Directory.GetFiles(_projectDirectory, "*.mock.json", SearchOption.AllDirectories);
             
             // Use a debug flag for detailed logs but show the count regardless
             if (_debug)
             {
-                ConsoleHelper.WriteDebug($"Searching for mock API definition files in: {_mockDirectory}");
+                ConsoleHelper.WriteDebug($"Searching for mock API definition files in: {_projectDirectory}");
                 Console.WriteLine($"Found {mockFiles.Length} mock API definition files");
             }
             
