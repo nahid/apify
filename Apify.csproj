@@ -27,12 +27,14 @@
     <PackageReference Include="Bogus" Version="35.6.3" />
     <PackageReference Include="ConsoleTableExt" Version="3.3.0" />
     <PackageReference Include="DynamicExpresso.Core" Version="2.19.0" />
+    <PackageReference Include="Jint" Version="4.4.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>
 
   <!-- Copy example files to output directory but exclude from build -->
   <ItemGroup>
+    <EmbeddedResource Include="includes\*" />
     <None Update="Examples\*.*" CopyToOutputDirectory="PreserveNewest" />
     <Compile Remove="Examples\**" />
     <EmbeddedResource Remove="Examples\**" />
@@ -49,5 +51,4 @@
   <ItemGroup>
     <Folder Include="bin\Debug\net8.0\" />
   </ItemGroup>
-
 </Project>

@@ -1,0 +1,3 @@
+const apify = {
+    assert: Assert,
+}
