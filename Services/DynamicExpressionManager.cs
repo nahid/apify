@@ -1,24 +1,28 @@
-using DynamicExpresso;
+using Jint;
+using Newtonsoft.Json;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace Apify.Services;
 
 public class DynamicExpressionManager
 {
-    private Interpreter? _interpreter;
-    private string _exprPattern = @"^ *expr *\|>";
-    
+     private Engine? _interpreter;
+     private Assembly _assembly = Assembly.GetExecutingAssembly();
+     private string _exprPattern = @"^ *expr *\|>";
     public DynamicExpressionManager()
     {
-        _interpreter = new Interpreter(InterpreterOptions.Default);
+        _interpreter = new Engine();
         
-        // Register helper methods to be used in expressions
-        _interpreter.SetFunction("int", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0));
-        _interpreter.SetFunction("Parse", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0));
-        _interpreter.SetFunction("ToLower", new Func<string, string>(s => s.ToLower()));
-        _interpreter.SetFunction("ToUpper", new Func<string, string>(s => s.ToUpper()));
-        _interpreter.SetFunction("Contains", new Func<string, string, bool>((source, value) => 
-            source.Contains(value, StringComparison.OrdinalIgnoreCase)));
+        _interpreter.SetValue("parse", new Func<string, int>(s => int.TryParse(s, out int result) ? result : 0)); // Assuming Faker is a class that provides methods for generating fake data
+        _interpreter.SetValue("toLower", new Func<string, string>(s => s.ToLower()));
+        _interpreter.SetValue("toUpper", new Func<string, string>(s => s.ToUpper()));
+        _interpreter.SetValue("contains", new Func<string, string, bool>((source, value) => 
+        source.Contains(value, StringComparison.OrdinalIgnoreCase)));
+        
+        ExecuteScriptFromAssembly("Apify.includes.app.js");
+        
+        
     }
 
     public void SetVariables(Dictionary<string, object> vars)
@@ -30,12 +34,32 @@ public class DynamicExpressionManager
 
         foreach (var v in vars)
         {
-            _interpreter.SetVariable(v.Key, v.Value);
+            _interpreter.SetValue(v.Key, v.Value);
         }
   
     }
+    
+    public void SetVariable(string name, object value)
+    {
+        if (_interpreter == null)
+        {
+            throw new InvalidOperationException("Interpreter is not initialized.");
+        }
 
-    public Interpreter GetInterpreter()
+        _interpreter.SetValue(name, value);
+    }
+    
+    public void SetPropertyToAppObject(string name, string expression)
+    {
+        if (_interpreter == null)
+        {
+            throw new InvalidOperationException("Interpreter is not initialized.");
+        }
+
+        _interpreter.Execute($"apify.{name} = {expression};");
+    }
+
+    public Engine GetInterpreter()
     {
         return _interpreter ?? throw new InvalidOperationException("Interpreter is not initialized.");
     }
@@ -49,7 +73,7 @@ public class DynamicExpressionManager
 
         foreach (var func in funcs)
         {
-            _interpreter.SetFunction(func.Key, func.Value);
+            _interpreter.SetValue(func.Key, func.Value);
         }
     }
 
@@ -60,15 +84,36 @@ public class DynamicExpressionManager
             throw new InvalidOperationException("Interpreter is not initialized.");
         }
 
-        _interpreter.SetFunction(name, func);
+        _interpreter.SetValue(name, func);
         
         return this;
     }
     
-    public string Compile(string expr)
+    public void Execute(string expr)
     {
-        return Compile<string>(expr);
+        if (_interpreter == null)
+        {
+            throw new InvalidOperationException("Interpreter is not initialized.");
+        }
+
+        if (string.IsNullOrWhiteSpace(expr))
+        {
+            return;
+        }
+
+        expr = GetExpression(expr);
         
+        if (string.IsNullOrWhiteSpace(expr))
+        {
+            return;
+        }
+        
+        _interpreter!.Execute(expr);
+    }
+    
+    public string? Compile(string expr)
+    {
+        return _interpreter?.Evaluate(expr)?.AsObject()?.ToString() ?? string.Empty;
     }
     
     public T Compile<T>(string expr)
@@ -76,11 +121,39 @@ public class DynamicExpressionManager
         expr = expr.Replace("\\", "");
         try
         {
-            var result = _interpreter!.Eval<T>(expr);
-            return result;
+            var result = _interpreter!.Evaluate(expr);
+            if (result.IsNull() || result.IsUndefined())
+            {
+                return default(T)!; // Return default value for type T
+            }
+            
+            return (T)Convert.ChangeType(result.ToObject(), typeof(T))!;
+        
         } catch (Exception)
         {
             return default(T)!; // Return default value for type T
+        }
+    }
+    
+    public void ExecuteScriptFromAssembly(string resourceName)
+    {
+        if (_interpreter == null)
+        {
+            throw new InvalidOperationException("Interpreter is not initialized.");
+        }
+
+        using (Stream? stream = _assembly.GetManifestResourceStream(resourceName))
+        {
+            if (stream == null)
+            {
+                throw new ArgumentException($"Resource '{resourceName}' not found in assembly.");
+            }
+            
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                string js = reader.ReadToEnd();
+                _interpreter.Execute(js);
+            }
         }
     }
     

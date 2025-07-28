@@ -8,7 +8,7 @@ namespace Apify.Utils;
 
 public static class StubManager
 {
-    private readonly static Regex PlaceholderRe = new Regex(@"\{\{\s*(.+?)\s*\}\}",
+    private readonly static Regex PlaceholderRe = new Regex(@"\{\{\s*(.+?)\s*\}\}|\{#\s*(.+?)\s*#\}",
         RegexOptions.Compiled);
 
     private readonly static DynamicExpressionManager DynamicExpression;
@@ -16,9 +16,8 @@ public static class StubManager
     static StubManager()
     {
         DynamicExpression = new DynamicExpressionManager();
-        var faker = new Faker();
-        DynamicExpression.GetInterpreter().SetVariable("Faker", faker);
-   
+        DynamicExpression.ExecuteScriptFromAssembly("Apify.includes.faker.min.js");
+        DynamicExpression.SetPropertyToAppObject("faker", "faker");
     }
 
     /// <summary>
@@ -32,21 +31,50 @@ public static class StubManager
         string template,
         Dictionary<string, object> vars)
     {
-        SetVariables(vars);
+        SetValues(vars);
         
         return PlaceholderRe.Replace(template, match =>
         {
-            if (DynamicExpression.IsEvalExpression(match.Groups[1].Value))
+            if (match.Groups[1].Success)
             {
-                return ExecExpression(match.Groups[1].Value);
+                // {{ path.to.value }}
+                if (DynamicExpression.IsEvalExpression(match.Groups[1].Value))
+                {
+                    try
+                    {
+                        return ExecExpression(match.Groups[1].Value);
+                    } catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error executing expression: {ex.Message}");
+                        return match.Value; // Return original if error occurs
+                    }
+                
+                }
+            
+                // split "users.posts.comment.id" → ["users","posts","comment","id"]
+                var parts = match.Groups[1]
+                .Value
+                .Split('.', StringSplitOptions.RemoveEmptyEntries);
+
+                return AccessNestedValue(match, vars, parts);
             }
             
-            // split "users.posts.comment.id" → ["users","posts","comment","id"]
-            var parts = match.Groups[1]
-            .Value
-            .Split('.', StringSplitOptions.RemoveEmptyEntries);
-
-            return AccessNestedValue(match, vars, parts);
+            if (match.Groups[2].Success)
+            {
+                try
+                {
+                    return ExecExpression(match.Groups[2].Value);
+                } catch (Exception ex)
+                {
+                    Console.WriteLine($"Error executing expression: {ex.Message}");
+                    return match.Value; // Return original if error occurs
+                }
+            }
+            
+            // If neither group matched, return the original match
+            
+            return match.Value;
+           
 
         });
     }
@@ -60,12 +88,10 @@ public static class StubManager
         }
         
         var output = DynamicExpression.Compile<object>(expression);
+
         var result = output.ToString() ?? string.Empty;
         
-        if (string.IsNullOrEmpty(result))
-        {
-            return expr;
-        }
+     
 
         return result;
     }
@@ -116,27 +142,27 @@ public static class StubManager
         return current.ToString() ?? "";
     }
     
-    private static void SetVariables(Dictionary<string, object> vars)
+    private static void SetValues(Dictionary<string, object> vars)
     {
         foreach (var kvp in vars)
         {
             if (kvp.Value is JToken jtoken)
             {
-                DynamicExpression.GetInterpreter().SetVariable(kvp.Key, jtoken);
+                DynamicExpression.GetInterpreter().SetValue(kvp.Key, jtoken);
             }
 
             if (kvp.Value is Dictionary<string, string> sdict)
             {
-                DynamicExpression.GetInterpreter().SetVariable(kvp.Key, sdict);
+                DynamicExpression.GetInterpreter().SetValue(kvp.Key, sdict);
             }
             
             if (kvp.Value is Dictionary<string, object> odict)
             {
-                DynamicExpression.GetInterpreter().SetVariable(kvp.Key, odict);
+                DynamicExpression.GetInterpreter().SetValue(kvp.Key, odict);
             }
             else
             {
-                DynamicExpression.GetInterpreter().SetVariable(kvp.Key, kvp.Value);
+                DynamicExpression.GetInterpreter().SetValue(kvp.Key, kvp.Value);
             }
         }
     }

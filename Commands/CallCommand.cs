@@ -140,7 +140,7 @@ namespace Apify.Commands
 
 
                 var assertionExecutor = new AssertionExecutor(response, requestSchema);
-                var testResults = await assertionExecutor.RunAsync(requestSchema.Tests ?? new List<AssertionEntity>());
+                var testResults = await assertionExecutor.RunAsync(requestSchema.Tests ?? new List<AssertionEntity>(), configService.LoadEnvironment(envName));
                 
                 apiExecutor.DisplayTestStats(testResults);
                 apiExecutor.DisplayTestResults(testResults);

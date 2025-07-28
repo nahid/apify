@@ -32,40 +32,17 @@ namespace Apify.Commands
 
         private Task ExecuteAsync()
         {
-            string[] resources = [
-                "Apify.includes.faker.min.js",
-                "Apify.includes.assert.js",
-                "Apify.includes.app.js"
-            ];
+           
             
             
             // Find your resource name here
-            var engine = new Engine();
+            var expresso = new DynamicExpressionManager();
+            
 // Add a fake window object to the JS global scope
-            engine.Execute("var window = this;");
-            engine.SetValue("Config", _config.LoadConfiguration());
-            engine.Execute(@"function getName(name) {
-                return 'Your Name: ' + name;
-            }");
-
-
-            // Load the JS code from embedded resource
-            var assembly = Assembly.GetExecutingAssembly();
-     
-
-            foreach (var resource in resources)
-            {
-                using (Stream stream = assembly.GetManifestResourceStream(resource))
-                using (StreamReader reader = new StreamReader(stream))
-                {
-                    string js = reader.ReadToEnd();
-                
-                    engine.Execute(js);
-                }
-            }
+           
             
             
-            var result = engine.Evaluate("apify.assert.equals(3, 3)").ToObject();
+            var result = expresso.Compile<int>("faker.number.int({ min: 1, max: 100 })");
               
             Console.WriteLine(result.ToString());
             

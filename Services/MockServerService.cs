@@ -107,7 +107,7 @@ namespace Apify.Services
                 // Display advanced mock endpoints
                 foreach (var mock in _mockSchemaDefinitions)
                 {
-                    ConsoleHelper.WriteSuccess($"[{mock.Method}] {mock.Endpoint} - {mock.Name} (Advanced)");
+                    ConsoleHelper.WriteSuccess($"[{mock.Method}] {mock.Endpoint} - {mock.Name}");
                 }
 
                 Console.WriteLine("\nPress Ctrl+C to stop the server...");
@@ -507,6 +507,22 @@ namespace Apify.Services
                 bodyContent = JsonConvert.DeserializeObject<JToken>("{}");
             }
             
+            var envVars = _configService.GetDefaultEnvironment()?.Variables ?? [];
+            
+            var mockDefString = JsonConvert.SerializeObject(mockDefinitionDef, Formatting.Indented);
+            
+            mockDefString = StubManager.Replace(mockDefString, new Dictionary<string, object>
+            {
+                {"env", envVars},
+                {"headers", headers},
+                {"params", pathParams},
+                {"query", queryParams},
+                {"body", bodyContent ?? new JObject()}
+            });
+            
+            mockDefinitionDef = JsonConvert.DeserializeObject<MockDefinitionSchema>(mockDefString) ??
+                                      new MockDefinitionSchema();
+            
             // First process the responses in two groups: defaults and non-defaults
             var defaultResponses = new List<ConditionalResponse>();
             var regularResponses = new List<ConditionalResponse>();
@@ -620,7 +636,6 @@ namespace Apify.Services
                     }
                 }
             }
-            var envVars = _configService.GetDefaultEnvironment()?.Variables ?? [];
             // Add headers
             if (matchedResponse.Headers.Count > 0)
             {
@@ -628,21 +643,21 @@ namespace Apify.Services
                 {
                     
                     
-                    string headerValue = StubManager.Replace(header.Value, new Dictionary<string, object>
+                    /*string headerValue = StubManager.Replace(header.Value, new Dictionary<string, object>
                     {
                         {"env", envVars},
                         {"headers", headers},
                         {"params", pathParams},
                         {"query", queryParams},
                         {"body", bodyContent ?? new JObject()}
-                    });
+                    });*/
                     
-                    response.Headers.Add(header.Key, headerValue);
+                    response.Headers.Add(header.Key, header.Value);
                     
                     // Set content type if it's in the headers
                     if (string.Equals(header.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
                     {
-                        response.ContentType = headerValue;
+                         response.ContentType = header.Value;
                     }
                 }
             }
@@ -663,14 +678,14 @@ namespace Apify.Services
                 
                 // Replace any template variables with actual values
                 // responseContent = ApplyTemplateVariables(responseContent, pathParams);
-                responseContent = StubManager.Replace(responseContent, new Dictionary<string, object>
+                /*responseContent = StubManager.Replace(responseContent, new Dictionary<string, object>
                 {
                     {"env", envVars},
                     {"headers", headers},
                     {"path", pathParams},
                     {"query", queryParams},
                     {"body", bodyContent ?? new JObject()}
-                });
+                });*/
                 
                 // Process dynamic template expressions (e.g., {{$random:int:1000:1999}})
                 // responseContent = ProcessDynamicTemplate(responseContent, request);

@@ -1,4 +1,5 @@
 using Apify.Utils;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Apify.Services
@@ -35,20 +36,30 @@ namespace Apify.Services
 
             try
             {
-                // Set up parameters for the expression
-                _dynamicExpression.GetInterpreter().SetVariable("headers", headers);
-                _dynamicExpression.GetInterpreter().SetVariable("body", body);
-                _dynamicExpression.GetInterpreter().SetVariable("query", queryParams);
-                _dynamicExpression.GetInterpreter().SetVariable("path", pathParams);
+                var headersString = JsonConvert.SerializeObject(headers);
+                headersString = headersString.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
+                _dynamicExpression.SetPropertyToAppObject("headers", $"tryParseJson('{headersString}')");
+                
+                var bodyString = JsonConvert.SerializeObject(body);
+                bodyString = bodyString.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
+                _dynamicExpression.SetPropertyToAppObject("body", $"tryParseJson('{bodyString}')");
+                
+                var queryParamsString = JsonConvert.SerializeObject(queryParams);
+                queryParamsString = queryParamsString.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
+                _dynamicExpression.SetPropertyToAppObject("query", $"tryParseJson('{queryParamsString}')");
+                
+                var pathParamsString = JsonConvert.SerializeObject(pathParams);
+                pathParamsString = pathParamsString.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
+                _dynamicExpression.SetPropertyToAppObject("path", $"tryParseJson('{pathParamsString}')");
                 
                 
                 // // Add special accessor objects for query parameters and headers
                 // // For accessing query parameters in a more natural way (q.parameter)
-                // _dynamicExpression.GetInterpreter().SetVariable("q", MiscHelper.DictionaryToExpandoObject(queryParams));
+                // _dynamicExpression.GetInterpreter().SetValue("q", MiscHelper.DictionaryToExpandoObject(queryParams));
                 //
                 // // For accessing headers in a more natural way (h.header)
-                // _dynamicExpression.GetInterpreter().SetVariable("h", MiscHelper.DictionaryToExpandoObject(headers));
-                // _dynamicExpression.GetInterpreter().SetVariable("p", MiscHelper.DictionaryToExpandoObject(pathParams));
+                // _dynamicExpression.GetInterpreter().SetValue("h", MiscHelper.DictionaryToExpandoObject(headers));
+                // _dynamicExpression.GetInterpreter().SetValue("p", MiscHelper.DictionaryToExpandoObject(pathParams));
 
                 // Evaluate the expression
                 var result = _dynamicExpression.Compile<bool>(condition);

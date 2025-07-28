@@ -1,5 +1,5 @@
 using Apify.Models;
-using DynamicExpresso;
+using Newtonsoft.Json;
 
 namespace Apify.Services;
 
@@ -7,6 +7,7 @@ public class AssertionExecutor
 {
     private readonly ResponseDefinitionSchema _responseDefinitionSchema;
     private readonly RequestDefinitionSchema _requestDefinitionSchema;
+    private EnvironmentSchema? _environment;
 
     
     
@@ -19,13 +20,33 @@ public class AssertionExecutor
     
     public TestResults Run(List<AssertionEntity> assertions)
     {
-        var interpreter = new Interpreter();
+        var interpreter = new DynamicExpressionManager();
         var assertionTracker = new AssertionTracker();
         var testResults = new TestResults();
         
-        interpreter.SetVariable("Assert", new Assert(_responseDefinitionSchema, assertionTracker));
-        interpreter.SetVariable("Response", _responseDefinitionSchema);
-        interpreter.SetVariable("Request", _requestDefinitionSchema);
+        interpreter.SetVariable("assertionTracker", assertionTracker);
+        
+        if (_environment != null)
+        {
+            var envString = JsonConvert.SerializeObject(_environment.Variables);
+            var envExpr = $"JSON.parse('{envString.Replace("\"", "\\\"")}')";
+            interpreter.SetPropertyToAppObject("env", envExpr);
+        }
+
+        var jsonReq = JsonConvert.SerializeObject(_requestDefinitionSchema);
+        var jsonResp = JsonConvert.SerializeObject(_responseDefinitionSchema);
+        jsonReq = jsonReq.Replace("\"", "\\\""); // Escape single quotes for JavaScript compatibility
+        jsonResp = jsonResp.Replace("\"", "\\\""); // Escape single quotes for JavaScript compatibility
+        interpreter.ExecuteScriptFromAssembly("Apify.includes.request.js");
+        interpreter.ExecuteScriptFromAssembly("Apify.includes.response.js");
+        interpreter.ExecuteScriptFromAssembly("Apify.includes.assert.js");
+        var reqObjExpr = @"new Request('" + jsonReq + @"')";
+        var respObjExpr = @"new Response('" + jsonResp + @"')";
+        
+        interpreter.SetPropertyToAppObject("request", reqObjExpr);
+        interpreter.SetPropertyToAppObject("response", respObjExpr);
+        interpreter.SetPropertyToAppObject("assert", "new Assert()");
+
         
         foreach (var assertion in assertions)
         {
@@ -37,7 +58,7 @@ public class AssertionExecutor
 
             try
             { 
-                testStatus = interpreter.Eval<bool>(assertion.Case);
+                testStatus = interpreter.Compile<bool>(assertion.Case);
             }
             catch (Exception ex)
             {
@@ -52,8 +73,10 @@ public class AssertionExecutor
         return testResults;
     }
 
-    public Task<TestResults> RunAsync(List<AssertionEntity> assertions)
+    public Task<TestResults> RunAsync(List<AssertionEntity> assertions, EnvironmentSchema? environment = null)
     {
+        _environment = environment;
+        
         return Task.FromResult(Run(assertions));
     }
     
