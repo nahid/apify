@@ -515,7 +515,7 @@ namespace Apify.Services
             {
                 {"env", envVars},
                 {"headers", headers},
-                {"params", pathParams},
+                {"path", pathParams},
                 {"query", queryParams},
                 {"body", bodyContent ?? new JObject()}
             });

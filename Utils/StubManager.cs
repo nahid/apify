@@ -1,5 +1,6 @@
 using Apify.Services;
 using Bogus;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Dynamic;
 using System.Text.RegularExpressions;
@@ -18,6 +19,7 @@ public static class StubManager
         DynamicExpression = new DynamicExpressionManager();
         DynamicExpression.ExecuteScriptFromAssembly("Apify.includes.faker.min.js");
         DynamicExpression.SetPropertyToAppObject("faker", "faker");
+        DynamicExpression.Execute("delete faker;");
     }
 
     /// <summary>
@@ -146,24 +148,10 @@ public static class StubManager
     {
         foreach (var kvp in vars)
         {
-            if (kvp.Value is JToken jtoken)
-            {
-                DynamicExpression.GetInterpreter().SetValue(kvp.Key, jtoken);
-            }
-
-            if (kvp.Value is Dictionary<string, string> sdict)
-            {
-                DynamicExpression.GetInterpreter().SetValue(kvp.Key, sdict);
-            }
-            
-            if (kvp.Value is Dictionary<string, object> odict)
-            {
-                DynamicExpression.GetInterpreter().SetValue(kvp.Key, odict);
-            }
-            else
-            {
-                DynamicExpression.GetInterpreter().SetValue(kvp.Key, kvp.Value);
-            }
+            var jsonStr = JsonConvert.SerializeObject(kvp.Value);
+            jsonStr = jsonStr.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
+            var jsExpression = $"JSON.parse('{jsonStr}')";
+            DynamicExpression.SetPropertyToAppObject(kvp.Key, jsExpression);
         }
     }
 }

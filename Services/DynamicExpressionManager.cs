@@ -19,7 +19,8 @@ public class DynamicExpressionManager
         _interpreter.SetValue("toUpper", new Func<string, string>(s => s.ToUpper()));
         _interpreter.SetValue("contains", new Func<string, string, bool>((source, value) => 
         source.Contains(value, StringComparison.OrdinalIgnoreCase)));
-        
+
+        _interpreter.Execute("window = this;");
         ExecuteScriptFromAssembly("Apify.includes.app.js");
         
         

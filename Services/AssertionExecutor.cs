@@ -35,8 +35,8 @@ public class AssertionExecutor
 
         var jsonReq = JsonConvert.SerializeObject(_requestDefinitionSchema);
         var jsonResp = JsonConvert.SerializeObject(_responseDefinitionSchema);
-        jsonReq = jsonReq.Replace("\"", "\\\""); // Escape single quotes for JavaScript compatibility
-        jsonResp = jsonResp.Replace("\"", "\\\""); // Escape single quotes for JavaScript compatibility
+        jsonReq = jsonReq.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JavaScript compatibility
+        jsonResp = jsonResp.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JavaScript compatibility
         interpreter.ExecuteScriptFromAssembly("Apify.includes.request.js");
         interpreter.ExecuteScriptFromAssembly("Apify.includes.response.js");
         interpreter.ExecuteScriptFromAssembly("Apify.includes.assert.js");
