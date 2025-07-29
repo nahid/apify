@@ -1,25 +1,25 @@
-using Apify.Services;
-using Bogus;
+using Apify.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Dynamic;
 using System.Text.RegularExpressions;
 
-namespace Apify.Utils;
+namespace Apify.Services;
 
-public static class StubManager
+public static class TagInterpolationManager
 {
-    private readonly static Regex PlaceholderRe = new Regex(@"\{\{\s*(.+?)\s*\}\}|\{#\s*(.+?)\s*#\}",
+    /// Regex to match {{path.to.value}} or {# expression #}
+    private readonly static Regex TagRegex = new Regex(@"\{\{\s*(.+?)\s*\}\}|\{#\s*(.+?)\s*#\}",
         RegexOptions.Compiled);
 
-    private readonly static DynamicExpressionManager DynamicExpression;
+    private readonly static DynamicScriptingManager ScriptMan;
     
-    static StubManager()
+    static TagInterpolationManager()
     {
-        DynamicExpression = new DynamicExpressionManager();
-        DynamicExpression.ExecuteScriptFromAssembly("Apify.includes.faker.min.js");
-        DynamicExpression.SetPropertyToAppObject("faker", "faker");
-        DynamicExpression.Execute("delete faker;");
+        ScriptMan = new DynamicScriptingManager();
+        ScriptMan.ExecuteScriptFromAssembly("Apify.includes.faker.min.js");
+        ScriptMan.SetPropertyToAppObject("faker", "faker");
+        ScriptMan.Execute("delete faker;");
     }
 
     /// <summary>
@@ -29,38 +29,26 @@ public static class StubManager
     /// </paramref>
     /// .
     /// </summary>
-    public static string Replace(
+    public static string Evaluate(
         string template,
-        Dictionary<string, object> vars)
+        Dictionary<string, object> args)
     {
-        SetValues(vars);
+        SetValues(args);
         
-        return PlaceholderRe.Replace(template, match =>
+        return TagRegex.Replace(template, match =>
         {
+            // Process if the match is a {{path.to.value}}
             if (match.Groups[1].Success)
             {
-                // {{ path.to.value }}
-                if (DynamicExpression.IsEvalExpression(match.Groups[1].Value))
-                {
-                    try
-                    {
-                        return ExecExpression(match.Groups[1].Value);
-                    } catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error executing expression: {ex.Message}");
-                        return match.Value; // Return original if error occurs
-                    }
-                
-                }
-            
                 // split "users.posts.comment.id" → ["users","posts","comment","id"]
                 var parts = match.Groups[1]
                 .Value
                 .Split('.', StringSplitOptions.RemoveEmptyEntries);
 
-                return AccessNestedValue(match, vars, parts);
+                return AccessNestedValue(match, args, parts);
             }
             
+            // Process if the match is a {# expression #}
             if (match.Groups[2].Success)
             {
                 try
@@ -83,18 +71,15 @@ public static class StubManager
     
     private static string ExecExpression(string expr)
     {
-        var expression = DynamicExpression.GetExpression(expr);
-        if (string.IsNullOrEmpty(expression))
+
+        if (string.IsNullOrEmpty(expr))
         {
             return expr;
         }
         
-        var output = DynamicExpression.Compile<object>(expression);
-
+        var output = ScriptMan.Compile<object>(expr);
         var result = output.ToString() ?? string.Empty;
         
-     
-
         return result;
     }
     
@@ -139,8 +124,7 @@ public static class StubManager
                     return match.Value; // not found or not navigable
             }
         }
-
-// ✅ Leaf node found
+        
         return current.ToString() ?? "";
     }
     
@@ -149,9 +133,9 @@ public static class StubManager
         foreach (var kvp in vars)
         {
             var jsonStr = JsonConvert.SerializeObject(kvp.Value);
-            jsonStr = jsonStr.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
+            jsonStr = MiscHelper.EscapeSpecialChars(jsonStr); //jsonStr.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
             var jsExpression = $"JSON.parse('{jsonStr}')";
-            DynamicExpression.SetPropertyToAppObject(kvp.Key, jsExpression);
+            ScriptMan.SetPropertyToAppObject(kvp.Key, jsExpression);
         }
     }
 }

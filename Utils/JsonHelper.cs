@@ -1,56 +1,10 @@
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq; // Add this for JObject
 using System.Diagnostics.CodeAnalysis;
 
 namespace Apify.Utils
 {
     public static class JsonHelper
     {
-        // Custom method to extract propertyPath from JSON files
-        public static Dictionary<string, string> ExtractPropertyPaths(string filePath)
-        {
-            var result = new Dictionary<string, string>();
-            
-            try
-            {
-                if (!File.Exists(filePath))
-                {
-                    Console.WriteLine($"File not found: {filePath}");
-                    return result;
-                }
-                
-                string json = File.ReadAllText(filePath);
-                var jObject = JObject.Parse(json);
-                
-                if (jObject["Tests"] is JArray tests)
-                {
-                    foreach (var test in tests)
-                    {
-                        if (test is JObject && 
-                            test["AssertType"]?.ToString().ToLowerInvariant() == "equal" &&
-                            test["propertyPath"] != null)
-                        {
-                            var testName = test["Name"]?.ToString() ?? "Unknown Test";
-                            var propertyPath = test["propertyPath"]?.ToString();
-                            
-                            Console.WriteLine($"Direct Access - Found propertyPath '{propertyPath}' in test '{testName}'");
-                            
-                            if (!string.IsNullOrEmpty(propertyPath))
-                            {
-                                result[testName] = propertyPath;
-                            }
-                        }
-                    }
-                }
-                
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error extracting properties from {filePath}: {ex.Message}");
-                return result;
-            }
-        }
         
         // Add UnconditionalSuppressMessage attribute to suppress trimming warnings
         [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
@@ -181,6 +135,17 @@ namespace Apify.Utils
                 }
             }
         }
+
+        [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode",
+            Justification = "JSON types are preserved in TrimmerRoots.xml")]
+        public static string SerializeWithEscapeSpecialChars<T>(T obj, bool indented = true)
+        {
+            var json = SerializeObject(obj, indented);
+            
+            return MiscHelper.EscapeSpecialChars(json);
+        }
+
+
 
         [UnconditionalSuppressMessage("AOT", "IL2026:RequiresUnreferencedCode", 
             Justification = "We don't care about specific types here, just validating JSON")]

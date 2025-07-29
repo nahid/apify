@@ -121,5 +121,27 @@ public static class MiscHelper
         result = Regex.Replace(result, "([A-Z])([A-Z][a-z])", "$1 $2");
         return result.Trim();
     }
+    
+    public static string EscapeSpecialChars(string json)
+    {
+        if (string.IsNullOrEmpty(json)) return string.Empty;
+        
+        // Escape newlines, carriage returns, and tabs
+        // Escape single quotes and double quotes
+        json = json.Replace("'", "\\'").Replace("\"", "\\\"");
+            
+        // Escape backslashes
+        // json = json.Replace("\\", "\\\\");
+            
+        // Escape newlines
+            
+        json = json.Replace("\n", "\\n").Replace("\r", "\\r");
+            
+        // Escape tabs
+            
+        json = json.Replace("\t", "\\t");
+
+        return json;
+    }
 
 }

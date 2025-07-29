@@ -511,7 +511,7 @@ namespace Apify.Services
             
             var mockDefString = JsonConvert.SerializeObject(mockDefinitionDef, Formatting.Indented);
             
-            mockDefString = StubManager.Replace(mockDefString, new Dictionary<string, object>
+            mockDefString = TagInterpolationManager.Evaluate(mockDefString, new Dictionary<string, object>
             {
                 {"env", envVars},
                 {"headers", headers},
@@ -643,7 +643,7 @@ namespace Apify.Services
                 {
                     
                     
-                    /*string headerValue = StubManager.Replace(header.Value, new Dictionary<string, object>
+                    /*string headerValue = TagInterpolationManager.Evaluate(header.Value, new Dictionary<string, object>
                     {
                         {"env", envVars},
                         {"headers", headers},
@@ -676,9 +676,9 @@ namespace Apify.Services
                 }
 
                 
-                // Replace any template variables with actual values
+                // Evaluate any template variables with actual values
                 // responseContent = ApplyTemplateVariables(responseContent, pathParams);
-                /*responseContent = StubManager.Replace(responseContent, new Dictionary<string, object>
+                /*responseContent = TagInterpolationManager.Evaluate(responseContent, new Dictionary<string, object>
                 {
                     {"env", envVars},
                     {"headers", headers},
@@ -692,7 +692,7 @@ namespace Apify.Services
                 
                 // Apply advanced template replacements
                 
-                // 1. Replace body.X references with actual body values
+                // 1. Evaluate body.X references with actual body values
             
             
             byte[] responseBuffer = Encoding.UTF8.GetBytes(responseContent);

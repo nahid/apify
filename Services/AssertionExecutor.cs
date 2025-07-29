@@ -1,5 +1,5 @@
 using Apify.Models;
-using Newtonsoft.Json;
+using Apify.Utils;
 
 namespace Apify.Services;
 
@@ -17,40 +17,40 @@ public class AssertionExecutor
         _requestDefinitionSchema = requestDefinitionSchema;
 
     }
-    
-    public TestResults Run(List<AssertionEntity> assertions)
+
+    private TestResults Run(List<AssertionEntity> assertions)
     {
-        var interpreter = new DynamicExpressionManager();
+        var scriptMan = new DynamicScriptingManager();
         var assertionTracker = new AssertionTracker();
         var testResults = new TestResults();
         
-        interpreter.SetVariable("assertionTracker", assertionTracker);
+        scriptMan.SetVariable("assertionTracker", assertionTracker);
         
         if (_environment != null)
         {
-            var envString = JsonConvert.SerializeObject(_environment.Variables);
-            var envExpr = $"JSON.parse('{envString.Replace("\"", "\\\"")}')";
-            interpreter.SetPropertyToAppObject("env", envExpr);
+            var envString = JsonHelper.SerializeWithEscapeSpecialChars(_environment.Variables); //JsonConvert.SerializeObject(_environment.Variables);
+            var envExpr = $"JSON.parse('{envString}')";
+            scriptMan.SetPropertyToAppObject("env", envExpr);
         }
 
-        var jsonReq = JsonConvert.SerializeObject(_requestDefinitionSchema);
-        var jsonResp = JsonConvert.SerializeObject(_responseDefinitionSchema);
-        jsonReq = jsonReq.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JavaScript compatibility
-        jsonResp = jsonResp.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JavaScript compatibility
-        interpreter.ExecuteScriptFromAssembly("Apify.includes.request.js");
-        interpreter.ExecuteScriptFromAssembly("Apify.includes.response.js");
-        interpreter.ExecuteScriptFromAssembly("Apify.includes.assert.js");
+        var jsonReq = JsonHelper.SerializeWithEscapeSpecialChars(_requestDefinitionSchema); 
+        var jsonResp = JsonHelper.SerializeWithEscapeSpecialChars(_responseDefinitionSchema); 
+
+        scriptMan.ExecuteScriptFromAssembly("Apify.includes.request.js");
+        scriptMan.ExecuteScriptFromAssembly("Apify.includes.response.js");
+        scriptMan.ExecuteScriptFromAssembly("Apify.includes.assert.js");
         var reqObjExpr = @"new Request('" + jsonReq + @"')";
         var respObjExpr = @"new Response('" + jsonResp + @"')";
         
-        interpreter.SetPropertyToAppObject("request", reqObjExpr);
-        interpreter.SetPropertyToAppObject("response", respObjExpr);
-        interpreter.SetPropertyToAppObject("assert", "new Assert()");
+        scriptMan.SetPropertyToAppObject("request", reqObjExpr);
+        scriptMan.SetPropertyToAppObject("response", respObjExpr);
+        scriptMan.SetPropertyToAppObject("assert", "new Assert()");
 
         
         foreach (var assertion in assertions)
         {
             bool testStatus;
+            
             if (string.IsNullOrEmpty(assertion.Case))
             {
                 throw new ArgumentException("Assertion expression cannot be null or empty.", nameof(assertion.Case));
@@ -58,7 +58,7 @@ public class AssertionExecutor
 
             try
             { 
-                testStatus = interpreter.Compile<bool>(assertion.Case);
+                testStatus = scriptMan.Compile<bool>(assertion.Case);
             }
             catch (Exception ex)
             {

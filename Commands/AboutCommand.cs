@@ -36,7 +36,7 @@ namespace Apify.Commands
             
             
             // Find your resource name here
-            var expresso = new DynamicExpressionManager();
+            var expresso = new DynamicScriptingManager();
             
 // Add a fake window object to the JS global scope
            

@@ -9,11 +9,11 @@ namespace Apify.Services
     /// </summary>
     public class ConditionEvaluator
     {
-        private readonly DynamicExpressionManager _dynamicExpression;
+        private readonly DynamicScriptingManager _scriptMan;
 
         public ConditionEvaluator()
         {
-            _dynamicExpression = new DynamicExpressionManager();
+            _scriptMan = new DynamicScriptingManager();
         }
         
  
@@ -36,33 +36,29 @@ namespace Apify.Services
 
             try
             {
-                var headersString = JsonConvert.SerializeObject(headers);
-                headersString = headersString.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
-                _dynamicExpression.SetPropertyToAppObject("headers", $"tryParseJson('{headersString}')");
-                
-                var bodyString = JsonConvert.SerializeObject(body);
-                bodyString = bodyString.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
-                _dynamicExpression.SetPropertyToAppObject("body", $"tryParseJson('{bodyString}')");
-                
-                var queryParamsString = JsonConvert.SerializeObject(queryParams);
-                queryParamsString = queryParamsString.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
-                _dynamicExpression.SetPropertyToAppObject("query", $"tryParseJson('{queryParamsString}')");
-                
-                var pathParamsString = JsonConvert.SerializeObject(pathParams);
-                pathParamsString = pathParamsString.Replace("\"", "\\\"").Replace("'", "\\'"); // Escape single quotes for JS
-                _dynamicExpression.SetPropertyToAppObject("path", $"tryParseJson('{pathParamsString}')");
+                var headersString = JsonHelper.SerializeWithEscapeSpecialChars(headers); 
+                _scriptMan.SetPropertyToAppObject("headers", $"tryParseJson('{headersString}')");
+
+                var bodyString = JsonHelper.SerializeWithEscapeSpecialChars(body);
+                _scriptMan.SetPropertyToAppObject("body", $"tryParseJson('{bodyString}')");
+
+                var queryParamsString = JsonHelper.SerializeWithEscapeSpecialChars(queryParams);
+                _scriptMan.SetPropertyToAppObject("query", $"tryParseJson('{queryParamsString}')");
+
+                var pathParamsString = JsonHelper.SerializeWithEscapeSpecialChars(pathParams);
+                _scriptMan.SetPropertyToAppObject("path", $"tryParseJson('{pathParamsString}')");
                 
                 
                 // // Add special accessor objects for query parameters and headers
                 // // For accessing query parameters in a more natural way (q.parameter)
-                // _dynamicExpression.GetInterpreter().SetValue("q", MiscHelper.DictionaryToExpandoObject(queryParams));
+                // _scriptMan.GetInterpreter().SetValue("q", MiscHelper.DictionaryToExpandoObject(queryParams));
                 //
                 // // For accessing headers in a more natural way (h.header)
-                // _dynamicExpression.GetInterpreter().SetValue("h", MiscHelper.DictionaryToExpandoObject(headers));
-                // _dynamicExpression.GetInterpreter().SetValue("p", MiscHelper.DictionaryToExpandoObject(pathParams));
+                // _scriptMan.GetInterpreter().SetValue("h", MiscHelper.DictionaryToExpandoObject(headers));
+                // _scriptMan.GetInterpreter().SetValue("p", MiscHelper.DictionaryToExpandoObject(pathParams));
 
                 // Evaluate the expression
-                var result = _dynamicExpression.Compile<bool>(condition);
+                var result = _scriptMan.Compile<bool>(condition);
                 return result;
             }
             catch (Exception e)
