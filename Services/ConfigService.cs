@@ -37,7 +37,7 @@ public class ConfigService
         // If the config file path is already set, return it
         if (_configFilePath != null)
         {
-            return _configFilePath;
+            return _configFilePath = Path.Combine(_configFilePath, ConfigFileName);
         }
         
         // Only use the current working directory (where the command is executed from)

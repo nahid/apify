@@ -34,7 +34,7 @@ namespace Apify.Commands
             var urlOption = new Option<string>(
                 "--url",
                 () => "",
-                "URL for the request (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)"
+                "URL for the request (e.g., {{env.baseUrl}}/users/{{vars.userId}} or https://api.example.com/users)"
             );
 
             var forceOption = new Option<bool>(
@@ -102,7 +102,7 @@ namespace Apify.Commands
                 name = ConsoleHelper.PromptInput<string>("API request name (e.g., Get User)");
                 method = ConsoleHelper.PromptChoice("Choose HTTP Method?", ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"
                 ]);
-                url = ConsoleHelper.PromptInput<string>("URL (e.g., {{baseUrl}}/users/{{userId}} or https://api.example.com/users)", required: true);
+                url = ConsoleHelper.PromptInput<string>("URL (e.g., {{env.baseUrl}}/users/{{vars.userId}} or https://api.example.com/users)", required: true);
             }
 
 

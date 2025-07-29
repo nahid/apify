@@ -192,8 +192,7 @@ namespace Apify.Commands
                 // Basic mock API information
                 name = ConsoleHelper.PromptInput("Mock API name (e.g., Get User)");
                 endpoint = ConsoleHelper.PromptInput("Endpoint path (e.g., /api/users/1 or /users):");
-                method = ConsoleHelper.PromptChoice<string>("HTTP method:", ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"
-                ]);
+                method = ConsoleHelper.PromptChoice<string>("HTTP method:", ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]);
             }
 
             
@@ -259,10 +258,10 @@ namespace Apify.Commands
                 
                 while (true)
                 {
-                    string headerName = ConsoleHelper.PromptInput<string>("Header name (e.g., Cache-Control):", required:false);
+                    string headerName = ConsoleHelper.PromptInput<string>("Header name (e.g., Cache-Control)", required:false);
                     if (string.IsNullOrWhiteSpace(headerName)) break;
                     
-                    string headerValue = ConsoleHelper.PromptInput($"Value for {headerName}:");
+                    string headerValue = ConsoleHelper.PromptInput($"Value for {headerName}");
                     headers[headerName] = headerValue;
                 }
             }
@@ -274,7 +273,7 @@ namespace Apify.Commands
             {
                 while (true)
                 {
-                    string delayStr = ConsoleHelper.PromptInput("Delay in milliseconds (e.g., 500):");
+                    string delayStr = ConsoleHelper.PromptInput("Delay in milliseconds (e.g., 500)");
 
                     if (int.TryParse(delayStr, out var delay) && delay >= 0)
                     {
@@ -321,7 +320,7 @@ namespace Apify.Commands
             {
                 while (true)
                 {
-                    int customCode = ConsoleHelper.PromptInput<int>("Enter custom status code (100-599):");
+                    int customCode = ConsoleHelper.PromptInput<int>("Enter custom status code (100-599)");
                     if (customCode is >= 100 and <= 599)
                     {
                         return customCode;

@@ -1,5 +1,5 @@
 using Apify.Models;
-using DynamicExpresso;
+using Apify.Utils;
 
 namespace Apify.Services;
 
@@ -7,6 +7,7 @@ public class AssertionExecutor
 {
     private readonly ResponseDefinitionSchema _responseDefinitionSchema;
     private readonly RequestDefinitionSchema _requestDefinitionSchema;
+    private EnvironmentSchema? _environment;
 
     
     
@@ -16,20 +17,40 @@ public class AssertionExecutor
         _requestDefinitionSchema = requestDefinitionSchema;
 
     }
-    
-    public TestResults Run(List<AssertionEntity> assertions)
+
+    private TestResults Run(List<AssertionEntity> assertions)
     {
-        var interpreter = new Interpreter();
+        var scriptMan = new DynamicScriptingManager();
         var assertionTracker = new AssertionTracker();
         var testResults = new TestResults();
         
-        interpreter.SetVariable("Assert", new Assert(_responseDefinitionSchema, assertionTracker));
-        interpreter.SetVariable("Response", _responseDefinitionSchema);
-        interpreter.SetVariable("Request", _requestDefinitionSchema);
+        scriptMan.SetVariable("assertionTracker", assertionTracker);
+        
+        if (_environment != null)
+        {
+            var envString = JsonHelper.SerializeWithEscapeSpecialChars(_environment.Variables); //JsonConvert.SerializeObject(_environment.Variables);
+            var envExpr = $"JSON.parse('{envString}')";
+            scriptMan.SetPropertyToAppObject("env", envExpr);
+        }
+
+        var jsonReq = JsonHelper.SerializeWithEscapeSpecialChars(_requestDefinitionSchema); 
+        var jsonResp = JsonHelper.SerializeWithEscapeSpecialChars(_responseDefinitionSchema); 
+
+        scriptMan.ExecuteScriptFromAssembly("Apify.includes.request.js");
+        scriptMan.ExecuteScriptFromAssembly("Apify.includes.response.js");
+        scriptMan.ExecuteScriptFromAssembly("Apify.includes.assert.js");
+        var reqObjExpr = @"new Request('" + jsonReq + @"')";
+        var respObjExpr = @"new Response('" + jsonResp + @"')";
+        
+        scriptMan.SetPropertyToAppObject("request", reqObjExpr);
+        scriptMan.SetPropertyToAppObject("response", respObjExpr);
+        scriptMan.SetPropertyToAppObject("assert", "new Assert()");
+
         
         foreach (var assertion in assertions)
         {
             bool testStatus;
+            
             if (string.IsNullOrEmpty(assertion.Case))
             {
                 throw new ArgumentException("Assertion expression cannot be null or empty.", nameof(assertion.Case));
@@ -37,7 +58,7 @@ public class AssertionExecutor
 
             try
             { 
-                testStatus = interpreter.Eval<bool>(assertion.Case);
+                testStatus = scriptMan.Compile<bool>(assertion.Case);
             }
             catch (Exception ex)
             {
@@ -52,8 +73,10 @@ public class AssertionExecutor
         return testResults;
     }
 
-    public Task<TestResults> RunAsync(List<AssertionEntity> assertions)
+    public Task<TestResults> RunAsync(List<AssertionEntity> assertions, EnvironmentSchema? environment = null)
     {
+        _environment = environment;
+        
         return Task.FromResult(Run(assertions));
     }
     

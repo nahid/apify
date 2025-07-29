@@ -149,7 +149,7 @@ namespace Apify.Services
                 
                 // Include the error message in the response body for test assertion context
                 response.Body = ex.ToString();
-                //response.Body = $"{{\"error\": \"{ex.Message.Replace("\"", "\\\"")}\", \"exception_type\": \"{ex.GetType().Name}\"}}";
+                //response.Body = $"{{\"error\": \"{ex.Message.Evaluate("\"", "\\\"")}\", \"exception_type\": \"{ex.GetType().Name}\"}}";
             }
 
             return response;
@@ -295,7 +295,7 @@ namespace Apify.Services
                 }
             }
             
-            apiDefContent = StubManager.Replace(apiDefContent, stubReplacor);
+            apiDefContent = TagInterpolationManager.Evaluate(apiDefContent, stubReplacor);
             
             if (string.IsNullOrEmpty(apiDefContent))
             {
@@ -325,6 +325,11 @@ namespace Apify.Services
             
             if (_options?.Tests == false)
             {
+                if (_options.Debug) 
+                {
+                    ConsoleHelper.WriteWarning("Tests are not enabled, skipping test results display.");
+                }
+                
                 return; // No need to display test results if tests are not enabled
             }
             

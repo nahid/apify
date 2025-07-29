@@ -150,7 +150,7 @@ For other platforms, replace `linux-x64` with your target platform:
 - macOS: `osx-x64`
 - ARM64: `linux-arm64` or `osx-arm64`
 
-> For documentation, please visit [Apify Documentation](https://apify.dev/docs).
+> For documentation, please visit [Apify Documentation](docs/Apify-Documentation.md).
 
 ## Development
 To contribute to Apify or build it from source, follow these steps:

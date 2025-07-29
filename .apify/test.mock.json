@@ -1,0 +1,14 @@
+{
+  "Name": "Test Mock",
+  "Endpoint": "/test",
+  "Method": "GET",
+  "Responses": [
+    {
+      "Condition": "default",
+      "StatusCode": 200,
+      "ResponseTemplate": {
+        "message": "I'm running out of ideas."
+      }
+    }
+  ]
+}

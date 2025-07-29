@@ -220,7 +220,7 @@ namespace Apify.Commands
                     Tests = [
                         new AssertionEntity {
                             Title = "Status code is successful",
-                            Case = "Assert.Response.StatusCodeIs(200)",
+                            Case = "$.assert.equals($.assert.response.getStatusCode(), 200)",
                         }
                     ]
                 };
@@ -246,20 +246,20 @@ namespace Apify.Commands
                     {
                         Json = new JObject
                         {
-                            { "name", "{{expr|> Faker.Name.FirstName()}}" },
-                            { "job", "{{expr|> Faker.Name.JobTitle()}}" }
+                            { "name", "{# $.faker.person.fullName() #}" },
+                            { "job", "{# $.faker.person.jobTitle() #}" }
                         }
                     },
                     PayloadType = PayloadContentType.Json,
                     Tests = [
                         new AssertionEntity {
                             Title = "Status code is Created",
-                            Case = "Assert.Response.StatusCodeIs(201)",
+                            Case = "$.assert.equals($.response.getStatusCode(), 201)",
                         },
 
                         new AssertionEntity {
                             Title = "The value of response's name matches the request body",
-                            Case = "Assert.Equals(Request.Body.Json.name, Response.Json.name)",
+                            Case = "$.assert.equals($.request.getBody().json.name, $.response.getJson().name)",
                         }
                     ]
                 };
@@ -276,14 +276,14 @@ namespace Apify.Commands
                 if (mock)
                 {
                     
-                                      // Create a sample Get User by ID mock definition
+                                      // Create a sample Get User by ID mock definition 
                     string getUserByIdMockJson = @"{
   ""Name"": ""Mock User by ID"",
   ""Method"": ""GET"",
   ""Endpoint"": ""/api/users/{id}"",
   ""Responses"": [
     {
-      ""Condition"": ""path[\""id\""] == \""2\"""",
+      ""Condition"": ""$.path.id == 2"",
       ""StatusCode"": 200,
       ""Headers"": {
         ""X-Apify-Version"": ""{{env.apiKey}}""
@@ -299,8 +299,8 @@ namespace Apify.Commands
       ""StatusCode"": 200,
       ""ResponseTemplate"": {
         ""id"": ""{{path.id}}"",
-        ""name"": ""{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}"",
-        ""email"": ""{{expr|> Faker.Internet.Email()}}""
+        ""name"": ""{# $.faker.person.fullName() #}"",
+        ""email"": ""{# $.faker.internet.email() #}""
       }
     }
   ]

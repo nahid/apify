@@ -12,31 +12,37 @@ namespace Apify.Commands
                 description: "The port on which to run the mock server (on Windows, ports above 1024 may not require admin rights)",
                 getDefaultValue: () => 0);
                 
-            var directoryOption = new Option<string>(
-                name: "--directory",
-                description: "The directory containing mock definition files",
-                getDefaultValue: () => ".apify");
+            var projectDirectoryOption = new Option<string>(
+                name: "--project",
+                description: "The project directory containing mock definition files",
+                getDefaultValue: () => "");
                 
             var verboseOption = new Option<bool>(
                 name: "--verbose",
                 description: "Show detailed output",
                 getDefaultValue: () => false);
-            
+
+            var watchOption = new Option<bool>(
+                name: "--watch",
+                description: "Watch for file changes and reload the server automatically");
+            watchOption.AddAlias("-w");
+
             AddOption(portOption);
-            AddOption(directoryOption);
+            AddOption(projectDirectoryOption);
             AddOption(verboseOption);
-            
-            this.SetHandler(async (port, directory, verbose, debug) =>
+            AddOption(watchOption);
+
+            this.SetHandler(async (port, projectDirectory, verbose, watch, debug) =>
             {
-                await RunMockServerAsync(port, directory, verbose, debug);
-            }, portOption, directoryOption, verboseOption, RootOption.DebugOption);
-            
+                await RunMockServerAsync(port, projectDirectory, verbose, watch, debug);
+            }, portOption, projectDirectoryOption, verboseOption, watchOption, RootOption.DebugOption);
+
         }
-        
-        private async Task RunMockServerAsync(int port, string directory, bool verbose, bool debug)
+
+        private async Task RunMockServerAsync(int port, string projectDirectory, bool verbose, bool watch, bool debug)
         {
-            var mockServer = new MockServerService(directory, debug);
-            await mockServer.StartAsync(port, verbose);
+            var mockServer = new MockServerService(projectDirectory, debug);
+            await mockServer.StartAsync(port, verbose, watch);
         }
     }
 }
