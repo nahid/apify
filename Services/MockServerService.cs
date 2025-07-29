@@ -703,18 +703,18 @@ namespace Apify.Services
                 await response.OutputStream.WriteAsync(responseBuffer, 0, responseBuffer.Length);
                 
                 // Always show basic response info
-                Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode} (Advanced)");
+                Console.WriteLine($"{DateTime.Now.ToString("HH:mm:ss")} - {method} {requestUrl} - {response.StatusCode}");
                 
                 // Show detailed info only in debug mode
                 if (_debug)
                 {
-                    ConsoleHelper.WriteSuccess($"Responded to {method} {requestUrl} with status {response.StatusCode} (Advanced Mock)");
+                    ConsoleHelper.WriteSuccess($"Responded to {method} {requestUrl} with status {response.StatusCode}");
                     ConsoleHelper.WriteInfo($"Response body: {responseContent}");
                 }
             }
             catch (Exception ex)
             {
-                // Always show basic error
+                // Always show a basic error
                 ConsoleHelper.WriteError($"Error sending response: {ex.Message}");
                 
                 // Show detailed stack trace only in debug mode

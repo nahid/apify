@@ -224,11 +224,11 @@ Structure:
   "Tests": [
     {
       "Title": "Status code is 200 OK",
-      "Case": "Assert.Response.StatusCodeIs(200)"
+      "Case": "{# $.assert($.response.statusCode === 200) #}"
     },
     {
       "Title": "Response body is an array",
-      "Case": "Assert.Response.Json.data.Type == JTokenType.Array"
+      "Case": "{# $.assert(Array.isArray($.response.json().data)) #}"
     }
   ]
 }
@@ -238,7 +238,230 @@ Structure:
 - **`Tags`**: Used for filtering tests with `apify tests --tag <tagname>`.
 - **`Tests` (Assertions)**: A list of assertion objects.
     - **`Title`**: A descriptive name for the assertion.
-    - **`Case`**: A C# expression to be evaluated. The expression should return a boolean value. You can use the `Assert` object and its methods to perform assertions.
+    - **`Case`**: A Javascript (ES6) expression to be evaluated. The expression should return a boolean value. You can use the `# Apify
+
+A powerful C# CLI application for comprehensive API testing and mocking, enabling developers to streamline API validation and development workflows with rich configuration and execution capabilities.
+
+## Features
+
+- **Comprehensive API Testing**: Define and run detailed API tests.
+    - **Multiple Request Methods**: Support for GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS.
+    - **Rich Payload Types**: JSON, Text, Form Data.
+    - **File Upload Support**: Test multipart/form-data requests with file uploads.
+    - **Detailed Assertions**: Validate response status, headers, body content (JSON properties, arrays, values), and response time.
+- **Integrated Mock Server**: Simulate API endpoints for development and testing.
+    - **Dynamic & Conditional Responses**: Define mock responses based on request parameters, headers, or body content.
+    - **Template Variables**: Use built-in (random data, timestamps) and custom (request-derived) variables in mock responses.
+    - **File-based Configuration**: Manage mock definitions in simple `.mock.json` files.
+- **Environment Management**: Use different configurations for development, staging, production, etc.
+    - **Variable Overriding**: Project, Environment, and Request-level variable support with clear precedence.
+- **User-Friendly CLI**:
+    - **Interactive Creation**: Commands to interactively create test and mock definitions.
+    - **Detailed Reports**: Comprehensive output with request, response, and assertion details.
+    - **Visual Progress Indicators**: Animated progress display for running multiple tests.
+- **Deployment & Extensibility**:
+    - **Single File Deployment**: Simplified deployment as a single executable file.
+    - **.NET 8.0 & .NET 9 Ready**: Built with .NET 8.0, with automatic multi-targeting for .NET 9.0 when available.
+
+## Getting Started
+
+### Prerequisites
+
+- .NET 8.0 SDK (required)
+- .NET 9.0 SDK (optional, for building with .NET 9.0 when available)
+
+### Installation
+
+The easiest way to get Apify is to download the pre-built executable from the [GitHub Releases](https://github.com/nahid/apify/releases) page.
+
+1.  Go to the [latest release](https://github.com/nahid/apify/releases/latest).
+2.  Download the appropriate `.zip` file for your operating system and architecture (e.g., `apify-win-x64.zip` for Windows 64-bit, `apify-linux-x64.zip` for Linux 64-bit, `apify-osx-arm64.zip` for macOS ARM64).
+3.  Extract the contents of the `.zip` file to a directory of your choice (e.g., `C:\Program Files\Apify` on Windows, `/opt/apify` on Linux/macOS).
+4.  Add the directory where you extracted Apify to your system's PATH environment variable. This allows you to run `apify` from any terminal.
+
+Alternatively, you can build Apify from source:
+
+### Build from Source
+
+Apify supports Native AOT (Ahead-of-Time) compilation, which produces a self-contained executable with no dependency on the .NET runtime. This results in:
+
+- Faster startup time
+- Smaller deployment size
+- No dependency on the .NET runtime
+- Improved performance
+
+To build the Native AOT version:
+
+```bash
+# Using the build script
+./build-native.sh
+
+# Or manually
+dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishAot=true
+```
+
+The resulting executable will be located at:
+`bin/Release/net8.0/linux-x64/publish/apify`
+
+You can run it directly without needing the .NET runtime:
+
+```bash
+./bin/Release/net8.0/linux-x64/publish/apify
+```
+
+#### Platform-Specific Builds
+
+For other platforms, replace `linux-x64` with your target platform:
+
+- Windows: `win-x64`
+- macOS: `osx-x64`
+- ARM64: `linux-arm64` or `osx-arm64`
+
+
+
+## Core Concepts
+
+### Project Initialization (`apify init`)
+
+To start using Apify in your project, navigate to your desired project directory and run:
+
+```bash
+apify init
+```
+
+This command interactively guides you through the initial setup, prompting for:
+- **Project Name**: A descriptive name for your API testing project.
+- **Default Environment Name**: The name for your primary testing environment (e.g., "Development", "Local").
+- **Additional Environment Variables**: You'll be asked if you want to configure global variables that apply across all environments (e.g., `baseUrl`, `apiToken`).
+- **Additional Environments**: You can define more environments (e.g., "Staging", "Production") and their specific variables.
+- **Sample Mock API Definitions**: Option to generate example mock files.
+
+Upon successful initialization, Apify creates the following:
+- `apify-config.json`: The central configuration file for your project. This file stores project metadata, environment definitions, and mock server settings.
+- `.apify/`: A dedicated directory where your API test definitions (`.json` files) and mock API definitions (`.mock.json` files) will reside.
+- Sample API test files (e.g., `users/get.json`, `users/create.json`) within the `.apify/` directory, demonstrating basic GET and POST requests with assertions.
+- If you opt to create sample mocks, a `user.mock.json` file will be generated in `.apify/users/`, showcasing conditional mock responses.
+
+**Example Interactive Session:**
+
+```
+$ apify init
+Initializing API Testing Project
+? Enter project name: MyAwesomeApiProject
+? Enter default environment name [Development]:
+? Configure additional environment variables? (y/N): y
+Enter environment variables (empty name to finish):
+? Variable name: baseUrl
+? Value for baseUrl: https://api.example.com/v1
+? Variable name: apiToken
+? Value for apiToken: your-secret-token
+? Variable name:
+? Add additional environments? (y/N): y
+? Environment name (empty to finish): Staging
+? Description for Staging [Staging environment]:
+? baseUrl for Staging [https://api.example.com/v1]: https://staging.example.com/v1
+? apiToken for Staging [your-secret-token]: staging-secret-token
+? Environment name (empty to finish):
+? Create sample mock API definitions? (y/N): y
+✓ Created sample API test: .apify/users/get.json
+✓ Created sample POST API test: .apify/users/create.json
+✓ Created sample mock API definitions in .apify/users
+✓ Created configuration file: apify-config.json
+
+Project initialized successfully!
+
+🚀 Quick Start Guide
+... (rest of the quick start guide)
+```
+
+You can also initialize a project non-interactively by providing options:
+
+```bash
+apify init --name "My Headless Project" --mock --force
+```
+- `--name <project_name>`: Specifies the project name directly.
+- `--mock`: Automatically creates sample mock API definitions.
+- `--force`: Overwrites existing `apify-config.json` and `.apify/` directory if they exist, without prompting.
+
+This command is crucial for setting up your testing workspace and provides a foundational `apify-config.json` with sensible defaults and example API definitions.
+
+### Configuration (`apify-config.json`)
+
+This file stores project-level settings, environments, and mock server configuration.
+
+```json
+{
+  "Name": "My Project API Tests",
+  "Description": "API Tests for My Project",
+  "DefaultEnvironment": "Development",
+  "Variables": {
+    "globalProjectVar": "This variable is available in all environments and tests"
+  },
+  "Environments": [
+    {
+      "Name": "Development",
+      "Description": "Development environment specific variables",
+      "Variables": {
+        "baseUrl": "https://dev-api.myproject.com",
+        "apiKey": "dev-secret-key"
+      }
+    },
+    {
+      "Name": "Production",
+      "Description": "Production environment specific variables",
+      "Variables": {
+        "baseUrl": "https://api.myproject.com",
+        "apiKey": "prod-secret-key"
+      }
+    }
+  ],
+  "MockServer": {
+    "Port": 8080,
+    "Directory": ".apify/mocks",
+    "Verbose": false,
+    "EnableCors": true,
+    "DefaultHeaders": {
+      "X-Mock-Server": "Apify"
+    }
+  }
+}
+```
+
+- **`Name`, `Description`**: Project metadata.
+- **`DefaultEnvironment`**: The environment used if `--env` is not specified.
+- **`Variables` (Project-Level)**: Key-value pairs available across all tests and environments unless overridden.
+- **`Environments`**: An array of environment objects.
+    - **`Name`**: Unique name for the environment (e.g., "Development", "Staging").
+    - **`Variables`**: Key-value pairs specific to this environment. These override project-level variables.
+- **`MockServer`**: Configuration for the mock server.
+    - **`Port`**: Port for the mock server.
+    - **`Verbose`**: Enable verbose logging for the mock server.
+    - **`EnableCors`**: Enable CORS headers (defaults to allow all).
+    - **`DefaultHeaders`**: Headers to be added to all mock responses.
+
+### API Test Definitions (`.json`)
+
+API tests are defined in JSON files (e.g., `.apify/users/get-users.json`).
+
+Structure:
+```json
+{
+  "Name": "Get All Users",
+  "Description": "Fetches the list of all users",
+  "Url": "{{baseUrl}}/users?page={{defaultPage}}",
+  "Method": "GET",
+  "Headers": {
+    "Accept": "application/json",
+    "X-Api-Key": "{{apiKey}}"
+  },
+  "Body": null,
+  "PayloadType": "none", // "json", "text", "formData"
+  "Timeout": 30000, // Optional, in milliseconds
+  "Tags": ["users", "smoke"], // Optional, for filtering tests
+  "Variables": { // Request-specific variables (highest precedence)
+    "defaultPage": "1"
+  },
+   object and its methods to perform assertions.
 
 ### Mock API Definitions (`.mock.json`)
 
@@ -257,12 +480,12 @@ Structure:
       "Headers": {
         "X-Source": "Mock-Conditional-User1"
       },
-      "ResponseTemplate": {
+            "ResponseTemplate": {
         "id": 1,
         "name": "John Doe (Mocked)",
         "email": "john.mock@example.com",
         "requested_id": "{{path.id}}",
-        "random_code": "{{expr|> Faker.Random.Int(1000,9999)}}"
+        "random_code": "{# $.faker.random.numeric(4) #}"
       }
     },
     {
@@ -274,7 +497,7 @@ Structure:
         "email": "admin.mock@example.com",
         "role": "admin",
         "token_used": "{{header.X-Admin-Token}}",
-        "uuid": "{{expr|> Faker.Random.Uuid()}}"
+        "uuid": "{# $.faker.datatype.uuid() #}"
       }
     },
     {
@@ -315,10 +538,66 @@ Structure:
             - `{{headers.HeaderName}}`: Value of a request header (case-insensitive).
             - `{{body.fieldName}}`: Value of a field from the JSON request body.
             - `{{body}}`: The full raw request body (string).
-            - `{{expr|> Faker.Random.Int(min,max)}}`: A random integer between min and max (inclusive). E.g., `{{expr|> Faker.Random.Int(1,100)}}`.
-            - `{{expr|> Faker.Random.Uuid()}}`: A random UUID.
-            - `{{expr|> Faker.Date.Recent()}}`: A recent date.
+            - `{# $.faker.random.numeric(4) #}`: A random 4-digit number.
+            - `{# $.faker.datatype.uuid() #}`: A random UUID.
+            - `{# $.faker.date.recent() #}`: A recent date.
             - Any environment or project variable (e.g., `{{baseUrl}}`).
+
+### Tags(Variable & Expressions)
+
+Apify provides a powerful templating engine that allows you to use variables and expressions to make your API tests and mocks dynamic. There are two types of tags you can use:
+
+- `{{ variable }}`: For simple variable substitution.
+- `{# expression #}`: For executing JavaScript (ES6) code.
+
+#### `{{ variable }}`
+
+This tag is used to substitute a variable with its value. The variable can be defined in your project's `apify-config.json` file, in an environment, or in the request itself.
+
+**Example:**
+
+```json
+{
+  "Name": "Get User",
+  "Url": "{{baseUrl}}/users/{{userId}}",
+  "Method": "GET"
+}
+```
+
+In this example, `{{baseUrl}}` and `{{userId}}` will be replaced with their respective values before the request is sent.
+
+#### `{# expression #}`
+
+This tag is used to execute JavaScript (ES6) code. This allows you to perform complex operations, such as generating random data, performing calculations, or even making assertions.
+
+The expression engine supports all ES6 features and provides a set of reserved objects that you can use to interact with Apify's core functionalities.
+
+##### Reserved Objects
+
+The following objects are available within the expression context:
+
+- **`$/apify`**: This object provides access to Apify's core functionalities.
+- **`$.request`**: This object contains all the details of the current request, including the URL, method, headers, and body.
+- **`$.response`**: This object contains all the details of the response, including the status code, headers, and body.
+- **`$.assert`**: This object provides a set of assertion methods that you can use to validate the response.
+- **`$.faker`**: This object provides access to the [Faker.js](https://fakerjs.dev/) library, which you can use to generate fake data.
+
+**Example:**
+
+```json
+{
+  "Name": "Create User",
+  "Url": "{{baseUrl}}/users",
+  "Method": "POST",
+  "Body": {
+    "name": "{# $.faker.name.firstName() #}",
+    "email": "{# $.faker.internet.email() #}",
+    "password": "{# $.faker.internet.password() #}"
+  }
+}
+```
+
+In this example, the `{# $.faker.name.firstName() #}`, `{# $.faker.internet.email() #}`, and `{# $.faker.internet.password() #}` expressions will be executed to generate a random name, email, and password before the request is sent.
 
 ## Commands
 
@@ -492,8 +771,8 @@ Creating New Mock API Response
 ? Enter JSON Body(Plain Text):
 {
   "id": "{{path.id}}",
-  "name": "{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}",
-  "email": "{{expr|> Faker.Internet.Email()}}"
+  "name": "{# $.faker.name.firstName() #} {# $.faker.name.lastName() #}",
+  "email": "{# $.faker.internet.email() #}"
 }
 (Press Enter on an empty line to finish input)
 
@@ -519,8 +798,8 @@ This will create a file named `.apify/users/getById.mock.json` with content simi
       "Headers": {},
       "ResponseTemplate": {
         "id": "{{path.id}}",
-        "name": "{{expr|> Faker.Name.FirstName()}} {{expr|> Faker.Name.LastName()}}",
-        "email": "{{expr|> Faker.Internet.Email()}}"
+        "name": "{# $.faker.name.firstName() #} {# $.faker.name.lastName() #}",
+        "email": "{# $.faker.internet.email() #}"
       }
     }
   ]
@@ -568,7 +847,7 @@ In this example:
       "StatusCode": 201,
       "ResponseTemplate": {
         "message": "User John Doe created successfully",
-        "id": "{{expr|> Faker.Random.Int(1000, 9999)}}",
+        "id": "{# $.faker.random.numeric(4) #}",
         "name": "{{body.name}}",
         "job": "{{body.job}}"
       }
@@ -625,15 +904,15 @@ And you have an API definition file `.apify/users/get.json`:
   "Tests": [
     {
       "Title": "Status code is 200 OK",
-      "Case": "Assert.Response.StatusCodeIs(200)"
+      "Case": "{# $.assert($.response.statusCode === 200) #}"
     },
     {
       "Title": "User ID matches requested ID",
-      "Case": "Assert.Equals(vars.userId, Response.Json.data.id)"
+      "Case": "{# $.assert($.response.json().data.id == $.request.variables.userId) #}"
     },
     {
       "Title": "User email is present",
-      "Case": "Assert.IsNotNull(Response.Json.data.email)"
+      "Case": "{# $.assert($.response.json().data.email !== null) #}"
     }
   ]
 }
@@ -734,12 +1013,13 @@ Let's assume you have the following API test files:
 This command starts a local HTTP server that serves mock API responses based on your `.mock.json` definition files. It's invaluable for frontend development, testing, and scenarios where you need to simulate API behavior without a live backend.
 
 ```bash
-apify server:mock [--port <port_number>] [--directory <path_to_mocks>] [--verbose] [--debug]
+apify server:mock [--port <port_number>] [--project <path_to_mocks>] [--verbose] [--watch] [--debug]
 ```
 
 - `--port <port_number>`: (Optional) Specifies the port on which the mock server will listen. If not provided, it defaults to the `Port` setting in the `MockServer` block of your `apify-config.json` (typically 1988).
-- `--directory <path_to_mocks>`: (Optional) Specifies the root directory where Apify should look for `.mock.json` files. Defaults to `.apify/`.
+- `--project <path_to_mocks>`: (Optional) Specifies the root directory where Apify should look for `.mock.json` files. Defaults to the current directory.
 - `--verbose` or `-v`: (Optional) Enables verbose logging for the mock server, showing details about incoming requests and matched mock responses.
+- `--watch` or `-w`: (Optional) Watch for file changes and reload the server automatically.
 - `--debug`: (Optional) Provides even more detailed debug output, useful for troubleshooting mock server behavior and condition evaluation.
 
 **How it Works:**
@@ -787,7 +1067,7 @@ The `MockServer` section in your `apify-config.json` provides global settings fo
 
 3.  **Start the mock server from a different directory:**
     ```bash
-    apify server:mock --directory ./my-custom-mocks
+    apify server:mock --project ./my-custom-mocks
     ```
     Apify will load `.mock.json` files from `./my-custom-mocks` instead of `.apify/`.
 
@@ -913,12 +1193,12 @@ This process typically builds single file executables for various platforms and 
     ```json
     {
       "Name": "Get User 1",
-      "Url": "{{baseUrl}}/users/1", // baseUrl will be http://localhost:8080/api
+      "Url": "{{baseUrl}}/users/1", 
       "Method": "GET",
       "Tests": [
-        { "Title": "Status 200", "Case": "Assert.Response.StatusCodeIs(200)" },
-        { "Title": "ID is 1", "Case": "Assert.Equals(1, Response.Json.id)" },
-        { "Title": "Name is Mocked Alice", "Case": "Assert.Equals(\"Mocked Alice\", Response.Json.name)" }
+        { "Title": "Status 200", "Case": "{# $.assert($.response.statusCode === 200) #}" },
+        { "Title": "ID is 1", "Case": "{# $.assert($.response.json().id === 1) #}" },
+        { "Title": "Name is Mocked Alice", "Case": "{# $.assert($.response.json().name === 'Mocked Alice') #}" }
       ]
     }
     ```

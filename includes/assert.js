@@ -100,6 +100,30 @@ class Assert
         return assertionTracker.AddResult(true, message);
     }
     
+    isString(value, message = null) {
+        message = message ?? "Value is a string."
+        if (typeof value !== 'string') {
+            return assertionTracker.AddResult(false, `Expected: string, Actual: ${value} > ${message}`);
+        }
+        return assertionTracker.AddResult(true, message);
+    }
+    
+    isNumber(value, message = null) {
+        message = message ?? "Value is a number."
+        if (typeof value !== 'number' || isNaN(value)) {
+            return assertionTracker.AddResult(false, `Expected: number, Actual: ${value} > ${message}`);
+        }
+        return assertionTracker.AddResult(true, message);
+    }
+    
+    isBoolean(value, message = null) {
+        message = message ?? "Value is a boolean."
+        if (typeof value !== 'boolean') {
+            return assertionTracker.AddResult(false, `Expected: boolean, Actual: ${value} > ${message}`);
+        }
+        return assertionTracker.AddResult(true, message);
+    }
+    
     contains(substring, string, message = null) {
         message = message ?? "String contains substring."
         
