@@ -366,7 +366,7 @@ namespace Apify.Utils
             Console.WriteLine();
             
             string exeName = Path.GetFileName(Environment.ProcessPath ?? "apify");
-            string exeCommand = isCompiledExecutable ? $"./{exeName}" : "apify";
+            string exeCommand = isCompiledExecutable ? $"{exeName}" : "apify";
             
             WriteSuccess("Your API testing project is ready to use!");
             Console.WriteLine();

@@ -5,7 +5,6 @@ using NuGet.Versioning;
 using System.CommandLine;
 using System.Net;
 using System.Reflection;
-using System.Text.Json;
 
 namespace Apify
 {
@@ -22,7 +21,7 @@ namespace Apify
             
             
             
-            var rootCommand = new System.CommandLine.RootCommand
+            var rootCommand = new RootCommand
             {
                 Description = "Apify - A robust and powerful CLI tool for testing APIs and a mock server."
             };
@@ -54,33 +53,42 @@ namespace Apify
             
             if (cachedVersion != null && cachedVersion.LastUpdated > DateTime.UtcNow.AddHours(-2))  
             {
-                return NuGetVersion.Parse(cachedVersion?.LatestVersion ?? "1.0.0");
+                return NuGetVersion.Parse(cachedVersion.LatestVersion);
             }
             var handler = new HttpClientHandler
             {
                 AllowAutoRedirect = false // or false to disable
             };
-            
-            using var client = new HttpClient(handler);
-            
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Apify CLI/1.0.0");
-            var response = await client.GetAsync($"https://github.com/nahid/apify/releases/latest");
 
-            if (response.StatusCode != HttpStatusCode.Found && response.StatusCode != HttpStatusCode.MovedPermanently)
+            try
+            {
+                using var client = new HttpClient(handler);
+                client.Timeout = TimeSpan.FromSeconds(5); // or whatever you want
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Apify CLI/1.0.0");
+                
+                var response = await client.GetAsync($"https://github.com/nahid/apify/releases/latest");
+
+                if (response.StatusCode != HttpStatusCode.Found && response.StatusCode != HttpStatusCode.MovedPermanently)
+                {
+                    throw new Exception($"Unexpected status code: {response.StatusCode}");
+                }
+            
+                var location = response.Headers.Location?.ToString();
+            
+                if (!string.IsNullOrEmpty(location))
+                {
+                    var lastSegment = location.Split('/').Last(); // e.g. v1.0.0-rc3
+                    var tag = lastSegment.TrimStart('v'); // return 1.0.0-rc3
+                    
+                    cacheService.UpdateVersion(tag);
+                    return NuGetVersion.Parse(tag);
+                }
+            }
+            catch (Exception)
             {
                 return null;
             }
-            
-            var location = response.Headers.Location?.ToString();
-            
-            if (!string.IsNullOrEmpty(location))
-            {
-                var lastSegment = location.Split('/').Last(); // e.g. v1.0.0-rc3
-                var tag = lastSegment.TrimStart('v'); // return 1.0.0-rc3
-                    
-                cacheService.UpdateVersion(tag);
-                return NuGetVersion.Parse(tag);
-            }
+           
 
             return null;
         }
