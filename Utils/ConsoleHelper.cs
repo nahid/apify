@@ -379,10 +379,10 @@ namespace Apify.Utils
             
             WriteInfo("Try these commands:");
             WriteKeyValue($"  {exeCommand} call users.get", "Run the command to get users from the API");
-            WriteKeyValue($"  {exeCommand} call users.", "Run the command to create new user");
-            WriteKeyValue($"  {exeCommand} list-env", "List all configured environments");
-            WriteKeyValue($"  {exeCommand} create:request users.get", "Create a new API request file");
-            WriteKeyValue($"  {exeCommand} server:mock --port 1988 --verbose", "Start the mock API server");
+            WriteKeyValue($"  {exeCommand} call users.create", "Run the command to create new user");
+            WriteKeyValue($"  {exeCommand} list:env", "List all configured environments");
+            WriteKeyValue($"  {exeCommand} create:request posts.get", "Create a new API request file");
+            WriteKeyValue($"  {exeCommand} server:mock --port 1988 --watch", "Start the mock API server and watch for changes");
             WriteKeyValue($"  {exeCommand} tests", "Run all tests with progress indicators");
             WriteWarning("We set https://reqres.in/api as the default API endpoint for testing purposes.");
             Console.WriteLine();
@@ -401,7 +401,7 @@ namespace Apify.Utils
             Console.WriteLine("- Create .mock.json files in subdirectories of .apify to define mock endpoints");
             Console.WriteLine("- Mock server configuration is in the MockServer section of apify-config.json");
             Console.WriteLine("- Start the mock server with 'server:mock' command for offline development");
-            Console.WriteLine("- Use Fake Data like {{Faker.Name.FirstName()}} or {{ expr|> Faker.Name.FirstName()}} in mock responses");
+            Console.WriteLine("- Use Fake Data like {# $.faker.person.fullName() #}, you can use any Faker.js function");
             Console.WriteLine("- Define route parameters with {param} syntax (e.g., /users/{id})");
             Console.WriteLine();
             
