@@ -1,7 +1,9 @@
 using Apify.Commands;
+using Apify.Models;
 using Apify.Services;
 using NuGet.Versioning;
 using System.CommandLine;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 
@@ -47,18 +49,39 @@ namespace Apify
         
         public async static Task<NuGetVersion?> GetLatestGitHubVersion()
         {
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Apify CLI/1.0.0");
-
-            var url = $"https://api.github.com/repos/nahid/apify/releases/latest";
-            var json = await client.GetStringAsync(url);
-            using var doc = JsonDocument.Parse(json);
-            var tag = doc.RootElement.GetProperty("tag_name").GetString();
-            tag = tag?.TrimStart('v');
-
-            if (tag != null)
-                return NuGetVersion.Parse(tag);
+            CacheService cacheService = new CacheService();
+            VersionCache? cachedVersion = cacheService.GetVersionCache();
             
+            if (cachedVersion != null && cachedVersion.LastUpdated > DateTime.UtcNow.AddHours(-2))  
+            {
+                return NuGetVersion.Parse(cachedVersion?.LatestVersion ?? "1.0.0");
+            }
+            var handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = false // or false to disable
+            };
+            
+            using var client = new HttpClient(handler);
+            
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Apify CLI/1.0.0");
+            var response = await client.GetAsync($"https://github.com/nahid/apify/releases/latest");
+
+            if (response.StatusCode != HttpStatusCode.Found && response.StatusCode != HttpStatusCode.MovedPermanently)
+            {
+                return null;
+            }
+            
+            var location = response.Headers.Location?.ToString();
+            
+            if (!string.IsNullOrEmpty(location))
+            {
+                var lastSegment = location.Split('/').Last(); // e.g. v1.0.0-rc3
+                var tag = lastSegment.TrimStart('v'); // return 1.0.0-rc3
+                    
+                cacheService.UpdateVersion(tag);
+                return NuGetVersion.Parse(tag);
+            }
+
             return null;
         }
         

@@ -143,5 +143,31 @@ public static class MiscHelper
 
         return json;
     }
+    
+    public static string GetSystemConfigPath()
+    {
+        // Get the current user's home directory
+        string homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        
+        // Combine it with the .apify directory
+        string configPath = Path.Combine(homeDirectory, ".apify");
+        
+        // Ensure the directory exists
+        if (!Directory.Exists(configPath))
+        {
+            Directory.CreateDirectory(configPath);
+        }
+        
+        return configPath;
+    }
+    
+    public static string GetSystemConfigPath(string fileName)
+    {
+        // Get the system config path
+        string configPath = GetSystemConfigPath();
+        
+        // Combine it with the specified file name
+        return Path.Combine(configPath, fileName);
+    }
 
 }
