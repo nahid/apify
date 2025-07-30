@@ -220,7 +220,7 @@ namespace Apify.Commands
                     Tests = [
                         new AssertionEntity {
                             Title = "Status code is successful",
-                            Case = "$.assert.equals($.assert.response.getStatusCode(), 200)",
+                            Case = "$.assert.equals($.response.getStatusCode(), 200)",
                         }
                     ]
                 };

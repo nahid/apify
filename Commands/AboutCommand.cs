@@ -32,25 +32,6 @@ namespace Apify.Commands
 
         private Task ExecuteAsync()
         {
-           
-            
-            
-            // Find your resource name here
-            var expresso = new DynamicScriptingManager();
-            
-// Add a fake window object to the JS global scope
-           
-            
-            
-            var result = expresso.Compile<int>("faker.number.int({ min: 1, max: 100 })");
-              
-            Console.WriteLine(result.ToString());
-            
-     
-            
-            //Console.WriteLine(engine.Evaluate("Config.MockServer").ToString());
-
-            return Task.CompletedTask;
             ConsoleHelper.WriteHeader("About Apify");
             Console.WriteLine("A robust and powerful CLI tool for testing APIs and a mock server.");
             Console.WriteLine();

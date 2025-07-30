@@ -66,7 +66,7 @@ jobs:
       
     - name: Prepare Release Asset
       run: |
-        ASSET_NAME="apify-${{ needs.determine_version.outputs.VERSION }}-${{ matrix.platform }}"
+        ASSET_NAME="apify-${{ matrix.platform }}"
         mkdir -p release-assets/apify
         mv ./bin/Release/net8.0/${{ matrix.rid }}/publish/apify${{ matrix.artifact_extension }} ./release-assets/apify/
         cd release-assets
@@ -79,7 +79,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: apify-${{ matrix.platform }}
-        path: release-assets/apify-${{ needs.determine_version.outputs.VERSION }}-${{ matrix.platform }}.zip
+        path: release-assets/apify-${{ matrix.platform }}.zip
         
   create-release:
     needs: [determine_version, build-single-file]

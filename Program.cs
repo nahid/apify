@@ -13,10 +13,6 @@ namespace Apify
             };
             rootCommand.AddGlobalOption(RootOption.DebugOption);
 
-            // Add the list-env command directly to the root command
-            var listEnvCommand = new Command("list-env", "List available environments");
-            rootCommand.AddCommand(listEnvCommand);
-
             // Add subcommands
             rootCommand.AddCommand(new CallCommand());
             rootCommand.AddCommand(new AboutCommand());
