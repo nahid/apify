@@ -1,4 +1,5 @@
 using Apify.Models;
+using Apify.Utils;
 using Newtonsoft.Json;
 
 namespace Apify.Services;
@@ -146,6 +147,32 @@ public class ConfigService
         }
         
         return environment;
+    }
+    
+    
+    public Dictionary<string, string> GetEnvironmentVariables(string? environmentName = null, Dictionary<string, string>? customVariables = null)
+    {
+        LoadConfiguration();
+        // Load the default environment if not specified
+        var environment = LoadEnvironment(environmentName);
+        
+        // If no environment is found, return an empty dictionary
+        if (environment == null)
+        {
+            Console.WriteLine("No environment variables available.");
+            return new Dictionary<string, string>();
+        }
+        
+        // Initialize the variables dictionary with the environment variables
+        var variables =  MiscHelper.MergeDictionaries(_config?.Variables ?? new Dictionary<string, string>(), environment?.Variables ?? new Dictionary<string, string>());
+
+        if (customVariables != null && customVariables.Count == 0)
+        {
+            variables = MiscHelper.MergeDictionaries(variables, customVariables);
+        }
+        
+        
+        return variables;
     }
     
     public void ListEnvironmentVariables(Dictionary<string, string>? customVariables = null)

@@ -127,11 +127,8 @@ namespace Apify.Commands
                     ));
                     
                     var variables = MiscHelper.ParseArgsVariables(vars ?? "");
-                    var runtimeVars = new Dictionary<string, Dictionary<string, string>> {
-                        { "vars", variables }
-                    };
 
-                    requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, runtimeVars);
+                    requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, variables);
                     var response = await apiExecutor.ExecuteRequestAsync(requestSchema);
                     
                     var assertionExecutor = new AssertionExecutor(response, requestSchema);

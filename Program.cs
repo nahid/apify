@@ -1,4 +1,5 @@
 using Apify.Commands;
+using Apify.Services;
 using System.CommandLine;
 
 namespace Apify
@@ -21,6 +22,7 @@ namespace Apify
             rootCommand.AddCommand(new CreateMockCommand());
             rootCommand.AddCommand(new TestsCommand());
             rootCommand.AddCommand(new MockServerCommand());
+            rootCommand.AddCommand(new ListEnvsCommand());
 
             if (args.Length == 0)
             {

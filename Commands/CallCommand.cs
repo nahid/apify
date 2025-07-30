@@ -125,11 +125,8 @@ namespace Apify.Commands
                 }
 
                 var variables = MiscHelper.ParseArgsVariables(options.Vars ?? "");
-                var argVars = new Dictionary<string, Dictionary<string, string>> {
-                    { "vars", variables }
-                };
 
-                requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, argVars);
+                requestSchema = apiExecutor.ApplyEnvToApiDefinition(requestSchema, envName, variables);
 
 
 

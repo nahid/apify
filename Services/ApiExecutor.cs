@@ -266,7 +266,7 @@ namespace Apify.Services
             request.Content = formData;
         }
         
-        public RequestDefinitionSchema ApplyEnvToApiDefinition(RequestDefinitionSchema requestDefinitionSchema, string environment, params Dictionary<string, Dictionary<string, string>>[]? variables)
+        public RequestDefinitionSchema ApplyEnvToApiDefinition(RequestDefinitionSchema requestDefinitionSchema, string environment, Dictionary<string, string>? variables)
         {
             var apiDefContent = JsonHelper.SerializeToJson(requestDefinitionSchema);
             
@@ -274,26 +274,14 @@ namespace Apify.Services
             {
                 return requestDefinitionSchema;
             }
-
-            var conf = _configService.LoadConfiguration();
-            var vars = MiscHelper.MergeDictionaries(conf.Variables, _configService.LoadEnvironment(environment)?.Variables ?? new Dictionary<string, string>());
+            
+            var vars = _configService.GetEnvironmentVariables(environment, variables);
             vars = MiscHelper.MergeDictionaries(vars, requestDefinitionSchema.Variables ?? new Dictionary<string, string>());
             
 
             var stubReplacor = new Dictionary<string, object>();
             
             stubReplacor.Add("env", vars);
-            
-            if (variables != null)
-            {
-                foreach (var v in variables)
-                {
-                    foreach (var kvp in v)
-                    {
-                        stubReplacor.Add(kvp.Key, kvp.Value);
-                    }
-                }
-            }
             
             apiDefContent = TagInterpolationManager.Evaluate(apiDefContent, stubReplacor);
             
