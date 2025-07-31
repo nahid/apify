@@ -46,6 +46,8 @@ TestResult.xml
 [Rr]eleasePS/
 dlldata.c
 
+GEMINI.md
+
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
 

@@ -36,6 +36,7 @@ namespace Apify
             rootCommand.AddCommand(new TestsCommand());
             rootCommand.AddCommand(new MockServerCommand());
             rootCommand.AddCommand(new ListEnvsCommand());
+            rootCommand.AddCommand(new ImportPostmanCommand());
 
             if (args.Length == 0)
             {

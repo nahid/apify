@@ -134,12 +134,12 @@ public static class MiscHelper
         // json = json.Replace("\\", "\\\\");
             
         // Escape newlines
-            
-        json = json.Replace("\n", "\\n").Replace("\r", "\\r");
+
+        json = json.Replace("\\n", "").Replace("\r\n", "");
             
         // Escape tabs
             
-        json = json.Replace("\t", "\\t");
+        json = json.Replace("\t", "");
 
         return json;
     }
