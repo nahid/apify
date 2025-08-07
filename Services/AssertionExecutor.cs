@@ -29,7 +29,7 @@ public class AssertionExecutor
         if (_environment != null)
         {
             var envString = JsonHelper.SerializeWithEscapeSpecialChars(_environment.Variables); //JsonConvert.SerializeObject(_environment.Variables);
-            var envExpr = $"JSON.parse('{envString}')";
+            var envExpr = $"JSON.parse(`{envString}`)";
             scriptMan.SetPropertyToAppObject("env", envExpr);
         }
 
@@ -39,8 +39,8 @@ public class AssertionExecutor
         scriptMan.ExecuteScriptFromAssembly("Apify.includes.request.js");
         scriptMan.ExecuteScriptFromAssembly("Apify.includes.response.js");
         scriptMan.ExecuteScriptFromAssembly("Apify.includes.assert.js");
-        var reqObjExpr = @"new Request('" + jsonReq + @"')";
-        var respObjExpr = @"new Response('" + jsonResp + @"')";
+        var reqObjExpr = @"new Request(`" + jsonReq + @"`)";
+        var respObjExpr = @"new Response(`" + jsonResp + @"`)";
         
         scriptMan.SetPropertyToAppObject("request", reqObjExpr);
         scriptMan.SetPropertyToAppObject("response", respObjExpr);

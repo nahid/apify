@@ -40,9 +40,18 @@ public static class TagInterpolationManager
             // Process if the match is a {{path.to.value}}
             if (match.Groups[1].Success)
             {
+                var v = match.Groups[1].Value;
+                if (string.IsNullOrEmpty(v))
+                {
+                    return string.Empty; // Return empty if no path is provided
+                }
+
+                if (!v.Contains("."))
+                {
+                    v = $"env.{v}"; // If no dot notation, assume it's an env variable
+                }
                 // split "users.posts.comment.id" → ["users","posts","comment","id"]
-                var parts = match.Groups[1]
-                .Value
+                 var parts = v
                 .Split('.', StringSplitOptions.RemoveEmptyEntries);
 
                 return AccessNestedValue(match, args, parts);

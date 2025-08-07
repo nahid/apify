@@ -37,16 +37,16 @@ namespace Apify.Services
             try
             {
                 var headersString = JsonHelper.SerializeWithEscapeSpecialChars(headers); 
-                _scriptMan.SetPropertyToAppObject("headers", $"tryParseJson('{headersString}')");
+                _scriptMan.SetPropertyToAppObject("headers", $"tryParseJson(`{headersString}`)");
 
                 var bodyString = JsonHelper.SerializeWithEscapeSpecialChars(body);
-                _scriptMan.SetPropertyToAppObject("body", $"tryParseJson('{bodyString}')");
+                _scriptMan.SetPropertyToAppObject("body", $"tryParseJson(`{bodyString}`)");
 
                 var queryParamsString = JsonHelper.SerializeWithEscapeSpecialChars(queryParams);
-                _scriptMan.SetPropertyToAppObject("query", $"tryParseJson('{queryParamsString}')");
+                _scriptMan.SetPropertyToAppObject("query", $"tryParseJson(`{queryParamsString}`)");
 
                 var pathParamsString = JsonHelper.SerializeWithEscapeSpecialChars(pathParams);
-                _scriptMan.SetPropertyToAppObject("path", $"tryParseJson('{pathParamsString}')");
+                _scriptMan.SetPropertyToAppObject("path", $"tryParseJson(`{pathParamsString}`)");
                 
                 
                 // // Add special accessor objects for query parameters and headers

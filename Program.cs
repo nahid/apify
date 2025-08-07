@@ -8,6 +8,7 @@ using System.Reflection;
 
 namespace Apify
 {
+    //TODO: if variable has no dot it consider as environment variable. {{baseUrl}} same as {{env.baseUrl}}
     public class Program
     {
         public async static Task<int> Main(string[] args)
