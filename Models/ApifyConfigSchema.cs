@@ -36,7 +36,7 @@ namespace Apify.Models
         public List<EnvironmentSchema> Environments { get; set; }
         
         [JsonProperty("authorization")]
-        public Authorization? Authorization { get; set; }
+        public AuthorizationSchema? Authorization { get; set; }
 
         [JsonProperty("defaultEnvironment")]
         public string? DefaultEnvironment { get; set; }
@@ -47,30 +47,6 @@ namespace Apify.Models
         [JsonProperty("mockServer")]
         public MockServer? MockServer { get; set; }
         
-    }
-
-    public class Authorization
-    {
-        [JsonProperty("type")]
-        public AuthorizationType? Type { get; set; }
-        
-        [JsonProperty("token")]
-        public string? Token { get; set; }
-    }
-    
-    public enum AuthorizationType
-    {
-        [JsonProperty("none")]
-        None,
-        
-        [JsonProperty("bearer")]
-        Bearer,
-        
-        [JsonProperty("basic")]
-        Basic,
-        
-        [JsonProperty("apiKey")]
-        ApiKey
     }
 
     public class ApiCallDisplayOptions

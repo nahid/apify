@@ -43,12 +43,12 @@ namespace Apify.Services
                 }
                 
                 var request = new HttpRequestMessage(new HttpMethod(requestDefinitionSchema.Method), url);
-
-                if (_configService.LoadConfiguration().Authorization != null)
-                {
+                
                     // If authorization is set in the config, add it to the request headers
-                    var authHeader = _configService.LoadConfiguration().Authorization;
+                var authHeader = HandleAuthorization(requestDefinitionSchema);
 
+                if (authHeader != null)
+                {
                     switch (authHeader?.Type)
                     {
                         case AuthorizationType.Bearer:
@@ -66,7 +66,7 @@ namespace Apify.Services
                             break;
                     }
                 }
-
+                
                 // Add headers
                 if (requestDefinitionSchema.Headers != null)
                 {
@@ -293,6 +293,21 @@ namespace Apify.Services
             requestDefinitionSchema = JsonHelper.DeserializeString<RequestDefinitionSchema>(apiDefContent) ?? new RequestDefinitionSchema();
 
             return requestDefinitionSchema;
+        }
+        
+        private AuthorizationSchema? HandleAuthorization(RequestDefinitionSchema requestDefinitionSchema)
+        {
+            if (requestDefinitionSchema.Authorization != null)
+            {
+                return requestDefinitionSchema.Authorization;
+            }
+
+            if (_configService.LoadConfiguration().Authorization != null)
+            {
+                return _configService.LoadConfiguration().Authorization;
+            }
+            
+            return null;
         }
         
         public void DisplayTestStats(TestResults testResults)

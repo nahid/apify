@@ -102,13 +102,15 @@ namespace Apify.Commands
                 ConsoleHelper.WriteError($"Failed to import Postman collection: {ex.Message}");
             }
         }
-
-        private async Task UpdateApifyConfigWithPostmanAuth(PostmanAuth postmanAuth)
+        
+        private AuthorizationSchema? HandleAuthorization(PostmanAuth? postmanAuth)
         {
-            var configService = new ConfigService();
-            var apifyConfig = configService.LoadConfiguration();
+            if (postmanAuth == null)
+            {
+                return null;
+            }
 
-            var newAuth = new Apify.Models.Authorization();
+            var newAuth = new AuthorizationSchema();
             string? token = null;
 
             switch (postmanAuth.Type)
@@ -126,18 +128,24 @@ namespace Apify.Commands
                         token = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{username}:{password}"));
                     }
                     break;
+                case "noauth":
+                    newAuth.Type = AuthorizationType.None;
+                    break;
                 default:
                     ConsoleHelper.WriteInfo($"Postman auth type '{postmanAuth.Type}' is not supported for import.");
-                    return;
+                    return null;
             }
 
-            if (string.IsNullOrEmpty(token))
-            {
-                ConsoleHelper.WriteWarning("Postman authorization token is empty, skipping update.");
-                return;
-            }
+            newAuth.Token = string.IsNullOrEmpty(token)? null : ReplaceVariables(token);
+            return newAuth;
+        }
 
-            newAuth.Token = ReplaceVariables(token);
+        private async Task UpdateApifyConfigWithPostmanAuth(PostmanAuth postmanAuth)
+        {
+            var configService = new ConfigService();
+            var apifyConfig = configService.LoadConfiguration();
+
+            var newAuth = HandleAuthorization(postmanAuth);
 
             if (apifyConfig.Authorization != null && apifyConfig.Authorization.Token != newAuth.Token)
             {
@@ -224,6 +232,11 @@ namespace Apify.Commands
                         Body = ConvertPostBody(item.Request.Body),
                         PayloadType = GetPayloadType(item.Request.Body)
                     };
+                    
+                    if (item.Request.Auth != null)
+                    {
+                        requestSchema.Authorization = HandleAuthorization(item.Request.Auth);
+                    }
 
                     var fileName = $"{item.Name!.Replace(" ", "_").ToLower()}.json";
                     var filePath = Path.Combine(currentDir, fileName);

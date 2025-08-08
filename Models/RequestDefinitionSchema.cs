@@ -29,6 +29,9 @@ namespace Apify.Models
 
         [JsonProperty("headers")]
         public Dictionary<string, string>? Headers { get; set; }
+        
+        [JsonProperty("authorization")]
+        public AuthorizationSchema? Authorization { get; set; }
 
         [JsonProperty("body")]
         public Body? Body { get; set; }

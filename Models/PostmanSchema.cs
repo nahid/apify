@@ -61,6 +61,9 @@ namespace Apify.Models
     {
         [JsonProperty("method")]
         public string? Method { get; set; }
+        
+        [JsonProperty("auth")]
+        public PostmanAuth? Auth { get; set; }
 
         [JsonProperty("header")]
         public PostmanHeader[]? Headers { get; set; }
