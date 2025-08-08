@@ -23,7 +23,7 @@ namespace Apify.Commands
 
             var outputDirOption = new Option<string>(
                 "--output-dir",
-                () => "apis",
+                () => RootOption.DefaultApiDirectory,
                 "The directory where the Apify collection will be saved."
             );
             AddOption(outputDirOption);
@@ -36,7 +36,8 @@ namespace Apify.Commands
             AddOption(forceOption);
 
             var envOption = new Option<string>(
-                "--env",
+                "--env-file",
+                () => string.Empty,
                 "The path to the Postman environment JSON file."
             );
             AddOption(envOption);
@@ -47,7 +48,7 @@ namespace Apify.Commands
             );
         }
 
-        private async Task ExecuteAsync(string filePath, string outputDir, bool force, string? env, bool debug)
+        private async Task ExecuteAsync(string filePath, string outputDir, bool force, string? envFile, bool debug)
         {
             ConsoleHelper.WriteHeader("Importing Postman Collection");
 
@@ -73,9 +74,9 @@ namespace Apify.Commands
 
             try
             {
-                if (!string.IsNullOrEmpty(env))
+                if (!string.IsNullOrEmpty(envFile))
                 {
-                    await UpdateApifyConfigWithPostmanEnvironment(env);
+                    await UpdateApifyConfigWithPostmanEnvironment(envFile);
                 }
 
                 string postmanJson = await File.ReadAllTextAsync(filePath);
@@ -209,6 +210,11 @@ namespace Apify.Commands
                 }
                 else if (item.Request != null)
                 {
+                    if (item.Request.Method == null || item.Request.Url == null)
+                    {
+                        continue;
+                    }
+                    
                     var requestSchema = new RequestDefinitionSchema
                     {
                         Name = item.Name!,

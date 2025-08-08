@@ -220,6 +220,48 @@ class Assert
         return assertionTracker.AddResult(true, message);
     }
     
+    exists(object, dottedKey, message = null) {
+        message = message ?? "Object exists at dotted key."
+        
+        if (typeof object !== 'object' || object === null) {
+            return assertionTracker.AddResult(false, `Expected: object at dotted key "${dottedKey}", Actual: ${object} > ${message}`);
+        }
+        
+        const keys = dottedKey.split('.');
+        let current = object;
+        
+        for (const key of keys) {
+            if (current[key] === undefined) {
+                return assertionTracker.AddResult(false, `Expected: object at dotted key "${dottedKey}", Actual: ${object} > ${message}`);
+            }
+            current = current[key];
+        }
+    
+        return assertionTracker.AddResult(true, message);
+    }
+    
+    notExists(object, dottedKey, message = null) {
+        message = message ?? "Object does not exist at dotted key."
+        
+        if (typeof object !== 'object' || object === null) {
+            return assertionTracker.AddResult(false, `Expected: no object at dotted key "${dottedKey}", Actual: ${object} > ${message}`);
+        }
+        
+        const keys = dottedKey.split('.');
+        let current = object;
+        
+        for (const key of keys) {
+            if (current[key] === undefined) {
+                return assertionTracker.AddResult(true, message);
+            }
+            current = current[key];
+        }
+    
+        return assertionTracker.AddResult(false, `Expected: no object at dotted key "${dottedKey}", Actual: ${object} > ${message}`);
+    }
+    
+    
+    
 }
 
 
