@@ -16,6 +16,7 @@ namespace Apify.Services
         private readonly ConditionEvaluator _conditionEvaluator = new ConditionEvaluator();
         private bool _verbose;
         private bool _debug;
+        private bool _enableCors;
         private HttpListener? _listener;
         private bool _isRunning;
         private FileSystemWatcher? _watcher;
@@ -40,12 +41,12 @@ namespace Apify.Services
             }
             
             _debug = debug;
-            _configService = new ConfigService(debug);
+            _configService = new ConfigService(_debug);
             _configService.SetConfigFilePath(_projectDirectory);
 
         }
 
-        public async Task StartAsync(int port, bool verbose, bool watch = false)
+        public async Task StartAsync(int port, bool verbose, bool watch = false, bool enableCors = false)
         {
             _verbose = verbose;
             _port = port;
@@ -53,6 +54,13 @@ namespace Apify.Services
             if (_port == 0)
             {
                 _port = _configService.LoadConfiguration().MockServer?.Port ?? 1988;
+            }
+
+            _enableCors = _configService.LoadConfiguration().MockServer?.EnableCors ?? false;
+
+            if (enableCors)
+            {
+                _enableCors = enableCors;
             }
 
             if (watch)
@@ -102,6 +110,10 @@ namespace Apify.Services
                 _isRunning = true;
 
                 ConsoleHelper.WriteSuccess($"Mock API Server started on http://localhost:{_port}");
+                if (_enableCors == true)
+                {
+                    ConsoleHelper.WriteInfo("CORS is enabled for all origins.");
+                }
                 ConsoleHelper.WriteInfo("Available endpoints:");
 
                 // Display advanced mock endpoints
@@ -317,6 +329,20 @@ namespace Apify.Services
         {
             var request = context.Request;
             var response = context.Response;
+
+            if (_enableCors == true)
+            {
+                response.Headers.Add("Access-Control-Allow-Origin", "*");
+                response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+                if (request.HttpMethod == "OPTIONS")
+                {
+                    response.StatusCode = 204; // No Content
+                    response.Close();
+                    return;
+                }
+            }
             
             string requestUrl = request.Url?.AbsolutePath ?? string.Empty;
             string method = request.HttpMethod;

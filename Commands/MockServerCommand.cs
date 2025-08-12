@@ -27,22 +27,28 @@ namespace Apify.Commands
                 description: "Watch for file changes and reload the server automatically");
             watchOption.AddAlias("-w");
 
+            var corsOption = new Option<bool>(
+                name: "--cors",
+                description: "Enable CORS for all origins. Overrides the global setting.",
+                getDefaultValue: () => false);
+
             AddOption(portOption);
             AddOption(projectDirectoryOption);
             AddOption(verboseOption);
             AddOption(watchOption);
+            AddOption(corsOption);
 
-            this.SetHandler(async (port, projectDirectory, verbose, watch, debug) =>
+            this.SetHandler(async (port, projectDirectory, verbose, watch, cors, debug) =>
             {
-                await RunMockServerAsync(port, projectDirectory, verbose, watch, debug);
-            }, portOption, projectDirectoryOption, verboseOption, watchOption, RootOption.DebugOption);
+                await RunMockServerAsync(port, projectDirectory, verbose, watch, cors, debug);
+            }, portOption, projectDirectoryOption, verboseOption, watchOption, corsOption, RootOption.DebugOption);
 
         }
 
-        private async Task RunMockServerAsync(int port, string projectDirectory, bool verbose, bool watch, bool debug)
+        private async Task RunMockServerAsync(int port, string projectDirectory, bool verbose, bool watch, bool enableCors, bool debug)
         {
             var mockServer = new MockServerService(projectDirectory, debug);
-            await mockServer.StartAsync(port, verbose, watch);
+            await mockServer.StartAsync(port, verbose, watch, enableCors);
         }
     }
 }

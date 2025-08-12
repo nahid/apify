@@ -150,7 +150,9 @@ For other platforms, replace `linux-x64` with your target platform:
 - macOS: `osx-x64`
 - ARM64: `linux-arm64` or `osx-arm64`
 
-> For documentation, please visit [Apify Documentation](docs/Apify-Documentation.md).
+> For documentation, please see the following files:
+> - [Getting Started](docs/get-started.md)
+> - [Import Postman Collection](docs/import-postman.md)
 
 ## Development
 To contribute to Apify or build it from source, follow these steps:
